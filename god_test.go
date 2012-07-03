@@ -3,15 +3,16 @@ package god
 
 import (
 	"testing"
+	"fmt"
+	"os"
 )
 
-func openGod(t *testing.T, p string) *God {
-	if g, err := NewGod(p); err == nil {
+func openGod(p string) *God {
+	g, err := NewGod(p)
+	if err == nil {
 		return g
-	} else {
-		t.Errorf("should be able to open %v, got %v", p, err)
 	}
-	return nil
+	panic(fmt.Errorf("should be able to open %v, got %v", p, err))
 }
 
 func assertStored(t *testing.T, g *God, key, expected string) {
@@ -24,8 +25,21 @@ func assertStored(t *testing.T, g *God, key, expected string) {
 	}
 }
 
+func BenchmarkPut(b *testing.B) {
+	g := openGod("bench1")
+	defer func() {
+		os.Remove("bench1")
+	}()
+	data := make([]byte, 128)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		g.Put(fmt.Sprint(i), data)
+	}
+	b.StopTimer()
+}
+
 func TestBlaj(t *testing.T) {
-	g := openGod(t, "test1")
+	g := openGod("test1")
 	g.Put("k", []byte("v"))
 	assertStored(t, g, "k", "v")
 }

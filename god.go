@@ -3,10 +3,9 @@ package god
 
 import (
 	"github.com/zond/gotomic"
-	"github.com/zond/cabinet"
 	"bytes"
+	"os"
 	"hash/crc32"
-	"fmt"
 )
 
 const exponent = 9
@@ -28,42 +27,18 @@ func (self key) Equals(t gotomic.Thing) bool {
 
 type God struct {
 	hashes []*gotomic.Hash
-	cabinet *cabinet.KCDB
+	logfile *os.File
 }
 func NewGod(path string) (rval *God, err error) {
-	rval = &God{make([]*gotomic.Hash, 1 << exponent), cabinet.New()}
-	if err = rval.cabinet.Open(fmt.Sprint(path, ".kch"), cabinet.KCOWRITER | cabinet.KCOCREATE); err != nil {
-		panic(err)
+	file, err := os.Create(path)
+	if err != nil {
+		return nil, err
 	}
-	rval.reload()
+	rval = &God{make([]*gotomic.Hash, 1 << exponent), file}
+	for i := 0; i < len(rval.hashes); i++ {
+		rval.hashes[i] = gotomic.NewHash()
+	}
 	return rval, nil
-}
-func (self *God) reload() {
-	for i := 0; i < len(self.hashes); i++ {
-		self.hashes[i] = gotomic.NewHash()
-	}
-	cursor := self.cabinet.Cursor()
-	k, v, err := cursor.Get(true)
-	for err == nil {
-		self.reinsert(k, v)
-		k, v, err = cursor.Get(true)
-	}
-}
-func (self *God) reinsert(k, v []byte) {
-	switch v[0] {
-	case hashvalue:
-		self.put(string(k), v[1:])
-	default:
-		panic(fmt.Errorf("Unknown data type %v", v[0]))
-	}
-}
-func (self *God) persist(k string, v []byte) {
-	if err := self.cabinet.Set([]byte(k), v); err != nil {
-		panic(err)
-	}
-	if err := self.cabinet.Sync(false); err != nil {
-		panic(err)
-	}
 }
 func (self *God) put(k string, v []byte) []byte {
 	key := key(k)
@@ -75,7 +50,9 @@ func (self *God) put(k string, v []byte) []byte {
 	return t.([]byte)
 }
 func (self *God) Put(k string, v []byte) []byte {
-	self.persist(k, self.mark(v, hashvalue))
+	if _, err := self.logfile.Write(v); err != nil {
+		panic(err)
+	}
 	return self.put(k, v)
 }
 func (self *God) mark(b []byte, t byte) []byte {
