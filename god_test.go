@@ -4,6 +4,8 @@ package god
 import (
 	"testing"
 	"fmt"
+	"os"
+	"github.com/simonz05/godis"
 )
 
 func openGod(p string) *God {
@@ -14,13 +16,40 @@ func openGod(p string) *God {
 	panic(fmt.Errorf("should be able to open %v, got %v", p, err))
 }
 
+func BenchmarkPut(b *testing.B) {
+	os.RemoveAll("bench1")
+	g := openGod("bench1")
+	defer g.Close()
+	resp := Response{}
+	oper := Operation{PUT, make([]string, 2)}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		oper.Parameters[0] = fmt.Sprint(i)
+		oper.Parameters[1] = oper.Parameters[0]
+		g.Perform(oper, &resp)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkGodis(b *testing.B) {
+	c := godis.New("", 0, "")
+	var p string 
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		p = fmt.Sprint(i)
+		c.Set(p, p)
+	}
+	b.StopTimer()
+}
+
 func TestBlaj(t *testing.T) {
 	g := openGod("test1")
+	defer g.Close()
 	resp := Response{}
-	g.Perform(Operation{KEYS, nil}, &resp)
-	fmt.Println(resp)
+	g.Perform(Operation{CLEAR, nil}, &resp)
 	g.Perform(Operation{PUT, []string{"k", "v"}}, &resp)
-	fmt.Println(resp)
 	g.Perform(Operation{GET, []string{"k"}}, &resp)
-	fmt.Println(resp)
+	if !resp.Ok() || resp.Parts[0] != "v" {
+		t.Error("should get 'v' but got", resp)
+	}
 }

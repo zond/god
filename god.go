@@ -26,6 +26,7 @@ const (
 	PUT 
 	DELETE
 	KEYS
+	CLEAR
 )
 
 const (
@@ -35,6 +36,7 @@ const (
 	UNKNOWN
 	BAD
 	ARITY
+	ERROR
 )
 
 type Command int
@@ -45,6 +47,10 @@ func (self Command) String() string {
 	case PUT:
 		return "PUT"
 	case DELETE:
+		return "DELETE"
+	case KEYS:
+		return "DELETE"
+	case CLEAR:
 		return "DELETE"
 	}
 	return "UNKNOWN"
@@ -71,6 +77,9 @@ func (self Result) String() string {
 	if self & ARITY == ARITY {
 		rval = append(rval, "ARITY")
 	}
+	if self & ERROR == ERROR {
+		rval = append(rval, "ARITY")
+	}
 	return fmt.Sprint(rval)
 }
 
@@ -83,27 +92,33 @@ type Response struct {
 	Result Result
 	Parts []string
 }
+func (self Response) Ok() bool {
+	return self.Result & OK == OK
+}
 
 type God struct {
 	hashes []*gotomic.Hash
 	dir string
 	logChannel chan Operation
-	doLog bool
 }
 func NewGod(dir string) (*God, error) {
-	os.MkdirAll(dir, 0700)
-	rval := &God{make([]*gotomic.Hash, shards), dir, make(chan Operation, backlog), false}
-	for i := 0; i < len(rval.hashes); i++ {
-		rval.hashes[i] = gotomic.NewHash()
-	}
-	if err := rval.loadAll(); err != nil {
+	rval := &God{make([]*gotomic.Hash, shards), dir, nil}
+	if err := rval.initialize(); err != nil {
 		return nil, err
 	}
-	rval.doLog = true
-	go rval.log()
 	return rval, nil
 }
+func (self *God) initialize() error {
+	self.setupHashes()
+	if err := self.loadAll(); err != nil {
+		return err
+	}
+	self.logChannel = make(chan Operation, backlog)
+	go self.store()
+	return nil
+}
 func (self *God) loadAll() error {
+	os.MkdirAll(self.dir, 0700)
 	if err := self.load(filepath.Join(self.dir, snapshot)); err != nil {
 		if !os.IsNotExist(err) {
 			return err
@@ -127,7 +142,7 @@ func (self *God) loadAll() error {
 	}
 	return nil
 }
-func (self *God) log() {
+func (self *God) store() {
 	logfile, err := os.Create(filepath.Join(self.dir, fmt.Sprint(time.Now().UnixNano(), ".log")))
 	if err != nil {
 		panic(err)
@@ -135,6 +150,9 @@ func (self *God) log() {
 	defer logfile.Close()
 	encoder := gob.NewEncoder(logfile)
 	for operation := range self.logChannel {
+		if operation.Command == CLEAR {
+			break
+		}
 		if err = encoder.Encode(operation); err != nil {
 			panic(err)
 		}
@@ -181,13 +199,16 @@ func (self *God) get(o Operation, r *Response) {
 	r.Result = OK | MISSING
 	r.Parts = nil
 }
+func (self *God) log(o Operation) {
+	if self.logChannel != nil {
+		self.logChannel <- o
+	}
+}
 func (self *God) put(o Operation, r *Response) {
 	if !self.okArity(o, 2, r) {
 		return
 	}
-	if self.doLog {
-		self.logChannel <- o
-	}
+	self.log(o)
 	key := gotomic.StringKey(o.Parameters[0])
 	hash, hc := self.shard(key)
 	if t, ok := hash.PutHC(hc, key, o.Parameters[1]); ok {
@@ -212,10 +233,36 @@ func (self *God) keys(o Operation, r *Response) {
 	r.Result = OK
 	r.Parts = keys
 }
+func (self *God) setupHashes() {
+	for i := 0; i < len(self.hashes); i++ {
+		self.hashes[i] = gotomic.NewHash()
+	}
+}
+func (self *God) clear(o Operation, r *Response) {
+	if !self.okArity(o, 0, r) {
+		return
+	}
+	self.log(o)
+	if err := os.RemoveAll(self.dir); err != nil {
+		r.Result = ERROR
+		r.Parts = []string{err.Error()}
+		return
+	} else {
+		os.MkdirAll(self.dir, 0700)
+		self.setupHashes()
+		go self.store()
+		r.Result = OK
+		r.Parts = nil
+	}
+}
+func (self *God) Close() {
+	close(self.logChannel)
+}
 func (self *God) del(o Operation, r *Response) {
 	if !self.okArity(o, 1, r) {
 		return
 	}
+	self.log(o)
 	key := gotomic.StringKey(o.Parameters[0])
 	hash, hc := self.shard(key)
 	if t, ok := hash.DeleteHC(hc, key); ok {
@@ -236,6 +283,8 @@ func (self *God) Perform(o Operation, r *Response) {
 		self.del(o, r)
 	case KEYS:
 		self.keys(o, r)
+	case CLEAR:
+		self.clear(o, r)
 	default:
 		r.Result = UNKNOWN
 		r.Parts = nil
