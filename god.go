@@ -15,8 +15,9 @@ import (
 )
 
 const (
+	backlog = 1 << 10
 	snapshot = "snapshot.god"
-	exponent = 9
+	shards = 1 << 9
 	arity_error = "Illegal number of parameters. Wanted %v but got %v."
 )
 
@@ -91,7 +92,7 @@ type God struct {
 }
 func NewGod(dir string) (*God, error) {
 	os.MkdirAll(dir, 0700)
-	rval := &God{make([]*gotomic.Hash, 1 << exponent), dir, make(chan Operation, 1 << 10), false}
+	rval := &God{make([]*gotomic.Hash, shards), dir, make(chan Operation, backlog), false}
 	for i := 0; i < len(rval.hashes); i++ {
 		rval.hashes[i] = gotomic.NewHash()
 	}
@@ -242,6 +243,6 @@ func (self *God) Perform(o Operation, r *Response) {
 }
 func (self *God) shard(h gotomic.Hashable) (hash *gotomic.Hash, hashCode uint32)  {
 	hashCode = h.HashCode()
-	hash = self.hashes[hashCode & ((1 << exponent) - 1)]
+	hash = self.hashes[hashCode & (shards - 1)]
 	return
 }
