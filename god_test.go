@@ -4,6 +4,7 @@ package god
 import (
 	"testing"
 	"fmt"
+	"reflect"
 	"os"
 	"github.com/simonz05/godis"
 )
@@ -42,12 +43,34 @@ func BenchmarkGodis(b *testing.B) {
 	b.StopTimer()
 }
 
-func TestBlaj(t *testing.T) {
+func TestPutGet(t *testing.T) {
 	g := openGod("test1")
 	defer g.Close()
 	resp := Response{}
 	g.Perform(Operation{CLEAR, nil}, &resp)
 	g.Perform(Operation{PUT, []string{"k", "v"}}, &resp)
+	g.Perform(Operation{GET, []string{"k"}}, &resp)
+	if !resp.Ok() || resp.Parts[0] != "v" {
+		t.Error("should get 'v' but got", resp)
+	}
+}
+
+func TestPersistence(t *testing.T) {
+	g := openGod("test1")
+	resp := Response{}
+	g.Perform(Operation{CLEAR, nil}, &resp)
+	g.Perform(Operation{PUT, []string{"k", "v"}}, &resp)
+	g.Perform(Operation{GET, []string{"k"}}, &resp)
+	if !resp.Ok() || resp.Parts[0] != "v" {
+		t.Error("should get 'v' but got", resp)
+	}
+	g.Close()
+	g = openGod("test1")
+	g.Perform(Operation{KEYS, nil}, &resp)
+	expected := []string{"k"}
+	if !resp.Ok() || !reflect.DeepEqual(resp.Parts, expected) {
+		t.Error("expected", expected, "but got", resp)
+	}
 	g.Perform(Operation{GET, []string{"k"}}, &resp)
 	if !resp.Ok() || resp.Parts[0] != "v" {
 		t.Error("should get 'v' but got", resp)
