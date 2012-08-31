@@ -5,25 +5,25 @@ import (
 	"sync"
 )
 
-type rwMap struct {
+type Map struct {
 	content map[string]string
 	lock *sync.RWMutex
 }
-func newRwMap() *rwMap {
-	return &rwMap{make(map[string]string), new(sync.RWMutex)}
+func NewMap() *Map {
+	return &Map{make(map[string]string), new(sync.RWMutex)}
 }
-func (self *rwMap) get(k string) (string, bool) {
+func (self *Map) Get(k string) (string, bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	v, ok := self.content[k]
-	return v,ok
+	return v, ok
 }
-func (self *rwMap) del(k string) {
+func (self *Map) Del(k string) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	delete(self.content, k)
 }
-func (self *rwMap) delIfPresent(k, exp string) bool {
+func (self *Map) DelIfPresent(k, exp string) bool {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if v, ok := self.content[k]; ok && v == exp {
@@ -34,7 +34,7 @@ func (self *rwMap) delIfPresent(k, exp string) bool {
 	}
 	return false	
 }
-func (self *rwMap) putIfPresent(k, v, exp string) bool {
+func (self *Map) PutIfPresent(k, v, exp string) bool {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if v, ok := self.content[k]; ok && v == exp{
@@ -45,7 +45,7 @@ func (self *rwMap) putIfPresent(k, v, exp string) bool {
 	}
 	return false
 }
-func (self *rwMap) putIfMissing(k, v string) bool {
+func (self *Map) PutIfMissing(k, v string) bool {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if v, ok := self.content[k]; !ok {
@@ -56,12 +56,12 @@ func (self *rwMap) putIfMissing(k, v string) bool {
 	}
 	return false
 }
-func (self *rwMap) put(k, v string) {
+func (self *Map) Put(k, v string) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.content[k] = v
 }
-func (self *rwMap) keys() []string {
+func (self *Map) Keys() []string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	rval := make([]string, len(self.content))
@@ -72,7 +72,7 @@ func (self *rwMap) keys() []string {
 	}
 	return rval
 }
-func (self *rwMap) size() int {
+func (self *Map) Size() int {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return len(self.content)

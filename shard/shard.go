@@ -4,6 +4,7 @@ package shard
 import (
 	"regexp"
 	"fmt"
+	locks "../locks"
 	"time"
 	"io"
 	"strconv"
@@ -40,9 +41,9 @@ func (self Command) String() string {
 	case DELETE:
 		return "DELETE"
 	case KEYS:
-		return "DELETE"
+		return "KEYS"
 	case CLEAR:
-		return "DELETE"
+		return "CLEAR"
 	}
 	return "UNKNOWN"
 }
@@ -125,7 +126,7 @@ func (self streamNames) Swap(i, j int) {
 }
 
 type Shard struct {
-	hash *rwMap
+	hash *locks.Map
 	dir string
 	logChannel chan Operation
 	state State
@@ -139,11 +140,23 @@ func NewShard(dir string) (*Shard, error) {
 		return nil, err
 	}
 	go rval.store()
+	rval.state = WORKING
+	return rval, nil
+}
+func NewEmptyShard(dir string) (*Shard, error) {
+	if err := os.RemoveAll(dir); err != nil {
+		return nil, err
+	}
+	rval, err := NewShard(dir)
+	if err != nil {
+		return nil, err
+	}
 	return rval, nil
 }
 func (self *Shard) initialize(dir string, state State) *Shard {
-	self.hash = newRwMap()
+	self.hash = locks.NewMap()
 	self.dir = dir
+	os.MkdirAll(self.dir, 0700)
 	self.logChannel = make(chan Operation)
 	self.state = state
 	return self
@@ -218,7 +231,7 @@ func (self *Shard) get(o Operation, r *Response) {
 	if !self.okArity(o, 1, r) {
 		return
 	}
-	if v, ok := self.hash.get(o.Parameters[0]); ok {
+	if v, ok := self.hash.Get(o.Parameters[0]); ok {
 		r.Result = OK | EXISTS
 		r.Parts = []string{v}
 	} else {
@@ -237,7 +250,7 @@ func (self *Shard) put(o Operation, r *Response) {
 		return
 	}
 	self.log(o)
-	self.hash.put(o.Parameters[0], o.Parameters[1])
+	self.hash.Put(o.Parameters[0], o.Parameters[1])
 	r.Result = OK
 	r.Parts = nil
 	return
@@ -247,7 +260,7 @@ func (self *Shard) keys(o Operation, r *Response) {
 		return
 	}
 	r.Result = OK
-	r.Parts = self.hash.keys()
+	r.Parts = self.hash.Keys()
 }
 func (self *Shard) clear(o Operation, r *Response) {
 	if !self.okArity(o, 0, r) {
@@ -259,7 +272,6 @@ func (self *Shard) clear(o Operation, r *Response) {
 		r.Parts = []string{err.Error()}
 		return
 	} 
-	os.MkdirAll(self.dir, 0700)
 	self.initialize(self.dir, self.state)
 	go self.store()
 	r.Result = OK
@@ -270,7 +282,7 @@ func (self *Shard) del(o Operation, r *Response) {
 		return
 	}
 	self.log(o)
-	self.hash.del(o.Parameters[0])
+	self.hash.Del(o.Parameters[0])
 	r.Result = OK
 	r.Parts = nil
 }
