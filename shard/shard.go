@@ -4,7 +4,7 @@ package shard
 import (
 	"regexp"
 	"fmt"
-	locks "../locks"
+	"github.com/zond/gotomic"
 	"time"
 	"io"
 	"strconv"
@@ -126,7 +126,7 @@ func (self streamNames) Swap(i, j int) {
 }
 
 type Shard struct {
-	hash *locks.Map
+	hash *gotomic.Hash
 	dir string
 	logChannel chan Operation
 	state State
@@ -154,7 +154,7 @@ func NewEmptyShard(dir string) (*Shard, error) {
 	return rval, nil
 }
 func (self *Shard) initialize(dir string, state State) *Shard {
-	self.hash = locks.NewMap()
+	self.hash = gotomic.NewHash()
 	self.dir = dir
 	os.MkdirAll(self.dir, 0700)
 	self.logChannel = make(chan Operation)
@@ -231,14 +231,13 @@ func (self *Shard) get(o Operation, r *Response) {
 	if !self.okArity(o, 1, r) {
 		return
 	}
-	if v, ok := self.hash.Get(o.Parameters[0]); ok {
+	if v, ok := self.hash.Get(gotomic.StringKey(o.Parameters[0])); ok {
 		r.Result = OK | EXISTS
-		r.Parts = []string{v}
+		r.Parts = []string{v.(string)}
 	} else {
 		r.Result = OK | MISSING
 		r.Parts = nil
 	}
-	return
 }
 func (self *Shard) log(o Operation) {
 	if self.state == WORKING {
@@ -250,17 +249,23 @@ func (self *Shard) put(o Operation, r *Response) {
 		return
 	}
 	self.log(o)
-	self.hash.Put(o.Parameters[0], o.Parameters[1])
-	r.Result = OK
-	r.Parts = nil
-	return
+	if old, ok := self.hash.Put(gotomic.StringKey(o.Parameters[0]), o.Parameters[1]); ok {
+		r.Result = OK | EXISTS
+		r.Parts = []string{old.(string)}
+	} else {
+		r.Result = OK | MISSING
+		r.Parts = nil
+	}
 }
 func (self *Shard) keys(o Operation, r *Response) {
 	if !self.okArity(o, 0, r) {
 		return
 	}
 	r.Result = OK
-	r.Parts = self.hash.Keys()
+	r.Parts = nil
+	self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) {
+		r.Parts = append(r.Parts, v.(string))
+	})
 }
 func (self *Shard) clear(o Operation, r *Response) {
 	if !self.okArity(o, 0, r) {
@@ -282,9 +287,13 @@ func (self *Shard) del(o Operation, r *Response) {
 		return
 	}
 	self.log(o)
-	self.hash.Del(o.Parameters[0])
-	r.Result = OK
-	r.Parts = nil
+	if old, ok := self.hash.Delete(gotomic.StringKey(o.Parameters[0])); ok {
+		r.Result = OK | EXISTS
+		r.Parts = []string{old.(string)}
+	} else {
+		r.Result = OK | MISSING
+		r.Parts = nil
+	}
 }
 func (self *Shard) Perform(o Operation, r *Response) {
 	switch o.Command {

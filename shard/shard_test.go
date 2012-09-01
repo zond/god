@@ -23,7 +23,7 @@ func TestShardBasicOps(t *testing.T) {
 		t.Errorf("while trying to create empty shard: %v", err)
 	}
 	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | MISSING, nil})
-	testPerform(t, s, Operation{PUT, []string{"k", "v"}}, Response{OK, nil})
+	testPerform(t, s, Operation{PUT, []string{"k", "v"}}, Response{OK | MISSING, nil})
 	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
 	s, err = NewShard("test1")
 	if err != nil {
@@ -32,8 +32,8 @@ func TestShardBasicOps(t *testing.T) {
 	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
 	testPerform(t, s, Operation{CLEAR, []string{}}, Response{OK, nil})
 	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | MISSING, nil})
-	testPerform(t, s, Operation{PUT, []string{"k", "v"}}, Response{OK, nil})
+	testPerform(t, s, Operation{PUT, []string{"k", "v"}}, Response{OK | MISSING, nil})
 	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
-	testPerform(t, s, Operation{DELETE, []string{"k"}}, Response{OK, nil})
+	testPerform(t, s, Operation{DELETE, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
 	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | MISSING, nil})
 }
