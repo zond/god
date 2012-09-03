@@ -23,4 +23,5 @@ _testmain.go
 *.kch
 *~
 test1
+test2
 bench1

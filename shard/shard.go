@@ -17,7 +17,7 @@ type Shard struct {
 	conf map[string]interface{}
 }
 func NewShard(dir string) (*Shard, error) {
-	rval := &Shard{gotomic.NewHash(), dir, make(chan loggedOperation), false, 0, nil}
+	rval := &Shard{gotomic.NewHash(), dir, make(chan loggedOperation), false, 0, make(map[string]interface{})}
 	if err := os.MkdirAll(rval.dir, 0700); err != nil {
 		panic(fmt.Errorf("When trying to create %v for %v: %v", rval.dir, rval, err))
 	}

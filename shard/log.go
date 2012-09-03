@@ -36,8 +36,14 @@ func (self logNames) Len() int {
 	return len(self)
 }
 func (self logNames) Less(i, j int) bool {
-	vi, _ := strconv.ParseUint(logPattern.FindStringSubmatch(self[i])[1], 10, 64)
-	vj, _ := strconv.ParseUint(logPattern.FindStringSubmatch(self[j])[1], 10, 64)
+	vi := uint64(0)
+	vj := uint64(0)
+	if logPattern.MatchString(self[i]) {
+		vi, _ = strconv.ParseUint(logPattern.FindStringSubmatch(self[i])[1], 10, 64)
+	}
+	if logPattern.MatchString(self[j]) {
+		vj, _ = strconv.ParseUint(logPattern.FindStringSubmatch(self[j])[1], 10, 64)
+	}
 	return vi < vj
 }
 func (self logNames) Swap(i, j int) {
@@ -63,29 +69,7 @@ func (self *Shard) loadPath(path string) error {
 	}
 	return nil
 }
-func (self *Shard) getLastSnapshot() (filename string, ok bool, t time.Time) {
-        directory, err := os.Open(self.dir)
-        if err != nil {
-		panic(fmt.Errorf("While trying to find last snapshot for %: %v", self, err))
-        }
-        children, err := directory.Readdirnames(-1)
-        if err != nil {
-		panic(fmt.Errorf("While trying to find last snapshot for %v: %v", self, err))
-        }
-	sort.Sort(logNames(children))
-	for i := len(children) -1; i > -1; i-- {
-		child := children[i]
-		if snapshotPattern.MatchString(child) {
-			filename = child
-			tmp, _ := strconv.ParseInt(snapshotPattern.FindStringSubmatch(child)[1], 10, 64)
-			t = time.Unix(0, tmp)
-			ok = true
-			return
-		}
-	}
-	return
-}
-func (self *Shard) getStreams(after time.Time) []string {
+func (self *Shard) getLogs() []string {
         directory, err := os.Open(self.dir)
         if err != nil {
                 panic(fmt.Errorf("While trying to find streams for %v: %v", self, err))
@@ -95,8 +79,38 @@ func (self *Shard) getStreams(after time.Time) []string {
 		panic(fmt.Errorf("While trying to find streams for %v: %v", self, err))
         }
         sort.Sort(logNames(children))
+	return children
+}
+func (self *Shard) getLastSnapshot() (filename string, ok bool, t time.Time) {
+	logs := self.getLogs()
+	for i := len(logs) -1; i > -1; i-- {
+		log := logs[i]
+		if snapshotPattern.MatchString(log) {
+			filename = log
+			tmp, _ := strconv.ParseInt(snapshotPattern.FindStringSubmatch(log)[1], 10, 64)
+			t = time.Unix(0, tmp)
+			ok = true
+			return
+		}
+	}
+	return
+}
+func (self *Shard) getStreamsBefore(before time.Time) []string {
 	var rval []string
-	for _, child := range children {
+	for _, child := range self.getLogs() {
+		if streamPattern.MatchString(child) {
+			tmp, _ := strconv.ParseInt(streamPattern.FindStringSubmatch(child)[1], 10, 64)
+			t := time.Unix(0, tmp)
+			if t.Before(before) {
+				rval = append(rval, child)
+			}
+		}
+	}
+	return rval
+}
+func (self *Shard) getStreamsAfter(after time.Time) []string {
+	var rval []string
+	for _, child := range self.getLogs() {
 		if streamPattern.MatchString(child) {
 			tmp, _ := strconv.ParseInt(streamPattern.FindStringSubmatch(child)[1], 10, 64)
 			t := time.Unix(0, tmp)
@@ -113,7 +127,7 @@ func (self *Shard) load() {
 	if snapshotFound {
 		self.loadPath(latestSnapshot)
 	}
-	for _, stream := range self.getStreams(snapshotTime) {
+	for _, stream := range self.getStreamsAfter(snapshotTime) {
 	        self.loadPath(filepath.Join(self.dir, stream))
         }
 	self.restoring = false
@@ -145,6 +159,11 @@ func (self *Shard) snapshot(t time.Time) {
 		snapshot.Close()
 		if err = os.Rename(tmpfilename, filename); err != nil {
 			panic(fmt.Errorf("While trying to rename %v to %v: %v", tmpfilename, filename, err))
+		}
+		for _, stream := range self.getStreamsBefore(t) {
+			if err := os.Remove(filepath.Join(self.dir, stream)); err != nil {
+				panic(fmt.Errorf("While trying to remove %v: %v", stream, err))
+			}
 		}
 	}
 }
@@ -181,7 +200,10 @@ func (self *Shard) store() {
 	}
 	logfile.Close()
 }
-func (self *Shard) getMaxLogSize() int64 {
+func (self *Shard) SetMaxLogSize(m int64) {
+	self.conf[maxLogSize] = m
+}
+func (self *Shard) GetMaxLogSize() int64 {
 	if v, ok := self.conf[maxLogSize]; ok {
 		return v.(int64)
 	}
@@ -192,7 +214,7 @@ func (self *Shard) tooLargeLog(logfile *os.File) bool {
 	if err != nil {
 		panic(fmt.Errorf("When trying to stat %v: %v", logfile, err))
 	} 
-	if info.Size() > self.getMaxLogSize() {
+	if info.Size() > self.GetMaxLogSize() {
 		return true
 	}
 	return false
