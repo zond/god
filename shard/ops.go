@@ -79,9 +79,6 @@ type Response struct {
 	Result Result
 	Parts []string
 }
-func (self Response) Ok() bool {
-	return self.Result & OK == OK
-}
 
 func (self *Shard) put(o Operation, r *Response) {
 	if !self.okArity(o, 2, r) {

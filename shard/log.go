@@ -22,14 +22,14 @@ const (
 	defaultMaxLogSize = 1024 * 1024 * 128
 )
 
+var streamPattern = regexp.MustCompile("^stream-(\\d+)\\.log$")
+var snapshotPattern = regexp.MustCompile("^snapshot-(\\d+)\\.log$")
+var logPattern = regexp.MustCompile("^\\w+-(\\d+)\\.log$")
+
 type loggedOperation struct {
 	operation Operation
 	done chan bool
 }
-
-var streamPattern = regexp.MustCompile("^stream-(\\d+)\\.log$")
-var snapshotPattern = regexp.MustCompile("^snapshot-(\\d+)\\.log$")
-var logPattern = regexp.MustCompile("^\\w+-(\\d+)\\.log$")
 
 type logNames []string
 func (self logNames) Len() int {
@@ -128,6 +128,7 @@ func (self *Shard) newStreamFile() *os.File {
 }
 func (self *Shard) snapshot() {
 	if atomic.CompareAndSwapInt32(&self.snapshotting, 0, 1) {
+		fmt.Println("implement snapshot!")
 		defer atomic.StoreInt32(&self.snapshotting, 0)
 	}
 }
