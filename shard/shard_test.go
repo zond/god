@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 	"reflect"
+	"fmt"
 )
 
 func testPerform(t *testing.T, s *Shard, o Operation, expected Response) {
@@ -16,6 +17,24 @@ func testPerform(t *testing.T, s *Shard, o Operation, expected Response) {
 	}
 	if !reflect.DeepEqual(r.Parts, expected.Parts) {
 		t.Errorf("s.Perform(%v, ...) expected %v but got %v", o, expected, r)
+	}
+}
+
+func BenchmarkShardPut(b *testing.B) {
+	b.StopTimer()
+	s, err := NewEmptyShard("test2")
+	if err != nil {
+		b.Errorf("while trying to create empty shard: %v", err)
+	}
+	r := &Response{}
+	o := Operation{Command: PUT, Parameters: []string{"", "v"}}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		o.Parameters[0] = fmt.Sprint("k", i)
+		s.Perform(o, r)
+		if r.Result & OK != OK {
+			b.Fatalf("%v produced %v", o, r)
+		}
 	}
 }
 
