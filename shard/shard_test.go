@@ -2,6 +2,8 @@
 package shard
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"reflect"
 )
@@ -27,6 +29,17 @@ func TestShardSnapshot(t *testing.T) {
 	testPerform(t, s, Operation{PUT, []string{"k", "v"}}, Response{OK | MISSING, nil})
 	testPerform(t, s, Operation{PUT, []string{"k", "v"}}, Response{OK | EXISTS, []string{"v"}})
 	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
+	s, err = NewShard("test2")
+	if err != nil {
+		t.Errorf("while trying to load shard: %v", err)
+	}
+	testPerform(t, s, Operation{PUT, []string{"k", "v"}}, Response{OK | EXISTS, []string{"v"}})
+	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
+	for _, log := range s.getLogs() {
+		if !snapshotPattern.MatchString(log) {
+			os.Remove(filepath.Join(s.dir, log))
+		}
+	}
 	s, err = NewShard("test2")
 	if err != nil {
 		t.Errorf("while trying to load shard: %v", err)

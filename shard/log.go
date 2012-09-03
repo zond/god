@@ -125,7 +125,7 @@ func (self *Shard) load() {
 	self.restoring = true
 	latestSnapshot, snapshotFound, snapshotTime := self.getLastSnapshot()
 	if snapshotFound {
-		self.loadPath(latestSnapshot)
+		self.loadPath(filepath.Join(self.dir, latestSnapshot))
 	}
 	for _, stream := range self.getStreamsAfter(snapshotTime) {
 	        self.loadPath(filepath.Join(self.dir, stream))
