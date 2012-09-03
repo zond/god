@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	snapshot = "snapshot-%v.log"
+	snapshotFormat = "snapshot-%v.log"
 	streamFormat = "stream-%v.log"
 	maxLogSize = "maxLogSize"
 	defaultMaxLogSize = 1024 * 1024 * 128
@@ -36,8 +36,8 @@ func (self logNames) Len() int {
 	return len(self)
 }
 func (self logNames) Less(i, j int) bool {
-	vi, _ := strconv.ParseUint(logPattern.FindString(self[i]), 10, 64)
-	vj, _ := strconv.ParseUint(logPattern.FindString(self[j]), 10, 64)
+	vi, _ := strconv.ParseUint(logPattern.FindStringSubmatch(self[i])[1], 10, 64)
+	vj, _ := strconv.ParseUint(logPattern.FindStringSubmatch(self[j])[1], 10, 64)
 	return vi < vj
 }
 func (self logNames) Swap(i, j int) {
@@ -47,7 +47,7 @@ func (self logNames) Swap(i, j int) {
 func (self *Shard) loadPath(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
-		panic(fmt.Errorf("While trying to load %v for %v: %v", path, self, err))
+		panic(fmt.Errorf("While trying to load %v: %v", path, err))
 	}
 	defer file.Close()
 	decoder := gob.NewDecoder(file)
@@ -59,14 +59,14 @@ func (self *Shard) loadPath(path string) error {
 		err = decoder.Decode(&operation)
 	}
 	if err != io.EOF {
-		panic(fmt.Errorf("While trying to load %v for %v: %v", path, self, err))
+		panic(fmt.Errorf("While trying to load %v: %v", path, err))
 	}
 	return nil
 }
 func (self *Shard) getLastSnapshot() (filename string, ok bool, t time.Time) {
         directory, err := os.Open(self.dir)
         if err != nil {
-		panic(fmt.Errorf("While trying to find last snapshot for %v: %v", self, err))
+		panic(fmt.Errorf("While trying to find last snapshot for %: %v", self, err))
         }
         children, err := directory.Readdirnames(-1)
         if err != nil {
@@ -77,7 +77,7 @@ func (self *Shard) getLastSnapshot() (filename string, ok bool, t time.Time) {
 		child := children[i]
 		if snapshotPattern.MatchString(child) {
 			filename = child
-			tmp, _ := strconv.ParseInt(snapshotPattern.FindString(child), 10, 64)
+			tmp, _ := strconv.ParseInt(snapshotPattern.FindStringSubmatch(child)[1], 10, 64)
 			t = time.Unix(0, tmp)
 			ok = true
 			return
@@ -98,9 +98,9 @@ func (self *Shard) getStreams(after time.Time) []string {
 	var rval []string
 	for _, child := range children {
 		if streamPattern.MatchString(child) {
-			tmp, _ := strconv.ParseInt(streamPattern.FindString(child), 10, 64)
+			tmp, _ := strconv.ParseInt(streamPattern.FindStringSubmatch(child)[1], 10, 64)
 			t := time.Unix(0, tmp)
-			if t.After(after) {
+			if after.IsZero() || !after.Before(t) {
 				rval = append(rval, child)
 			}
 		}
@@ -118,25 +118,42 @@ func (self *Shard) load() {
         }
 	self.restoring = false
 }
-func (self *Shard) newStreamFile() *os.File {
-	filename := filepath.Join(self.dir, fmt.Sprintf(streamFormat, time.Now().UnixNano()))
+func (self *Shard) newStreamFile(t time.Time) *os.File {
+	filename := filepath.Join(self.dir, fmt.Sprintf(streamFormat, t.UnixNano()))
 	logfile, err := os.Create(filename)
 	if err != nil {
 		panic(fmt.Errorf("While trying to create %v: %v", filename, err))
 	}
 	return logfile
 }
-func (self *Shard) snapshot() {
+func (self *Shard) snapshot(t time.Time) {
 	if atomic.CompareAndSwapInt32(&self.snapshotting, 0, 1) {
-		fmt.Println("implement snapshot!")
 		defer atomic.StoreInt32(&self.snapshotting, 0)
+
+		filename := filepath.Join(self.dir, fmt.Sprintf(snapshotFormat, t.UnixNano()))
+		tmpfilename := fmt.Sprint(filename, ".spool")
+		snapshot, err := os.Create(tmpfilename)
+		if err != nil {
+			panic(fmt.Errorf("While trying to create %v: %v", tmpfilename, err))
+		}
+		encoder := gob.NewEncoder(snapshot)
+		self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) {
+			if err = encoder.Encode(&Operation{PUT, []string{string(k.(gotomic.StringKey)), v.(string)}}); err != nil {
+				panic(fmt.Errorf("While trying to create %v: %v", tmpfilename, err))
+			}
+		}) 
+		snapshot.Close()
+		if err = os.Rename(tmpfilename, filename); err != nil {
+			panic(fmt.Errorf("While trying to rename %v to %v: %v", tmpfilename, filename, err))
+		}
 	}
 }
 func (self *Shard) store() {
-	logfile := self.newStreamFile()
+	logfile := self.newStreamFile(time.Now())
 	encoder := gob.NewEncoder(logfile)
 	for entry := range self.logChannel {
 		if entry.operation.Command == CLEAR {
+			logfile.Close()
 			if err := os.RemoveAll(self.dir); err != nil {
 				panic(fmt.Errorf("While trying to clear %v: %v", self, err))
 			}
@@ -144,7 +161,7 @@ func (self *Shard) store() {
 				panic(fmt.Errorf("While trying to clear %v: %v", self, err))
 			}
 			self.hash = gotomic.NewHash()
-			logfile = self.newStreamFile()
+			logfile = self.newStreamFile(time.Now())
 			encoder = gob.NewEncoder(logfile)
 		} else {
 			if err := encoder.Encode(entry.operation); err != nil {
@@ -152,8 +169,10 @@ func (self *Shard) store() {
 			}
 			if self.tooLargeLog(logfile) {
 				logfile.Close()
-				go self.snapshot()
-				logfile = self.newStreamFile()
+				t := time.Now()
+				go self.snapshot(t)
+				logfile = self.newStreamFile(t)
+				encoder = gob.NewEncoder(logfile)
 			}
 		}
 		if entry.done != nil {
