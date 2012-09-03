@@ -95,19 +95,6 @@ func (self *Shard) getLastSnapshot() (filename string, ok bool, t time.Time) {
 	}
 	return
 }
-func (self *Shard) getStreamsBefore(before time.Time) []string {
-	var rval []string
-	for _, child := range self.getLogs() {
-		if streamPattern.MatchString(child) {
-			tmp, _ := strconv.ParseInt(streamPattern.FindStringSubmatch(child)[1], 10, 64)
-			t := time.Unix(0, tmp)
-			if t.Before(before) {
-				rval = append(rval, child)
-			}
-		}
-	}
-	return rval
-}
 func (self *Shard) getStreamsAfter(after time.Time) []string {
 	var rval []string
 	for _, child := range self.getLogs() {
@@ -160,9 +147,13 @@ func (self *Shard) snapshot(t time.Time) {
 		if err = os.Rename(tmpfilename, filename); err != nil {
 			panic(fmt.Errorf("While trying to rename %v to %v: %v", tmpfilename, filename, err))
 		}
-		for _, stream := range self.getStreamsBefore(t) {
-			if err := os.Remove(filepath.Join(self.dir, stream)); err != nil {
-				panic(fmt.Errorf("While trying to remove %v: %v", stream, err))
+		for _, log := range self.getLogs() {
+			tmp, _ := strconv.ParseInt(logPattern.FindStringSubmatch(log)[1], 10, 64)
+			logtime := time.Unix(0, tmp)
+			if logtime.Before(t) {
+				if err := os.Remove(filepath.Join(self.dir, log)); err != nil {
+					panic(fmt.Errorf("While trying to remove %v: %v", log, err))
+				}
 			}
 		}
 	}
