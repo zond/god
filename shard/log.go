@@ -151,9 +151,7 @@ func (self *Shard) snapshot(t time.Time) {
 			tmp, _ := strconv.ParseInt(logPattern.FindStringSubmatch(log)[1], 10, 64)
 			logtime := time.Unix(0, tmp)
 			if logtime.Before(t) {
-				if err := os.Remove(filepath.Join(self.dir, log)); err != nil {
-					panic(fmt.Errorf("While trying to remove %v: %v", log, err))
-				}
+				os.Remove(filepath.Join(self.dir, log))
 			}
 		}
 	}
