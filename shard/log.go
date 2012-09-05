@@ -26,6 +26,11 @@ var streamPattern = regexp.MustCompile("^stream-(\\d+)\\.log$")
 var snapshotPattern = regexp.MustCompile("^snapshot-(\\d+)\\.log$")
 var logPattern = regexp.MustCompile("^\\w+-(\\d+)\\.log$")
 
+type slave struct {
+	snapshot chan Operation
+	stream chan Operation
+}
+
 type loggedOperation struct {
 	operation Operation
 	done chan bool
@@ -139,8 +144,9 @@ func (self *Shard) snapshot(t time.Time) {
 		}
 		encoder := gob.NewEncoder(snapshot)
 		self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) {
-			if err = encoder.Encode(&Operation{PUT, []string{string(k.(gotomic.StringKey)), v.(string)}}); err != nil {
-				panic(fmt.Errorf("While trying to create %v: %v", tmpfilename, err))
+			op := Operation{PUT, []string{string(k.(gotomic.StringKey)), v.(string)}}
+			if err = encoder.Encode(op); err != nil {
+				panic(fmt.Errorf("While trying to encode %v: %v", op, err))
 			}
 		}) 
 		snapshot.Close()
@@ -156,35 +162,65 @@ func (self *Shard) snapshot(t time.Time) {
 		}
 	}
 }
+func (self *Shard) flushSnapshot(log chan Operation) {
+	self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) {
+		log <- Operation{PUT, []string{string(k.(gotomic.StringKey)), v.(string)}}
+	});
+}
 func (self *Shard) store() {
+	slaves := make(map[slave]bool)
 	logfile := self.newStreamFile(time.Now())
 	encoder := gob.NewEncoder(logfile)
-	for entry := range self.logChannel {
-		if entry.operation.Command == CLEAR {
-			logfile.Close()
-			if err := os.RemoveAll(self.dir); err != nil {
-				panic(fmt.Errorf("While trying to clear %v: %v", self, err))
+	for {
+		select {
+		case entry, ok := <- self.logChannel:
+			if !ok {
+				return
 			}
-			if err := os.MkdirAll(self.dir, 0700); err != nil {
-				panic(fmt.Errorf("While trying to clear %v: %v", self, err))
-			}
-			self.hash = gotomic.NewHash()
-			logfile = self.newStreamFile(time.Now())
-			encoder = gob.NewEncoder(logfile)
-		} else {
-			if err := encoder.Encode(entry.operation); err != nil {
-				panic(fmt.Errorf("While trying to log %v: %v", entry.operation, err))
-			}
-			if self.tooLargeLog(logfile) {
+			if entry.operation.Command == CLEAR {
 				logfile.Close()
-				t := time.Now()
-				go self.snapshot(t)
-				logfile = self.newStreamFile(t)
+				if err := os.RemoveAll(self.dir); err != nil {
+					panic(fmt.Errorf("While trying to clear %v: %v", self, err))
+				}
+				if err := os.MkdirAll(self.dir, 0700); err != nil {
+					panic(fmt.Errorf("While trying to clear %v: %v", self, err))
+				}
+				self.hash = gotomic.NewHash()
+				logfile = self.newStreamFile(time.Now())
 				encoder = gob.NewEncoder(logfile)
+			} else {
+				if err := encoder.Encode(entry.operation); err != nil {
+					panic(fmt.Errorf("While trying to log %v: %v", entry.operation, err))
+				}
+				for slave, _ := range slaves {
+					slave.stream <- entry.operation
+				}
+				if self.tooLargeLog(logfile) {
+					logfile.Close()
+					t := time.Now()
+					go self.snapshot(t)
+					logfile = self.newStreamFile(t)
+					encoder = gob.NewEncoder(logfile)
+				}
 			}
+			if entry.done != nil {
+				entry.done <- true
+			}
+		case slave, ok := <- self.slaveChannel:
+			if !ok {
+				return
+			}
+			slaves[slave] = true
+			go self.flushSnapshot(slave.snapshot)
 		}
-		if entry.done != nil {
-			entry.done <- true
+		select {
+		case slave, ok := <- self.slaveChannel:
+			if !ok {
+				return
+			}
+			slaves[slave] = true
+			go self.flushSnapshot(slave.snapshot)
+		default:
 		}
 	}
 	logfile.Close()
