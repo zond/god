@@ -61,15 +61,16 @@ func (self *Shard) addSlave(snapshot, stream chan Operation) {
 	self.slaveChannel <- slave{snapshot, stream}
 }
 func (self *Shard) setMaster(snapshot, stream chan Operation) {
-	go self.bufferMaster(stream)
+	sem := newSemaphore()
+	go self.bufferMaster(stream, sem)
 	response := &Response{}
 	self.Perform(Operation{CLEAR, []string{}}, response)
 	if response.Result & OK != OK {
 		panic(fmt.Errorf("When trying to clear: %v", response))
 	}
-	go self.followMaster(snapshot)
+	go self.followMaster(snapshot, sem)
 }
-func (self *Shard) followMaster(snapshot chan Operation) {
+func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
 	response := &Response{}
 	for op := range snapshot {
 		self.Perform(op, response)
@@ -77,14 +78,25 @@ func (self *Shard) followMaster(snapshot chan Operation) {
 			panic(fmt.Errorf("While trying to perform %v: %v", op, response))
 		}
 	}
+	/*
+	 find the oldest follow-file
+	 follow it to the end
+	 wait for the semaphore
+	 see if there is more to read
+	 - if there isn't: see if there are more files
+	 -- if there are, find the oldest follow-file...
+	 -- if there arent, wait for the semaphore
+	 - if there is, read it
+	 */
 }
-func (self *Shard) bufferMaster(stream chan Operation) {
+func (self *Shard) bufferMaster(stream chan Operation, sem *semaphore) {
 	logfile := self.newLogFile(time.Now(), followFormat)
 	encoder := gob.NewEncoder(logfile)
 	for op := range stream {
 		if err := encoder.Encode(op); err != nil {
 			panic(fmt.Errorf("While trying to log %v: %v", op, err))
 		}
+		sem.broadcast()
 		if self.tooLargeLog(logfile) {
 			logfile.Close()
 			logfile = self.newLogFile(time.Now(), followFormat)
