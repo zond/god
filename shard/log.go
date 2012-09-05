@@ -18,11 +18,13 @@ import (
 const (
 	snapshotFormat = "snapshot-%v.log"
 	streamFormat = "stream-%v.log"
+	followFormat = "follow-%v.log"
 	maxLogSize = "maxLogSize"
 	defaultMaxLogSize = 1024 * 1024 * 128
 )
 
 var streamPattern = regexp.MustCompile("^stream-(\\d+)\\.log$")
+var followPattern = regexp.MustCompile("^follow-(\\d+)\\.log$")
 var snapshotPattern = regexp.MustCompile("^snapshot-(\\d+)\\.log$")
 var logPattern = regexp.MustCompile("^\\w+-(\\d+)\\.log$")
 
@@ -55,6 +57,41 @@ func (self logNames) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
+func (self *Shard) addSlave(snapshot, stream chan Operation) {
+	self.slaveChannel <- slave{snapshot, stream}
+}
+func (self *Shard) setMaster(snapshot, stream chan Operation) {
+	go self.bufferMaster(stream)
+	response := &Response{}
+	self.Perform(Operation{CLEAR, []string{}}, response)
+	if response.Result & OK != OK {
+		panic(fmt.Errorf("When trying to clear: %v", response))
+	}
+	go self.followMaster(snapshot)
+}
+func (self *Shard) followMaster(snapshot chan Operation) {
+	response := &Response{}
+	for op := range snapshot {
+		self.Perform(op, response)
+		if response.Result & OK != OK {
+			panic(fmt.Errorf("While trying to perform %v: %v", op, response))
+		}
+	}
+}
+func (self *Shard) bufferMaster(stream chan Operation) {
+	logfile := self.newLogFile(time.Now(), followFormat)
+	encoder := gob.NewEncoder(logfile)
+	for op := range stream {
+		if err := encoder.Encode(op); err != nil {
+			panic(fmt.Errorf("While trying to log %v: %v", op, err))
+		}
+		if self.tooLargeLog(logfile) {
+			logfile.Close()
+			logfile = self.newLogFile(time.Now(), followFormat)
+			encoder = gob.NewEncoder(logfile)
+		}
+	}
+}
 func (self *Shard) loadPath(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
@@ -124,8 +161,8 @@ func (self *Shard) load() {
         }
 	self.restoring = false
 }
-func (self *Shard) newStreamFile(t time.Time) *os.File {
-	filename := filepath.Join(self.dir, fmt.Sprintf(streamFormat, t.UnixNano()))
+func (self *Shard) newLogFile(t time.Time, format string) *os.File {
+	filename := filepath.Join(self.dir, fmt.Sprintf(format, t.UnixNano()))
 	logfile, err := os.Create(filename)
 	if err != nil {
 		panic(fmt.Errorf("While trying to create %v: %v", filename, err))
@@ -166,10 +203,11 @@ func (self *Shard) flushSnapshot(log chan Operation) {
 	self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) {
 		log <- Operation{PUT, []string{string(k.(gotomic.StringKey)), v.(string)}}
 	});
+	close(log)
 }
 func (self *Shard) store() {
 	slaves := make(map[slave]bool)
-	logfile := self.newStreamFile(time.Now())
+	logfile := self.newLogFile(time.Now(), streamFormat)
 	encoder := gob.NewEncoder(logfile)
 	for {
 		select {
@@ -186,22 +224,22 @@ func (self *Shard) store() {
 					panic(fmt.Errorf("While trying to clear %v: %v", self, err))
 				}
 				self.hash = gotomic.NewHash()
-				logfile = self.newStreamFile(time.Now())
+				logfile = self.newLogFile(time.Now(), streamFormat)
 				encoder = gob.NewEncoder(logfile)
 			} else {
 				if err := encoder.Encode(entry.operation); err != nil {
 					panic(fmt.Errorf("While trying to log %v: %v", entry.operation, err))
 				}
-				for slave, _ := range slaves {
-					slave.stream <- entry.operation
-				}
 				if self.tooLargeLog(logfile) {
 					logfile.Close()
 					t := time.Now()
 					go self.snapshot(t)
-					logfile = self.newStreamFile(t)
+					logfile = self.newLogFile(t, streamFormat)
 					encoder = gob.NewEncoder(logfile)
 				}
+			}
+			for slave, _ := range slaves {
+				slave.stream <- entry.operation
 			}
 			if entry.done != nil {
 				entry.done <- true
