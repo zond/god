@@ -84,6 +84,13 @@ func (self *Shard) getLogs() []string {
         sort.Sort(logNames(children))
 	return children
 }
+func (self *Shard) closeLogs() {
+	close(self.slaveChannel)
+	close(self.logChannel)
+}
+func (self *Shard) isClosed() bool {
+	return atomic.LoadInt32(&self.closed) == 1
+}
 func (self *Shard) getLastSnapshot() (filename string, t time.Time, ok bool) {
 	logs := self.getLogs()
 	for i := len(logs) -1; i > -1; i-- {
@@ -141,28 +148,35 @@ func (self *Shard) snapshot(t time.Time) {
 			panic(fmt.Errorf("While trying to create %v: %v", tmpfilename, err))
 		}
 		encoder := gob.NewEncoder(snapshot)
-		self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) {
+		self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) bool {
+			if self.isClosed() {
+				return false
+			}
 			op := Operation{PUT, []string{string(k.(gotomic.StringKey)), v.(string)}}
 			if err = encoder.Encode(op); err != nil {
 				panic(fmt.Errorf("While trying to encode %v: %v", op, err))
 			}
+			return true
 		}) 
 		snapshot.Close()
-		if err = os.Rename(tmpfilename, filename); err != nil {
-			panic(fmt.Errorf("While trying to rename %v to %v: %v", tmpfilename, filename, err))
-		}
-		for _, log := range self.getLogs() {
-			tmp, _ := strconv.ParseInt(logPattern.FindStringSubmatch(log)[1], 10, 64)
-			logtime := time.Unix(0, tmp)
-			if logtime.Before(t) {
-				os.Remove(filepath.Join(self.dir, log))
+		if err = os.Rename(tmpfilename, filename); err == nil {
+			for _, log := range self.getLogs() {
+				tmp, _ := strconv.ParseInt(logPattern.FindStringSubmatch(log)[1], 10, 64)
+				logtime := time.Unix(0, tmp)
+				if logtime.Before(t) {
+					os.Remove(filepath.Join(self.dir, log))
+				}
 			}
 		}
 	}
 }
 func (self *Shard) flushSnapshot(log chan Operation) {
-	self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) {
+	self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) bool {
+		if self.isClosed() {
+			return false
+		}
 		log <- Operation{PUT, []string{string(k.(gotomic.StringKey)), v.(string)}}
+		return true
 	});
 	close(log)
 }
@@ -174,15 +188,15 @@ func (self *Shard) store() {
 		select {
 		case entry, ok := <- self.logChannel:
 			if !ok {
+				self.cleanSlaves(slaves)
 				return
 			}
 			if entry.operation.Command == CLEAR {
 				logfile.Close()
-				if err := os.RemoveAll(self.dir); err != nil {
-					panic(fmt.Errorf("While trying to clear %v: %v", self, err))
-				}
-				if err := os.MkdirAll(self.dir, 0700); err != nil {
-					panic(fmt.Errorf("While trying to clear %v: %v", self, err))
+				for _, log := range self.getLogs() {
+					if err := os.Remove(filepath.Join(self.dir, log)); err != nil {
+						panic(fmt.Errorf("While trying to clear %v: %v", self, err))
+					}
 				}
 				self.hash = gotomic.NewHash()
 				logfile = self.newLogFile(time.Now(), streamFormat)
@@ -207,6 +221,7 @@ func (self *Shard) store() {
 			}
 		case slave, ok := <- self.slaveChannel:
 			if !ok {
+				self.cleanSlaves(slaves)
 				return
 			}
 			slaves[slave] = true
@@ -215,6 +230,7 @@ func (self *Shard) store() {
 		select {
 		case slave, ok := <- self.slaveChannel:
 			if !ok {
+				self.cleanSlaves(slaves)
 				return
 			}
 			slaves[slave] = true
@@ -223,6 +239,12 @@ func (self *Shard) store() {
 		}
 	}
 	logfile.Close()
+}
+func (self *Shard) cleanSlaves(slaves map[slave]bool) {
+	for slave, _ := range slaves {
+		close(slave.snapshot)
+		close(slave.stream)
+	}
 }
 func (self *Shard) SetMaxLogSize(m int64) {
 	self.conf[maxLogSize] = m

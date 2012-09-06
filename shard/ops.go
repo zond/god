@@ -99,8 +99,9 @@ func (self *Shard) keys(o Operation, r *Response) {
 	}
 	r.Result = OK
 	r.Parts = nil
-	self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) {
+	self.hash.Each(func(k gotomic.Hashable, v gotomic.Thing) bool {
 		r.Parts = append(r.Parts, v.(string))
+		return true
 	})
 }
 func (self *Shard) clear(o Operation, r *Response) {
