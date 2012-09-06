@@ -60,62 +60,6 @@ func (self logNames) Swap(i, j int) {
 func (self *Shard) addSlave(snapshot, stream chan Operation) {
 	self.slaveChannel <- slave{snapshot, stream}
 }
-func (self *Shard) setMaster(snapshot, stream chan Operation) {
-	sem := newSemaphore()
-	go self.bufferMaster(stream, sem)
-	response := &Response{}
-	self.Perform(Operation{CLEAR, []string{}}, response)
-	if response.Result & OK != OK {
-		panic(fmt.Errorf("When trying to clear: %v", response))
-	}
-	go self.followMaster(snapshot, sem)
-}
-func (self *Shard) getOldestFollow() string {
-	for _, log := range self.getLogs() {
-		if followPattern.MatchString(log) {
-			return log
-		}
-	}
-	panic(fmt.Errorf("There doesn't seem to be any follow logs!"))
-}
-func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
-	response := &Response{}
-	for op := range snapshot {
-		self.Perform(op, response)
-		if response.Result & OK != OK {
-			panic(fmt.Errorf("While trying to perform %v: %v", op, response))
-		}
-	}
-	for {
-		oldestFollow := self.getOldestFollow()
-		self.loadDecoder(newDecoderFile(oldestFollow))
-	}
-	/*
-	 find the oldest follow-file
-	 follow it to the end
-	 wait for the semaphore
-	 see if there is more to read
-	 - if there isn't: see if there are more files
-	 -- if there are, find the oldest follow-file...
-	 -- if there arent, wait for the semaphore
-	 - if there is, read it
-	 */
-}
-func (self *Shard) bufferMaster(stream chan Operation, sem *semaphore) {
-	logfile := self.newLogFile(time.Now(), followFormat)
-	encoder := gob.NewEncoder(logfile)
-	for op := range stream {
-		if err := encoder.Encode(op); err != nil {
-			panic(fmt.Errorf("While trying to log %v: %v", op, err))
-		}
-		sem.broadcast()
-		if self.tooLargeLog(logfile) {
-			logfile.Close()
-			logfile = self.newLogFile(time.Now(), followFormat)
-			encoder = gob.NewEncoder(logfile)
-		}
-	}
-}
 func (self *Shard) loadDecoder(decoder *decoderFile) {
 	operation := Operation{}
 	response := Response{}
@@ -143,7 +87,7 @@ func (self *Shard) getLogs() []string {
         sort.Sort(logNames(children))
 	return children
 }
-func (self *Shard) getLastSnapshot() (filename string, ok bool, t time.Time) {
+func (self *Shard) getLastSnapshot() (filename string, t time.Time, ok bool) {
 	logs := self.getLogs()
 	for i := len(logs) -1; i > -1; i-- {
 		log := logs[i]
@@ -172,7 +116,7 @@ func (self *Shard) getStreamsAfter(after time.Time) []string {
 }
 func (self *Shard) load() {
 	self.restoring = true
-	latestSnapshot, snapshotFound, snapshotTime := self.getLastSnapshot()
+	latestSnapshot, snapshotTime, snapshotFound := self.getLastSnapshot()
 	if snapshotFound {
 		self.loadDecoder(newDecoderFile(filepath.Join(self.dir, latestSnapshot)))
 	}
