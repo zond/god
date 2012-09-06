@@ -70,6 +70,14 @@ func (self *Shard) setMaster(snapshot, stream chan Operation) {
 	}
 	go self.followMaster(snapshot, sem)
 }
+func (self *Shard) getOldestFollow() string {
+	for _, log := range self.getLogs() {
+		if followPattern.MatchString(log) {
+			return log
+		}
+	}
+	panic(fmt.Errorf("There doesn't seem to be any follow logs!"))
+}
 func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
 	response := &Response{}
 	for op := range snapshot {
@@ -77,6 +85,10 @@ func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
 		if response.Result & OK != OK {
 			panic(fmt.Errorf("While trying to perform %v: %v", op, response))
 		}
+	}
+	for {
+		oldestFollow := self.getOldestFollow()
+		self.loadDecoder(newDecoderFile(oldestFollow))
 	}
 	/*
 	 find the oldest follow-file
@@ -104,24 +116,20 @@ func (self *Shard) bufferMaster(stream chan Operation, sem *semaphore) {
 		}
 	}
 }
-func (self *Shard) loadPath(path string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		panic(fmt.Errorf("While trying to load %v: %v", path, err))
-	}
-	defer file.Close()
-	decoder := gob.NewDecoder(file)
+func (self *Shard) loadDecoder(decoder *decoderFile) {
 	operation := Operation{}
 	response := Response{}
-	err = decoder.Decode(&operation)
+	err := decoder.Decode(&operation)
 	for err == nil {
 		self.Perform(operation, &response)
+		if response.Result & OK != OK {
+			panic(fmt.Errorf("Trying to perform %v resulted in %v", operation, response))
+		}
 		err = decoder.Decode(&operation)
 	}
 	if err != io.EOF {
-		panic(fmt.Errorf("While trying to load %v: %v", path, err))
+		panic(fmt.Errorf("While trying to load %v: %v", decoder, err))
 	}
-	return nil
 }
 func (self *Shard) getLogs() []string {
         directory, err := os.Open(self.dir)
@@ -166,10 +174,10 @@ func (self *Shard) load() {
 	self.restoring = true
 	latestSnapshot, snapshotFound, snapshotTime := self.getLastSnapshot()
 	if snapshotFound {
-		self.loadPath(filepath.Join(self.dir, latestSnapshot))
+		self.loadDecoder(newDecoderFile(filepath.Join(self.dir, latestSnapshot)))
 	}
 	for _, stream := range self.getStreamsAfter(snapshotTime) {
-	        self.loadPath(filepath.Join(self.dir, stream))
+	        self.loadDecoder(newDecoderFile(filepath.Join(self.dir, stream)))
         }
 	self.restoring = false
 }
