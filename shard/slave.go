@@ -9,14 +9,17 @@ import (
 	"encoding/gob"
 )
 
+func (self *Shard) addSlave(snapshot, stream chan Operation) {
+	self.slaveChannel <- slave{snapshot, stream}
+}
 func (self *Shard) setMaster(snapshot, stream chan Operation) {
-	sem := newSemaphore()
-	go self.bufferMaster(stream, sem)
 	response := &Response{}
 	self.Perform(Operation{CLEAR, []string{}}, response)
 	if response.Result & OK != OK {
 		panic(fmt.Errorf("When trying to clear: %v", response))
 	}
+	sem := newSemaphore()
+	go self.bufferMaster(stream, sem)
 	go self.followMaster(snapshot, sem)
 }
 func (self *Shard) getOldestFollow() (path string, t time.Time) {
@@ -53,6 +56,7 @@ func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
 			panic(fmt.Errorf("While trying to perform %v: %v", op, response))
 		}
 	}
+	sem.wait()
 	path, t := self.getOldestFollow()
 	decoder := newDecoderFile(filepath.Join(self.dir, path))
 	for {
@@ -69,6 +73,7 @@ func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
 }
 func (self *Shard) bufferMaster(stream chan Operation, sem *semaphore) {
 	logfile := self.newLogFile(time.Now(), followFormat)
+	sem.broadcast()
 	encoder := gob.NewEncoder(logfile)
 	for op := range stream {
 		if err := encoder.Encode(op); err != nil {

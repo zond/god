@@ -38,6 +38,29 @@ func BenchmarkShardPut(b *testing.B) {
 	}
 }
 
+func TestShardSlaving(t *testing.T) {
+	s, err := NewEmptyShard("test3")
+	if err != nil {
+		t.Errorf("while trying to create empty shard: %v", err)
+	}
+	s2, err := NewEmptyShard("test4")
+	if err != nil {
+		t.Errorf("while trying to create empty shard: %v", err)
+	}
+	testPerform(t, s2, Operation{GET, []string{"k"}}, Response{OK | MISSING, nil})
+	testPerform(t, s2, Operation{PUT, []string{"k", "v"}}, Response{OK | MISSING, nil})
+	testPerform(t, s2, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
+	snapshot := make(chan Operation)
+	stream := make(chan Operation)
+	s.addSlave(snapshot, stream)
+	s2.setMaster(snapshot, stream)
+	testPerform(t, s2, Operation{GET, []string{"k"}}, Response{OK | MISSING, nil})
+	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | MISSING, nil})
+	testPerform(t, s, Operation{PUT, []string{"k", "v"}}, Response{OK | MISSING, nil})
+	testPerform(t, s, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
+	
+}
+
 func TestShardSnapshot(t *testing.T) {
 	s, err := NewEmptyShard("test2")
 	if err != nil {

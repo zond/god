@@ -57,9 +57,6 @@ func (self logNames) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
-func (self *Shard) addSlave(snapshot, stream chan Operation) {
-	self.slaveChannel <- slave{snapshot, stream}
-}
 func (self *Shard) loadDecoder(decoder *decoderFile) {
 	operation := Operation{}
 	response := Response{}
