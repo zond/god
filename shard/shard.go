@@ -42,7 +42,7 @@ func NewShard(dir string) (*Shard, error) {
 }
 func (self *Shard) Close() {
 	self.stopSlavery()
-	self.closeLogs()
+	self.stopLogging()
 	atomic.StoreInt32(&self.closed, 1)
 }
 func NewEmptyShard(dir string) (*Shard, error) {

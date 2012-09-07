@@ -71,7 +71,7 @@ func (self *Shard) getLogs(pattern *regexp.Regexp) []string {
         sort.Sort(logNames(rval))
 	return rval
 }
-func (self *Shard) closeLogs() {
+func (self *Shard) stopLogging() {
 	close(self.slaveChannel)
 	close(self.logChannel)
 }
