@@ -57,7 +57,7 @@ func (self logNames) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
-func (self *Shard) loadDecoder(decoder *decoderFile) {
+func (self *Shard) loadDecoder(decoder *fileDecoder) {
 	operation := Operation{}
 	response := Response{}
 	err := decoder.Decode(&operation)
@@ -122,10 +122,10 @@ func (self *Shard) load() {
 	self.restoring = true
 	latestSnapshot, snapshotTime, snapshotFound := self.getLastSnapshot()
 	if snapshotFound {
-		self.loadDecoder(newDecoderFile(filepath.Join(self.dir, latestSnapshot)))
+		self.loadDecoder(newFileDecoder(filepath.Join(self.dir, latestSnapshot)))
 	}
 	for _, stream := range self.getStreamsAfter(snapshotTime) {
-	        self.loadDecoder(newDecoderFile(filepath.Join(self.dir, stream)))
+	        self.loadDecoder(newFileDecoder(filepath.Join(self.dir, stream)))
         }
 	self.restoring = false
 }

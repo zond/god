@@ -66,14 +66,14 @@ func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
 	}
 	sem.wait()
 	path, t := self.getOldestFollow()
-	decoder := newDecoderFile(filepath.Join(self.dir, path))
+	decoder := newFileDecoder(filepath.Join(self.dir, path))
 	for self.masterSnapshot == snapshot {
 		self.loadDecoder(decoder)
 		next_path, next_t, ok := self.getNextFollow(t)
 		if ok {
 			path = next_path
 			t = next_t
-			decoder = newDecoderFile(filepath.Join(self.dir, path))
+			decoder = newFileDecoder(filepath.Join(self.dir, path))
 		} else {
 			sem.wait()
 		}
