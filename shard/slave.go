@@ -9,6 +9,12 @@ import (
 	"encoding/gob"
 )
 
+/*
+ The entire slavery concept is NOT very resilient at the moment.
+
+ Changing master multiple times within a short timeframe may lead to unexpected behaviour.
+*/
+
 func (self *Shard) addSlave(snapshot, stream chan Operation) {
 	self.slaveChannel <- slave{snapshot, stream}
 }
@@ -36,6 +42,7 @@ func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
 		self.loadDecoder(decoder)
 		next_path, next_t, ok := self.getNextFollow(t)
 		if ok {
+			os.Remove(filepath.Join(self.dir, path))
 			path = next_path
 			t = next_t
 			decoder = newFileDecoder(filepath.Join(self.dir, path))
