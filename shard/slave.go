@@ -4,6 +4,7 @@ package shard
 import (
 	"fmt"
 	"strconv"
+	"os"
 	"time"
 	"path/filepath"
 	"encoding/gob"
@@ -91,7 +92,11 @@ func (self *Shard) stopSlavery() {
 	self.masterSnapshot = nil
 	self.masterStream = nil
 	self.masterStreamSem = nil
-	// ADD REMOVAL OF OLD FOLLOW FILES HERE!
+	for _, log := range self.getLogs() {
+		if followPattern.MatchString(log) {
+			os.Remove(filepath.Join(self.dir, log))
+		}
+	}
 }
 func (self *Shard) bufferMaster(stream chan Operation, sem *semaphore) {
 	logfile := self.newLogFile(time.Now(), followFormat)
