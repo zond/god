@@ -13,14 +13,6 @@ import (
 	"os"
 )
 
-const (
-	snapshotFormat = "snapshot-%v.log"
-	streamFormat = "stream-%v.log"
-	followFormat = "follow-%v.log"
-	maxLogSize = "maxLogSize"
-	defaultMaxLogSize = 1024 * 1024 * 128
-)
-
 type slave struct {
 	snapshot chan Operation
 	stream chan Operation

@@ -11,6 +11,14 @@ import (
 	"path/filepath"
 )
 
+const (
+	snapshotFormat = "snapshot-%v.log"
+	streamFormat = "stream-%v.log"
+	followFormat = "follow-%v.log"
+	maxLogSize = "maxLogSize"
+	defaultMaxLogSize = 1024 * 1024 * 128
+)
+
 var streamPattern = regexp.MustCompile("^stream-(\\d+)\\.log$")
 var followPattern = regexp.MustCompile("^follow-(\\d+)\\.log$")
 var snapshotPattern = regexp.MustCompile("^snapshot-(\\d+)\\.log$")
