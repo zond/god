@@ -13,11 +13,13 @@ import (
 func testPerformWithin(t *testing.T, s *Shard, o Operation, expected Response, within time.Duration) {
 	deadline := time.Now().Add(within)
 	for {
-		if err := doesPerform(s, o, expected); err != nil && time.Now().After(deadline) {
-			t.Error(err.Error())
+		if err := doesPerform(s, o, expected); err == nil {
 			return
 		} else {
-			return
+			if time.Now().After(deadline) {
+				t.Error(err.Error())
+				return
+			}
 		}
 		time.Sleep(time.Second / 10)
 	}
