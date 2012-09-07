@@ -3,7 +3,6 @@ package shard
 
 import (
 	"fmt"
-	"strconv"
 	"os"
 	"time"
 	"path/filepath"
@@ -26,26 +25,6 @@ func (self *Shard) setMaster(snapshot, stream chan Operation) {
 	self.masterStreamSem = sem
 	go self.bufferMaster(stream, sem)
 	go self.followMaster(snapshot, sem)
-}
-func (self *Shard) getOldestFollow() (path string, t time.Time) {
-	logs := self.getLogs(followPattern)
-	path = logs[len(logs) - 1]
-	tmp, _ := strconv.ParseInt(followPattern.FindStringSubmatch(path)[1], 10, 64)
-	t = time.Unix(0, tmp)
-	return
-}
-func (self *Shard) getNextFollow(after time.Time) (path string, t time.Time, ok bool) {
-	for _, log := range self.getLogs(followPattern) {
-		tmp, _ := strconv.ParseInt(followPattern.FindStringSubmatch(log)[1], 10, 64)
-		this_t := time.Unix(0, tmp)
-		if this_t.After(after) {
-			path = log
-			ok = true
-			t = this_t
-			return
-		}
-	}
-	return
 }
 func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
 	response := &Response{}
