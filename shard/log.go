@@ -53,7 +53,7 @@ func (self *Shard) loadDecoder(decoder *fileDecoder) {
 		panic(fmt.Errorf("While trying to load %v: %v", decoder, err))
 	}
 }
-func (self *Shard) getLogs() []string {
+func (self *Shard) getLogs(pattern *regexp.Regexp) []string {
         directory, err := os.Open(self.dir)
         if err != nil {
                 panic(fmt.Errorf("While trying to find streams for %v: %v", self, err))
@@ -62,8 +62,14 @@ func (self *Shard) getLogs() []string {
         if err != nil {
 		panic(fmt.Errorf("While trying to find streams for %v: %v", self, err))
         }
-        sort.Sort(logNames(children))
-	return children
+	var rval []string
+	for _, child := range children {
+		if pattern.MatchString(child) {
+			rval = append(rval, child)
+		}
+	}
+        sort.Sort(logNames(rval))
+	return rval
 }
 func (self *Shard) closeLogs() {
 	close(self.slaveChannel)
@@ -73,28 +79,23 @@ func (self *Shard) isClosed() bool {
 	return atomic.LoadInt32(&self.closed) == 1
 }
 func (self *Shard) getLastSnapshot() (filename string, t time.Time, ok bool) {
-	logs := self.getLogs()
-	for i := len(logs) -1; i > -1; i-- {
-		log := logs[i]
-		if snapshotPattern.MatchString(log) {
-			filename = log
-			tmp, _ := strconv.ParseInt(snapshotPattern.FindStringSubmatch(log)[1], 10, 64)
-			t = time.Unix(0, tmp)
-			ok = true
-			return
-		}
+	logs := self.getLogs(snapshotPattern)
+	if len(logs) > 0 {
+		filename = logs[len(logs) - 1]
+		tmp, _ := strconv.ParseInt(snapshotPattern.FindStringSubmatch(filename)[1], 10, 64)
+		t = time.Unix(0, tmp)
+		ok = true
+		return
 	}
 	return
 }
 func (self *Shard) getStreamsAfter(after time.Time) []string {
 	var rval []string
-	for _, child := range self.getLogs() {
-		if streamPattern.MatchString(child) {
-			tmp, _ := strconv.ParseInt(streamPattern.FindStringSubmatch(child)[1], 10, 64)
-			t := time.Unix(0, tmp)
-			if after.IsZero() || !after.Before(t) {
-				rval = append(rval, child)
-			}
+	for _, child := range self.getLogs(streamPattern) {
+		tmp, _ := strconv.ParseInt(streamPattern.FindStringSubmatch(child)[1], 10, 64)
+		t := time.Unix(0, tmp)
+		if after.IsZero() || !after.Before(t) {
+			rval = append(rval, child)
 		}
 	}
 	return rval
@@ -141,7 +142,7 @@ func (self *Shard) snapshot(t time.Time) {
 		}) 
 		snapshot.Close()
 		if err = os.Rename(tmpfilename, filename); err == nil {
-			for _, log := range self.getLogs() {
+			for _, log := range self.getLogs(logPattern) {
 				tmp, _ := strconv.ParseInt(logPattern.FindStringSubmatch(log)[1], 10, 64)
 				logtime := time.Unix(0, tmp)
 				if logtime.Before(t) {
@@ -174,7 +175,7 @@ func (self *Shard) store() {
 			}
 			if entry.operation.Command == CLEAR {
 				logfile.Close()
-				for _, log := range self.getLogs() {
+				for _, log := range self.getLogs(logPattern) {
 					if err := os.Remove(filepath.Join(self.dir, log)); err != nil {
 						panic(fmt.Errorf("While trying to clear %v: %v", self, err))
 					}

@@ -104,7 +104,7 @@ func TestShardSnapshot(t *testing.T) {
 	}
 	testPerform(t, s2, Operation{PUT, []string{"k", "v"}}, Response{OK | EXISTS, []string{"v"}})
 	testPerform(t, s2, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}})
-	for _, log := range s2.getLogs() {
+	for _, log := range s2.getLogs(logPattern) {
 		if !snapshotPattern.MatchString(log) {
 			os.Remove(filepath.Join(s2.dir, log))
 		}

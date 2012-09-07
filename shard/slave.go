@@ -28,27 +28,21 @@ func (self *Shard) setMaster(snapshot, stream chan Operation) {
 	go self.followMaster(snapshot, sem)
 }
 func (self *Shard) getOldestFollow() (path string, t time.Time) {
-	for _, log := range self.getLogs() {
-		if followPattern.MatchString(log) {
-			tmp, _ := strconv.ParseInt(followPattern.FindStringSubmatch(log)[1], 10, 64)
-			t = time.Unix(0, tmp)
-			path = log
-			return
-		}
-	}
-	panic(fmt.Errorf("There doesn't seem to be any follow logs!"))
+	logs := self.getLogs(followPattern)
+	path = logs[len(logs) - 1]
+	tmp, _ := strconv.ParseInt(followPattern.FindStringSubmatch(path)[1], 10, 64)
+	t = time.Unix(0, tmp)
+	return
 }
 func (self *Shard) getNextFollow(after time.Time) (path string, t time.Time, ok bool) {
-	for _, log := range self.getLogs() {
-		if followPattern.MatchString(log) {
-			tmp, _ := strconv.ParseInt(followPattern.FindStringSubmatch(log)[1], 10, 64)
-			this_t := time.Unix(0, tmp)
-			if this_t.After(after) {
-				path = log
-				ok = true
-				t = this_t
-				return
-			}
+	for _, log := range self.getLogs(followPattern) {
+		tmp, _ := strconv.ParseInt(followPattern.FindStringSubmatch(log)[1], 10, 64)
+		this_t := time.Unix(0, tmp)
+		if this_t.After(after) {
+			path = log
+			ok = true
+			t = this_t
+			return
 		}
 	}
 	return
@@ -92,10 +86,8 @@ func (self *Shard) stopSlavery() {
 	self.masterSnapshot = nil
 	self.masterStream = nil
 	self.masterStreamSem = nil
-	for _, log := range self.getLogs() {
-		if followPattern.MatchString(log) {
-			os.Remove(filepath.Join(self.dir, log))
-		}
+	for _, log := range self.getLogs(followPattern) {
+		os.Remove(filepath.Join(self.dir, log))
 	}
 }
 func (self *Shard) bufferMaster(stream chan Operation, sem *semaphore) {
