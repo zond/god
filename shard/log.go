@@ -100,14 +100,15 @@ func (self *Shard) flushSnapshot(log chan Operation) {
 	close(log)
 }
 func (self *Shard) store() {
-	slaves := make(map[slave]bool)
 	logfile := self.newLogFile(time.Now(), streamFormat)
+	defer logfile.Close()
+	slaves := make(map[slave]bool)
+	defer self.cleanSlaves(slaves)
 	encoder := gob.NewEncoder(logfile)
 	for {
 		select {
 		case entry, ok := <- self.logChannel:
 			if !ok {
-				self.cleanSlaves(slaves)
 				return
 			}
 			if entry.operation.Command == CLEAR {
@@ -140,7 +141,6 @@ func (self *Shard) store() {
 			}
 		case slave, ok := <- self.slaveChannel:
 			if !ok {
-				self.cleanSlaves(slaves)
 				return
 			}
 			slaves[slave] = true
@@ -149,7 +149,6 @@ func (self *Shard) store() {
 		select {
 		case slave, ok := <- self.slaveChannel:
 			if !ok {
-				self.cleanSlaves(slaves)
 				return
 			}
 			slaves[slave] = true
@@ -157,7 +156,6 @@ func (self *Shard) store() {
 		default:
 		}
 	}
-	logfile.Close()
 }
 func (self *Shard) cleanSlaves(slaves map[slave]bool) {
 	for slave, _ := range slaves {

@@ -41,9 +41,9 @@ func NewShard(dir string) (*Shard, error) {
 	return rval, nil
 }
 func (self *Shard) Close() {
+	atomic.StoreInt32(&self.closed, 1)
 	self.stopSlavery()
 	self.stopLogging()
-	atomic.StoreInt32(&self.closed, 1)
 }
 func NewEmptyShard(dir string) (*Shard, error) {
 	if err := os.RemoveAll(dir); err != nil {
