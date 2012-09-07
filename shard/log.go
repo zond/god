@@ -25,13 +25,9 @@ type loggedOperation struct {
 
 func (self *Shard) loadDecoder(decoder *fileDecoder) {
 	operation := Operation{}
-	response := Response{}
 	err := decoder.Decode(&operation)
 	for err == nil {
-		self.Perform(operation, &response)
-		if response.Result & OK != OK {
-			panic(fmt.Errorf("Trying to perform %v resulted in %v", operation, response))
-		}
+		self.MustPerform(operation)
 		err = decoder.Decode(&operation)
 	}
 	if err != io.EOF {

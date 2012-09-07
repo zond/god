@@ -49,15 +49,11 @@ func BenchmarkShardPut(b *testing.B) {
 	if err != nil {
 		b.Errorf("while trying to create empty shard: %v", err)
 	}
-	r := &Response{}
 	o := Operation{Command: PUT, Parameters: []string{"", "v"}}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		o.Parameters[0] = fmt.Sprint("k", i)
-		s.Perform(o, r)
-		if r.Result & OK != OK {
-			b.Fatalf("%v produced %v", o, r)
-		}
+		s.MustPerform(o)
 	}
 }
 

@@ -14,11 +14,7 @@ func (self *Shard) addSlave(snapshot, stream chan Operation) {
 }
 func (self *Shard) setMaster(snapshot, stream chan Operation) {
 	self.stopSlavery()
-	response := &Response{}
-	self.Perform(Operation{CLEAR, []string{}}, response)
-	if response.Result & OK != OK {
-		panic(fmt.Errorf("When trying to clear: %v", response))
-	}
+	self.MustPerform(Operation{CLEAR, []string{}})
 	self.masterSnapshot = snapshot
 	self.masterStream = stream
 	sem := newSemaphore()
@@ -27,15 +23,11 @@ func (self *Shard) setMaster(snapshot, stream chan Operation) {
 	go self.followMaster(snapshot, sem)
 }
 func (self *Shard) followMaster(snapshot chan Operation, sem *semaphore) {
-	response := &Response{}
 	for op := range snapshot {
-		if self.isClosed() {
+		if self.masterSnapshot != snapshot {
 			return 
 		}
-		self.Perform(op, response)
-		if response.Result & OK != OK {
-			panic(fmt.Errorf("While trying to perform %v: %v", op, response))
-		}
+		self.MustPerform(op)
 	}
 	sem.wait()
 	path, t := self.getOldestFollow()
@@ -73,8 +65,8 @@ func (self *Shard) bufferMaster(stream chan Operation, sem *semaphore) {
 	logfile := self.newLogFile(time.Now(), followFormat)
 	sem.broadcast()
 	encoder := gob.NewEncoder(logfile)
-	for op := range self.masterStream {
-		if self.isClosed() {
+	for op := range stream {
+		if self.masterStream != stream {
 			return 
 		}
 		if err := encoder.Encode(op); err != nil {

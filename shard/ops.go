@@ -127,6 +127,13 @@ func (self *Shard) del(o Operation, r *Response) {
 		r.Parts = nil
 	}
 }
+func (self *Shard) MustPerform(o Operation) {
+	response := &Response{}
+	self.Perform(o, response)
+	if response.Result & OK != OK {
+		panic(fmt.Errorf("When trying to perform %v: %v", o, response))
+	}
+}
 func (self *Shard) Perform(o Operation, r *Response) {
 	switch o.Command {
 	case GET:
