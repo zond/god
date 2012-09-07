@@ -82,9 +82,9 @@ func TestShardSlaving(t *testing.T) {
 	testPerform(t, s, Operation{PUT, []string{"k3", "v"}}, Response{OK | MISSING, nil})
 	testPerform(t, s, Operation{PUT, []string{"k4", "v"}}, Response{OK | MISSING, nil})
 	testPerformWithin(t, s2, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v"}}, time.Second)
-	testPerformWithin(t, s2, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v2"}}, time.Second)
-	testPerformWithin(t, s2, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v3"}}, time.Second)
-	testPerformWithin(t, s2, Operation{GET, []string{"k"}}, Response{OK | EXISTS, []string{"v4"}}, time.Second)
+	testPerformWithin(t, s2, Operation{GET, []string{"k2"}}, Response{OK | EXISTS, []string{"v"}}, time.Second)
+	testPerformWithin(t, s2, Operation{GET, []string{"k3"}}, Response{OK | EXISTS, []string{"v"}}, time.Second)
+	testPerformWithin(t, s2, Operation{GET, []string{"k4"}}, Response{OK | EXISTS, []string{"v"}}, time.Second)
 }
 
 func TestShardSnapshot(t *testing.T) {
