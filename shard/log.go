@@ -2,7 +2,6 @@
 package shard
 
 import (
-	"regexp"
 	"path/filepath"
 	"strconv"
 	"encoding/gob"
@@ -21,11 +20,6 @@ const (
 	maxLogSize = "maxLogSize"
 	defaultMaxLogSize = 1024 * 1024 * 128
 )
-
-var streamPattern = regexp.MustCompile("^stream-(\\d+)\\.log$")
-var followPattern = regexp.MustCompile("^follow-(\\d+)\\.log$")
-var snapshotPattern = regexp.MustCompile("^snapshot-(\\d+)\\.log$")
-var logPattern = regexp.MustCompile("^\\w+-(\\d+)\\.log$")
 
 type slave struct {
 	snapshot chan Operation

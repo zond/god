@@ -11,6 +11,11 @@ import (
 	"path/filepath"
 )
 
+var streamPattern = regexp.MustCompile("^stream-(\\d+)\\.log$")
+var followPattern = regexp.MustCompile("^follow-(\\d+)\\.log$")
+var snapshotPattern = regexp.MustCompile("^snapshot-(\\d+)\\.log$")
+var logPattern = regexp.MustCompile("^\\w+-(\\d+)\\.log$")
+
 func (self *Shard) getLogs(pattern *regexp.Regexp) []string {
         directory, err := os.Open(self.dir)
         if err != nil {
