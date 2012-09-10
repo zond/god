@@ -27,6 +27,20 @@ func TestTreeEach(t *testing.T) {
 		m[string([]byte(fmt.Sprint(i)))] = i
 	}
 	assertMappness(t, tree, m)
+	var collector []string
+	tree.Each(Up, []byte("5"), []byte("7"), func(key []byte, value Thing) {
+		collector = append(collector, string(key))
+	})
+	if !reflect.DeepEqual(collector, []string{"5", "6", "7"}) {
+		t.Errorf("%v is bad", collector)
+	}
+	collector = nil
+	tree.Each(Down, []byte("4"), []byte("6"), func(key []byte, value Thing) {
+		collector = append(collector, string(key))
+	})
+	if !reflect.DeepEqual(collector, []string{"6", "5", "4"}) {
+		t.Errorf("%v is bad", collector)
+	}
 }
 
 func TestTreeBasicOps(t *testing.T) {

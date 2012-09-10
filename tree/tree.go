@@ -14,13 +14,13 @@ func init() {
 
 type Thing interface{}
 
-type TreeIterator func(key []byte, value Thing) bool
+type TreeIterator func(key []byte, value Thing)
 
 type direction int
 
 const (
-	Down = 0
-	Up = 1
+	Down = iota
+	Up
 )
 
 type Tree struct {
@@ -37,6 +37,11 @@ func (self *Tree) Put(key []byte, value Thing) (old Thing, existed bool) {
 func (self *Tree) Get(key []byte) (value Thing, existed bool) {
 	return self.root.get(key)
 }
+func (self *Tree) Describe() string {
+	buffer := bytes.NewBufferString(fmt.Sprintf("<Tree size:%v>\n", self.Size()))
+	self.root.describe(0, buffer)
+	return string(buffer.Bytes())
+}
 func (self *Tree) Del(key []byte) (old Thing, existed bool) {
 	self.root, existed, old = self.root.del(key)
 	if existed {
@@ -44,8 +49,8 @@ func (self *Tree) Del(key []byte) (old Thing, existed bool) {
 	}
 	return
 }
-func (self *Tree) Each(dir direction, from []byte, f TreeIterator) {
-	self.root.each(dir, from, f)
+func (self *Tree) Each(dir direction, min, max []byte, f TreeIterator) {
+	self.root.each(dir, min, max, f)
 }
 func (self *Tree) Size() int {
 	return self.size
@@ -55,10 +60,8 @@ func (self *Tree) String() string {
 }
 func (self *Tree) ToMap() map[string]Thing {
 	rval := make(map[string]Thing)
-	self.Each(Up, []byte{}, func(key []byte, value Thing) bool {
-		fmt.Println("key: ", string(key), " value: ", value)
+	self.Each(Up, nil, nil, func(key []byte, value Thing) {
 		rval[string(key)] = value
-		return true
 	})
 	return rval
 }
@@ -90,6 +93,17 @@ func newNode(key []byte, value Thing) *node {
 		value: value,
 	}
 }
+func (self *node) describe(indent int, buffer *bytes.Buffer) {
+	if self != nil {
+		self.left.describe(indent + 1, buffer)
+		indentation := &bytes.Buffer{}
+		for i := 0; i < indent; i++ {
+			fmt.Fprint(indentation, " ")
+		}
+		fmt.Fprintf(buffer, "%v%v [%v] => %v\n", string(indentation.Bytes()), self.key, self.weight, self.value)
+		self.right.describe(indent + 1, buffer)
+	}
+}
 func (self *node) get(key []byte) (value Thing, existed bool) {
 	if self != nil {
 		switch bytes.Compare(key, self.key) {
@@ -104,35 +118,40 @@ func (self *node) get(key []byte) (value Thing, existed bool) {
 	}
 	return
 }
-func (self *node) each(dir direction, from []byte, f TreeIterator) {
+func (self *node) each(dir direction, min, max []byte, f TreeIterator) {
 	if self != nil {
-		cmp := bytes.Compare(from, self.key)
+		min_cmp := -1
+		if min != nil {
+			min_cmp = bytes.Compare(min, self.key)
+		}
+		max_cmp := 1
+		if max != nil {
+			max_cmp = bytes.Compare(max, self.key)
+		}
+
 		order := []*node{self.left, self.right}
 		if dir == Down {
 			order = []*node{self.right, self.left}
-			cmp = cmp * -1
+			min_cmp, max_cmp = max_cmp * -1, min_cmp * -1
 		}
-		switch cmp {
-		case -1:
-			order[0].each(dir, from, f)
-			if f(self.key, self.value) {
-				order[1].each(dir, from, f)
-			}
-		case 1:
-			order[1].each(dir, from, f)
-		default:
-			if f(self.key, self.value) {
-				order[1].each(dir, from, f)
-			}
+
+		if min_cmp < 0 {
+			order[0].each(dir, min, max, f)
+		}
+		if min_cmp < 1 && max_cmp > -1 {
+			f(self.key, self.value)
+		}
+		if max_cmp > 0 {
+			order[1].each(dir, min, max, f)
 		}
 	}
 }
 func (self *node) rotateLeft() (result *node) {
-	result, self.left = self.left, self.left.right
+	result, self.left, self.left.right = self.left, self.left.right, self
 	return
 }
 func (self *node) rotateRight() (result *node) {
-	result, self.right = self.right, self.right.left
+	result, self.right, self.right.left = self.right, self.right.left, self
 	return
 }
 func (self *node) del(key []byte) (result *node, existed bool, old Thing) {
