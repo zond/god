@@ -27,6 +27,9 @@ func (self *Tree) Put(key []byte, value Thing) (old Thing, existed bool) {
 	}
 	return
 }
+func (self *Tree) Get(key []byte) (value Thing, existed bool) {
+	return self.root.get(key)
+}
 func (self *Tree) Del(key []byte) (old Thing, existed bool) {
 	self.root, existed, old = self.root.del(key)
 	if existed {
@@ -79,6 +82,20 @@ func newNode(key []byte, value Thing) *node {
 		value: value,
 	}
 }
+func (self *node) get(key []byte) (value Thing, existed bool) {
+	if self != nil {
+		switch bytes.Compare(self.key, key) {
+		case -1:
+			return self.left.get(key)
+		case 1:
+			return self.right.get(key)
+		default:
+			value, existed = self.value, true
+		}
+		
+	}
+	return
+}
 func (self *node) each(dir int, f TreeIterator) {
 	if self != nil {
 		order := []*node{self.left, self.right}
@@ -100,39 +117,37 @@ func (self *node) rotateRight() (result *node) {
 	return
 }
 func (self *node) del(key []byte) (result *node, existed bool, old Thing) {
-	if self == nil {
-		return
-	} 
-	result = self
-	switch bytes.Compare(self.key, key) {
-	case -1:
-		self.left, existed, old = self.left.del(key)
-	case 1:
-		self.right, existed, old = self.right.del(key)
-	default:
-		result, existed, old = merge(self.left, self.right), true, self.value
+	if self != nil {
+		result = self
+		switch bytes.Compare(self.key, key) {
+		case -1:
+			self.left, existed, old = self.left.del(key)
+		case 1:
+			self.right, existed, old = self.right.del(key)
+		default:
+			result, existed, old = merge(self.left, self.right), true, self.value
+		}
 	}
 	return
 }
 func (self *node) insert(n *node) (result *node, existed bool, old Thing) {
-	if self == nil {
-		result = n
-		return
-	}
-	result = self
-	switch bytes.Compare(self.key, n.key) {
-	case -1:
-		self.left, existed, old = self.left.insert(n)
-		if self.left.weight < self.weight {
-			result = self.rotateLeft()
+	result = n
+	if self != nil {
+		result = self
+		switch bytes.Compare(self.key, n.key) {
+		case -1:
+			self.left, existed, old = self.left.insert(n)
+			if self.left.weight < self.weight {
+				result = self.rotateLeft()
+			}
+		case 1:
+			self.right, existed, old = self.right.insert(n)
+			if self.right.weight < self.weight {
+				result = self.rotateRight()
+			}
+		default:
+			existed, old, self.value = true, self.value, n.value
 		}
-	case 1:
-		self.right, existed, old = self.right.insert(n)
-		if self.right.weight < self.weight {
-			result = self.rotateRight()
-		}
-	default:
-		existed, old, self.value = true, self.value, n.value
 	}
 	return
 }
