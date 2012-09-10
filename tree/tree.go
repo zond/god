@@ -5,12 +5,16 @@ import (
 	"bytes"
 	"math/rand"
 	"fmt"
+	"time"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 type Thing interface{}
 
 type TreeIterator func(key []byte, value Thing) bool
-
 
 type Tree struct {
 	size int
