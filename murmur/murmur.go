@@ -4,6 +4,7 @@ package murmur
 import (
 	"unsafe"
 	"bytes"
+	"fmt"
 )
 
 /*
@@ -23,10 +24,30 @@ const (
 	seed = 42
 )
 
+func HashString(s string) []byte {
+	return NewBytes([]byte(s)).Get()
+}
+
+func HashInt(i int) []byte {
+	return NewString(fmt.Sprint(i)).Get()
+}
+
+func HashBytes(b []byte) []byte {
+	return NewBytes(b).Get()
+}
+
 type Hash bytes.Buffer
 
-func (self *Hash) Sum(p []byte) (result []byte) {
-	(*bytes.Buffer)(self).Write(p)
+func New() *Hash {
+	return new(Hash)
+}
+func NewString(s string) *Hash {
+	return (*Hash)(bytes.NewBufferString(s))
+}
+func NewBytes(b []byte) *Hash {
+	return (*Hash)(bytes.NewBuffer(b))
+}
+func (self *Hash) Get() (result []byte) {
 	result = make([]byte, Size)
 	buf := (*bytes.Buffer)(self).Bytes()
 	C.MurmurHash3_x64_128(
@@ -36,6 +57,10 @@ func (self *Hash) Sum(p []byte) (result []byte) {
 		*(*unsafe.Pointer)(unsafe.Pointer(&result)))
 	self.Reset()
 	return
+}
+func (self *Hash) Sum(p []byte) []byte {
+	(*bytes.Buffer)(self).Write(p)
+	return self.Get()
 }
 func (self *Hash) Write(p []byte) (n int, err error) {
 	return (*bytes.Buffer)(self).Write(p)

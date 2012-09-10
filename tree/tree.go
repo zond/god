@@ -12,9 +12,11 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-type Thing interface{}
+type Hasher interface {
+	Hash() []byte
+}
 
-type TreeIterator func(key []byte, value Thing)
+type TreeIterator func(key []byte, value Hasher)
 
 type direction int
 
@@ -27,14 +29,14 @@ type Tree struct {
 	size int
 	root *node
 }
-func (self *Tree) Put(key []byte, value Thing) (old Thing, existed bool) {
+func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 	self.root, existed, old = self.root.insert(newNode(key, value))
 	if !existed {
 		self.size++
 	}
 	return
 }
-func (self *Tree) Get(key []byte) (value Thing, existed bool) {
+func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
 	return self.root.get(key)
 }
 func (self *Tree) Describe() string {
@@ -42,7 +44,7 @@ func (self *Tree) Describe() string {
 	self.root.describe(0, buffer)
 	return string(buffer.Bytes())
 }
-func (self *Tree) Del(key []byte) (old Thing, existed bool) {
+func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
 	self.root, existed, old = self.root.del(key)
 	if existed {
 		self.size--
@@ -58,9 +60,9 @@ func (self *Tree) Size() int {
 func (self *Tree) String() string {
 	return fmt.Sprint(self.ToMap())
 }
-func (self *Tree) ToMap() map[string]Thing {
-	rval := make(map[string]Thing)
-	self.Each(Up, nil, nil, func(key []byte, value Thing) {
+func (self *Tree) ToMap() map[string]Hasher {
+	rval := make(map[string]Hasher)
+	self.Each(Up, nil, nil, func(key []byte, value Hasher) {
 		rval[string(key)] = value
 	})
 	return rval
@@ -84,14 +86,15 @@ type node struct {
 	left *node
 	right *node
 	key []byte
-	value Thing
+	value Hasher
 }
-func newNode(key []byte, value Thing) *node {
-	return &node{
+func newNode(key []byte, value Hasher) (rval *node) {
+	rval = &node{
 		weight: rand.Int31(),
 		key: key,
 		value: value,
 	}
+	return
 }
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	if self != nil {
@@ -104,7 +107,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 		self.right.describe(indent + 1, buffer)
 	}
 }
-func (self *node) get(key []byte) (value Thing, existed bool) {
+func (self *node) get(key []byte) (value Hasher, existed bool) {
 	if self != nil {
 		switch bytes.Compare(key, self.key) {
 		case -1:
@@ -154,7 +157,7 @@ func (self *node) rotateRight() (result *node) {
 	result, self.right, self.right.left = self.right, self.right.left, self
 	return
 }
-func (self *node) del(key []byte) (result *node, existed bool, old Thing) {
+func (self *node) del(key []byte) (result *node, existed bool, old Hasher) {
 	if self != nil {
 		result = self
 		switch bytes.Compare(key, self.key) {
@@ -168,7 +171,7 @@ func (self *node) del(key []byte) (result *node, existed bool, old Thing) {
 	}
 	return
 }
-func (self *node) insert(n *node) (result *node, existed bool, old Thing) {
+func (self *node) insert(n *node) (result *node, existed bool, old Hasher) {
 	result = n
 	if self != nil {
 		result = self
