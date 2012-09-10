@@ -16,11 +16,27 @@ func assertMappness(t *testing.T, tree *Tree, m map[string]Thing) {
 	}
 }
 
+func TestTreeEach(t *testing.T) {
+	tree := new(Tree)
+	m := make(map[string]Thing)
+	for i := 0; i < 10; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), i)
+		if val, exists := tree.Get([]byte(fmt.Sprint(i))); val != i || !exists {
+			t.Errorf("insert of %v failed!", i)
+		}
+		m[string([]byte(fmt.Sprint(i)))] = i
+	}
+	assertMappness(t, tree, m)
+}
+
 func TestTreeBasicOps(t *testing.T) {
 	tree := new(Tree)
 	m := make(map[string]Thing)
 	assertMappness(t, tree, m)
 	if val, existed := tree.Get([]byte("key")); val != nil || existed {
+		t.Errorf("should not have existed")
+	}
+	if old, existed := tree.Del([]byte("key")); old != nil || existed {
 		t.Errorf("should not have existed")
 	}
 	if old, existed := tree.Put([]byte("key"), "value"); old != nil || existed {
@@ -34,9 +50,19 @@ func TestTreeBasicOps(t *testing.T) {
 	if old, existed := tree.Put([]byte("key"), "value2"); old != "value" || !existed {
 		t.Errorf("should have existed")
 	}
+	if val, existed := tree.Get([]byte("key")); val != "value2" || !existed {
+		t.Errorf("should have existed")
+	}
 	m["key"] = "value2"
 	assertMappness(t, tree, m)
-	
+	if old, existed := tree.Del([]byte("key")); old != "value2" || !existed {
+		t.Errorf("should have existed")
+	}
+	delete(m, "key")
+	assertMappness(t, tree, m)
+	if old, existed := tree.Del([]byte("key")); old != nil || existed {
+		t.Errorf("should not have existed")
+	}
 }
 
 func benchTree(b *testing.B, n int) {

@@ -16,6 +16,13 @@ type Thing interface{}
 
 type TreeIterator func(key []byte, value Thing) bool
 
+type direction int
+
+const (
+	Down = 0
+	Up = 1
+)
+
 type Tree struct {
 	size int
 	root *node
@@ -37,8 +44,8 @@ func (self *Tree) Del(key []byte) (old Thing, existed bool) {
 	}
 	return
 }
-func (self *Tree) Each(dir int, f TreeIterator) {
-	self.root.each(dir, f)
+func (self *Tree) Each(dir direction, from []byte, f TreeIterator) {
+	self.root.each(dir, from, f)
 }
 func (self *Tree) Size() int {
 	return self.size
@@ -48,7 +55,8 @@ func (self *Tree) String() string {
 }
 func (self *Tree) ToMap() map[string]Thing {
 	rval := make(map[string]Thing)
-	self.Each(1, func(key []byte, value Thing) bool {
+	self.Each(Up, []byte{}, func(key []byte, value Thing) bool {
+		fmt.Println("key: ", string(key), " value: ", value)
 		rval[string(key)] = value
 		return true
 	})
@@ -84,7 +92,7 @@ func newNode(key []byte, value Thing) *node {
 }
 func (self *node) get(key []byte) (value Thing, existed bool) {
 	if self != nil {
-		switch bytes.Compare(self.key, key) {
+		switch bytes.Compare(key, self.key) {
 		case -1:
 			return self.left.get(key)
 		case 1:
@@ -96,15 +104,26 @@ func (self *node) get(key []byte) (value Thing, existed bool) {
 	}
 	return
 }
-func (self *node) each(dir int, f TreeIterator) {
+func (self *node) each(dir direction, from []byte, f TreeIterator) {
 	if self != nil {
+		cmp := bytes.Compare(from, self.key)
 		order := []*node{self.left, self.right}
-		if dir < 0 {
+		if dir == Down {
 			order = []*node{self.right, self.left}
+			cmp = cmp * -1
 		}
-		order[0].each(dir, f)
-		if f(self.key, self.value) {
-			order[1].each(dir, f)
+		switch cmp {
+		case -1:
+			order[0].each(dir, from, f)
+			if f(self.key, self.value) {
+				order[1].each(dir, from, f)
+			}
+		case 1:
+			order[1].each(dir, from, f)
+		default:
+			if f(self.key, self.value) {
+				order[1].each(dir, from, f)
+			}
 		}
 	}
 }
@@ -119,7 +138,7 @@ func (self *node) rotateRight() (result *node) {
 func (self *node) del(key []byte) (result *node, existed bool, old Thing) {
 	if self != nil {
 		result = self
-		switch bytes.Compare(self.key, key) {
+		switch bytes.Compare(key, self.key) {
 		case -1:
 			self.left, existed, old = self.left.del(key)
 		case 1:
@@ -134,7 +153,7 @@ func (self *node) insert(n *node) (result *node, existed bool, old Thing) {
 	result = n
 	if self != nil {
 		result = self
-		switch bytes.Compare(self.key, n.key) {
+		switch bytes.Compare(n.key, self.key) {
 		case -1:
 			self.left, existed, old = self.left.insert(n)
 			if self.left.weight < self.weight {

@@ -1,5 +1,5 @@
 
-package tree
+package tiger
 
 import (
 	"unsafe"
