@@ -16,7 +16,7 @@ func init() {
 func TestMurmur(t *testing.T) {
 	h := &Hash{}
 	m := make(map[string]bool)
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 1000000; i++ {
 		s := fmt.Sprint(rand.Int63())
 		c1 := h.Sum([]byte(s))
 		c2 := h.Sum([]byte(s))
