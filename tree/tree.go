@@ -18,13 +18,6 @@ type Hasher interface {
 
 type TreeIterator func(key []byte, value Hasher)
 
-type direction int
-
-const (
-	Down = iota
-	Up
-)
-
 type Tree struct {
 	size int
 	root *node
@@ -51,8 +44,11 @@ func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
 	}
 	return
 }
-func (self *Tree) Each(dir direction, min, max []byte, f TreeIterator) {
-	self.root.each(dir, min, max, f)
+func (self *Tree) Up(from, below []byte, f TreeIterator) {
+	self.root.up(from, below, f)
+}
+func (self *Tree) Down(from, above []byte, f TreeIterator) {
+	self.root.down(from, above, f)
 }
 func (self *Tree) Size() int {
 	return self.size
@@ -62,7 +58,7 @@ func (self *Tree) String() string {
 }
 func (self *Tree) ToMap() map[string]Hasher {
 	rval := make(map[string]Hasher)
-	self.Each(Up, nil, nil, func(key []byte, value Hasher) {
+	self.Up(nil, nil, func(key []byte, value Hasher) {
 		rval[string(key)] = value
 	})
 	return rval
@@ -121,31 +117,47 @@ func (self *node) get(key []byte) (value Hasher, existed bool) {
 	}
 	return
 }
-func (self *node) each(dir direction, min, max []byte, f TreeIterator) {
+func (self *node) up(from, below []byte, f TreeIterator) {
 	if self != nil {
-		min_cmp := -1
-		if min != nil {
-			min_cmp = bytes.Compare(min, self.key)
+		from_cmp := -1
+		if from != nil {
+			from_cmp = bytes.Compare(from, self.key)
 		}
-		max_cmp := 1
-		if max != nil {
-			max_cmp = bytes.Compare(max, self.key)
-		}
-
-		order := []*node{self.left, self.right}
-		if dir == Down {
-			order = []*node{self.right, self.left}
-			min_cmp, max_cmp = max_cmp * -1, min_cmp * -1
+		below_cmp := 1
+		if below != nil {
+			below_cmp = bytes.Compare(below, self.key)
 		}
 
-		if min_cmp < 0 {
-			order[0].each(dir, min, max, f)
+		if from_cmp < 0 {
+			self.left.up(from, below, f)
 		}
-		if min_cmp < 1 && max_cmp > -1 {
+		if from_cmp < 1 && below_cmp > 0 {
 			f(self.key, self.value)
 		}
-		if max_cmp > 0 {
-			order[1].each(dir, min, max, f)
+		if below_cmp > 0 {
+			self.right.up(from, below, f)
+		}
+	}
+}
+func (self *node) down(from, above []byte, f TreeIterator) {
+	if self != nil {
+		from_cmp := -1
+		if from != nil {
+			from_cmp = bytes.Compare(from, self.key)
+		}
+		above_cmp := 1
+		if above != nil {
+			above_cmp = bytes.Compare(above, self.key)
+		}
+
+		if from_cmp > 0 {
+			self.right.down(from, above, f)
+		}
+		if from_cmp > -1 && above_cmp < 0 {
+			f(self.key, self.value)
+		}
+		if above_cmp < 0 {
+			self.left.down(from, above, f)
 		}
 	}
 }

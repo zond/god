@@ -39,14 +39,14 @@ func TestTreeEach(t *testing.T) {
 	}
 	assertMappness(t, tree, m)
 	var collector []string
-	tree.Each(Up, []byte("5"), []byte("7"), func(key []byte, value Hasher) {
+	tree.Up([]byte("5"), []byte("8"), func(key []byte, value Hasher) {
 		collector = append(collector, string(key))
 	})
 	if !reflect.DeepEqual(collector, []string{"5", "6", "7"}) {
 		t.Errorf("%v is bad", collector)
 	}
 	collector = nil
-	tree.Each(Down, []byte("4"), []byte("6"), func(key []byte, value Hasher) {
+	tree.Down([]byte("6"), []byte("3"), func(key []byte, value Hasher) {
 		collector = append(collector, string(key))
 	})
 	if !reflect.DeepEqual(collector, []string{"6", "5", "4"}) {
