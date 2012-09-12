@@ -40,50 +40,45 @@ func (self *Tree) Describe() string {
 	return string(buffer.Bytes())
 }
 
-type edge struct {
-	key byte
-	node *node
-}
-func (self *edge) String() string {
-	return fmt.Sprintf("{%v:%v}", self.key, *self.node)
-}
-
-type edges []*edge
-func newEdges() *edges {
-	var rval edges
-	return &rval
-}
-func (self *edges) get(k byte) *node {
-	for _, e := range *self {
-		if e.key == k {
-			return e.node
-		}
-	}
-	return nil
-}
-func (self *edges) add(n *node) {
-	*self = append(*self, &edge{n.key[0], n})
-}
-func (self *edges) replace(n *node) {
-	for _, e := range *self {
-		if e.key == n.key[0] {
-			e.node = n
-			return
-		}
-	}
-}
-
 type node struct {
 	key []byte
 	value Hasher
-	children *edges
+	children [][][][]*node
 }
 func newNode(key []byte, value Hasher) *node {
 	return &node{
 		key: key,
 		value: value,
-		children: newEdges(),
+		children: make([][][][]*node, 4),
 	}
+}
+func (self *node) indices(i byte) (p1, p2, p3, p4 byte) {
+	p1 = (i & (3 << 6)) >> 6
+	p2 = (i & (3 << 4)) >> 4
+	p3 = (i & (3 << 2)) >> 2
+	p4 = (i & 3)
+	return
+}
+func (self *node) childSlice(i byte) (slice []*node, subi byte) {
+	p1, p2, p3, p4 := self.indices(i)
+	if self.children[p1] == nil {
+		self.children[p1] = make([][][]*node, 4)
+	}
+	if self.children[p1][p2] == nil {
+		self.children[p1][p2] = make([][]*node, 4)
+	}
+	if self.children[p1][p2][p3] == nil {
+		self.children[p1][p2][p3] = make([]*node, 4)
+	}
+	return self.children[p1][p2][p3], p4
+}
+func (self *node) getChild(i byte) *node {
+	slice, subi := self.childSlice(i)
+	return slice[subi]
+}
+func (self *node) setChild(i byte, child *node) {
+	slice, subi := self.childSlice(i)
+	slice[subi] = child
 }
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	indentation := &bytes.Buffer{}
@@ -95,8 +90,14 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 		fmt.Fprintf(buffer, " => %v", self.value)
 	}
 	fmt.Fprintf(buffer, "\n")
-	for _, edge := range *self.children {
-		edge.node.describe(indent + len(self.key), buffer)
+	for _, s1 := range self.children {
+		for _, s2 := range s1 {
+			for _, s3 := range s2 {
+				for _, node := range s3 {
+					node.describe(indent + len(self.key), buffer)
+				}
+			}
+		}
 	}
 }
 func (self *node) trimKey(from, to int) {
@@ -105,7 +106,7 @@ func (self *node) trimKey(from, to int) {
 	self.key = new_key
 }
 func (self *node) get(key []byte) (value Hasher, existed bool) {
-	if current := self.children.get(key[0]); current != nil {
+	if current := self.getChild(key[0]); current != nil {
 		for i := 0;; i ++ {
 			if i >= len(key) && i >= len(current.key) {
 				value, existed = current.value, true
@@ -123,15 +124,15 @@ func (self *node) get(key []byte) (value Hasher, existed bool) {
 	return
 }
 func (self *node) insert(node *node) (old Hasher, existed bool) {
-	if current := self.children.get(node.key[0]); current == nil {
-		self.children.add(node)
+	if current := self.getChild(node.key[0]); current == nil {
+		self.setChild(node.key[0], node)
 		return
 	} else {
 		for i := 0;; i ++ {
 			if i >= len(node.key) {
-				self.children.replace(node)
+				self.setChild(node.key[0], node)
 				current.trimKey(i, len(current.key))
-				node.children.add(current)
+				node.setChild(current.key[0], current)
 				return
 			} else if i >= len(current.key) {
 				node.trimKey(i, len(node.key))
@@ -140,11 +141,11 @@ func (self *node) insert(node *node) (old Hasher, existed bool) {
 			} else if node.key[i] != current.key[i] {
 				extra_node := newNode(make([]byte, i), nil)
 				copy(extra_node.key, node.key[:i])
-				self.children.replace(extra_node)
+				self.setChild(extra_node.key[0], extra_node)
 				node.trimKey(i, len(node.key))
-				extra_node.children.add(node)
+				extra_node.setChild(node.key[0], node)
 				current.trimKey(i, len(current.key))
-				extra_node.children.add(current)
+				extra_node.setChild(current.key[0], current)
 				return
 			}
 		}
