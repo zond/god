@@ -2,11 +2,11 @@
 package radix
 
 import (
+	"../murmur"
 	"fmt"
 	"testing"
 	"math/rand"
 	"bytes"
-	"../murmur"
 	"time"
 )
 

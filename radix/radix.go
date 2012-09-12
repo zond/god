@@ -11,6 +11,20 @@ type Hasher interface {
 	Hash() []byte
 }
 
+const (
+	parts = 2
+)
+
+func rip(b []byte) (result []byte) {
+	result = make([]byte, parts * len(b))
+	for i, char := range b {
+		for j := 0; j < parts; j++ {
+			result[(i * parts) + j] = (char << byte((8 / parts) * j)) >> byte(8 - (8 / parts))
+		}
+	}
+	return
+}
+
 type StringHasher string
 func (self StringHasher) Hash() []byte {
 	return murmur.HashString(string(self))
@@ -28,7 +42,7 @@ func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 		panic(fmt.Errorf("%v does not allow nil keys", self))
 	}
 	self.size++
-	old, existed = self.root.insert(newNode(key, value))
+	old, existed = self.root.insert(newNode(rip(key), value))
 	return
 }
 func (self *Tree) Hash() []byte {
@@ -38,7 +52,7 @@ func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
 	if key == nil {
 		panic(fmt.Errorf("%v does not allow nil keys", self))
 	}
-	return self.root.get(key)
+	return self.root.get(rip(key))
 }
 func (self *Tree) Size() int {
 	return self.size
@@ -56,13 +70,14 @@ type node struct {
 	value Hasher
 	valueHash []byte
 	hash []byte
-	children [][][][]*node
+	children []*node
 }
 func newNode(key []byte, value Hasher) (result *node) {
 	result = &node{
 		key: key,
 		value: value,
 		hash: make([]byte, murmur.Size),
+		children: make([]*node, 1 << (8 / parts)),
 	}
 	if value != nil {
 		result.valueHash = value.Hash()
@@ -77,57 +92,18 @@ func (self *node) rehash() {
 	})
 	h.Extrude(&self.hash)
 }
-func (self *node) indices(i byte) (p1, p2, p3, p4 byte) {
-	p1 = (i & (3 << 6)) >> 6
-	p2 = (i & (3 << 4)) >> 4
-	p3 = (i & (3 << 2)) >> 2
-	p4 = (i & 3)
-	return
-}
 func (self *node) eachChild(f func(child *node)) {
-	for _, s1 := range self.children {
-		for _, s2 := range s1 {
-			for _, s3 := range s2 {
-				for _, node := range s3 {
-					if node != nil {
-						f(node)
-					}
-				}
-			}
+	for _, child := range self.children {
+		if child != nil {
+			f(child)
 		}
 	}
 }
 func (self *node) getChild(i byte) *node {
-	p1, p2, p3, p4 := self.indices(i)
-	if self.children == nil {
-		return nil
-	}
-	if self.children[p1] == nil {
-		return nil
-	}
-	if self.children[p1][p2] == nil {
-		return nil
-	}
-	if self.children[p1][p2][p3] == nil {
-		return nil
-	}
-	return self.children[p1][p2][p3][p4]
+	return self.children[i]
 }
 func (self *node) setChild(i byte, child *node) {
-	p1, p2, p3, p4 := self.indices(i)
-	if self.children == nil {
-		self.children = make([][][][]*node, 4)
-	}
-	if self.children[p1] == nil {
-		self.children[p1] = make([][][]*node, 4)
-	}
-	if self.children[p1][p2] == nil {
-		self.children[p1][p2] = make([][]*node, 4)
-	}
-	if self.children[p1][p2][p3] == nil {
-		self.children[p1][p2][p3] = make([]*node, 4)
-	}
-	self.children[p1][p2][p3][p4] = child
+	self.children[i] = child
 }
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	indentation := &bytes.Buffer{}
