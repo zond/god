@@ -49,14 +49,17 @@ func NewBytes(b []byte) *Hash {
 }
 func (self *Hash) Get() (result []byte) {
 	result = make([]byte, Size)
+	self.Extrude(&result)
+	return
+}
+func (self *Hash) Extrude(result *[]byte) {
 	buf := (*bytes.Buffer)(self).Bytes()
 	C.MurmurHash3_x64_128(
 		*(*unsafe.Pointer)(unsafe.Pointer(&buf)), 
 		C.int(len(buf)), 
 		C.uint32_t(seed), 
-		*(*unsafe.Pointer)(unsafe.Pointer(&result)))
+		*(*unsafe.Pointer)(unsafe.Pointer(result)))
 	self.Reset()
-	return
 }
 func (self *Hash) Sum(p []byte) []byte {
 	(*bytes.Buffer)(self).Write(p)

@@ -62,7 +62,7 @@ func newNode(key []byte, value Hasher) (result *node) {
 	result = &node{
 		key: key,
 		value: value,
-		children: make([][][][]*node, 4),
+		hash: make([]byte, murmur.Size),
 	}
 	if value != nil {
 		result.valueHash = value.Hash()
@@ -75,7 +75,7 @@ func (self *node) rehash() {
 	self.eachChild(func(node *node) {
 		h.Write(node.hash)
 	})
-	self.hash = h.Get()
+	h.Extrude(&self.hash)
 }
 func (self *node) indices(i byte) (p1, p2, p3, p4 byte) {
 	p1 = (i & (3 << 6)) >> 6
@@ -97,8 +97,27 @@ func (self *node) eachChild(f func(child *node)) {
 		}
 	}
 }
-func (self *node) childSlice(i byte) (slice []*node, subi byte) {
+func (self *node) getChild(i byte) *node {
 	p1, p2, p3, p4 := self.indices(i)
+	if self.children == nil {
+		return nil
+	}
+	if self.children[p1] == nil {
+		return nil
+	}
+	if self.children[p1][p2] == nil {
+		return nil
+	}
+	if self.children[p1][p2][p3] == nil {
+		return nil
+	}
+	return self.children[p1][p2][p3][p4]
+}
+func (self *node) setChild(i byte, child *node) {
+	p1, p2, p3, p4 := self.indices(i)
+	if self.children == nil {
+		self.children = make([][][][]*node, 4)
+	}
 	if self.children[p1] == nil {
 		self.children[p1] = make([][][]*node, 4)
 	}
@@ -108,15 +127,7 @@ func (self *node) childSlice(i byte) (slice []*node, subi byte) {
 	if self.children[p1][p2][p3] == nil {
 		self.children[p1][p2][p3] = make([]*node, 4)
 	}
-	return self.children[p1][p2][p3], p4
-}
-func (self *node) getChild(i byte) *node {
-	slice, subi := self.childSlice(i)
-	return slice[subi]
-}
-func (self *node) setChild(i byte, child *node) {
-	slice, subi := self.childSlice(i)
-	slice[subi] = child
+	self.children[p1][p2][p3][p4] = child
 }
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	indentation := &bytes.Buffer{}
