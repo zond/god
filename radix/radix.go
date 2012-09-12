@@ -119,38 +119,33 @@ func (self *node) get(key []byte) (value Hasher, existed bool) {
 				return
 			}
 		}
-	}
-	panic("shouldn't happen")
+	} 
+	return
 }
 func (self *node) insert(node *node) (old Hasher, existed bool) {
-	if bytes.Compare(self.key, node.key) == 0 {
-		old, self.value, existed = self.value, node.value, true
+	if current := self.children.get(node.key[0]); current == nil {
+		self.children.add(node)
 		return
 	} else {
-		if current := self.children.get(node.key[0]); current == nil {
-			self.children.add(node)
-			return
-		} else {
-			for i := 0;; i ++ {
-				if i >= len(node.key) {
-					self.children.replace(node)
-					current.trimKey(i, len(current.key))
-					node.children.add(current)
-					return
-				} else if i >= len(current.key) {
-					node.trimKey(i, len(node.key))
-					old, existed = current.insert(node)
-					return
-				} else if node.key[i] != current.key[i] {
-					extra_node := newNode(make([]byte, i), nil)
-					copy(extra_node.key, node.key[:i])
-					self.children.replace(extra_node)
-					node.trimKey(i, len(node.key))
-					extra_node.children.add(node)
-					current.trimKey(i, len(current.key))
-					extra_node.children.add(current)
-					return
-				}
+		for i := 0;; i ++ {
+			if i >= len(node.key) {
+				self.children.replace(node)
+				current.trimKey(i, len(current.key))
+				node.children.add(current)
+				return
+			} else if i >= len(current.key) {
+				node.trimKey(i, len(node.key))
+				old, existed = current.insert(node)
+				return
+			} else if node.key[i] != current.key[i] {
+				extra_node := newNode(make([]byte, i), nil)
+				copy(extra_node.key, node.key[:i])
+				self.children.replace(extra_node)
+				node.trimKey(i, len(node.key))
+				extra_node.children.add(node)
+				current.trimKey(i, len(current.key))
+				extra_node.children.add(current)
+				return
 			}
 		}
 	}
