@@ -1,12 +1,11 @@
-
 package radix
 
 import (
 	"../murmur"
-	"fmt"
-	"testing"
-	"math/rand"
 	"bytes"
+	"fmt"
+	"math/rand"
+	"testing"
 	"time"
 )
 
@@ -44,8 +43,8 @@ func TestRadixHash(t *testing.T) {
 		k := keys[index]
 		v := vals[index]
 		tree2.Put(k, v)
-		keys = append(keys[:index], keys[index + 1:]...)
-		vals = append(vals[:index], vals[index + 1:]...)
+		keys = append(keys[:index], keys[index+1:]...)
+		vals = append(vals[:index], vals[index+1:]...)
 	}
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
@@ -137,4 +136,3 @@ func BenchmarkTree100000(b *testing.B) {
 func BenchmarkTree1000000(b *testing.B) {
 	benchTree(b, 1000000)
 }
-

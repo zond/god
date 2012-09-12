@@ -1,10 +1,9 @@
-
 package radix
 
 import (
+	"../murmur"
 	"bytes"
 	"fmt"
-	"../murmur"
 )
 
 type Hasher interface {
@@ -16,16 +15,17 @@ const (
 )
 
 func rip(b []byte) (result []byte) {
-	result = make([]byte, parts * len(b))
+	result = make([]byte, parts*len(b))
 	for i, char := range b {
 		for j := 0; j < parts; j++ {
-			result[(i * parts) + j] = (char << byte((8 / parts) * j)) >> byte(8 - (8 / parts))
+			result[(i*parts)+j] = (char << byte((8/parts)*j)) >> byte(8-(8/parts))
 		}
 	}
 	return
 }
 
 type StringHasher string
+
 func (self StringHasher) Hash() []byte {
 	return murmur.HashString(string(self))
 }
@@ -34,6 +34,7 @@ type Tree struct {
 	size int
 	root *node
 }
+
 func NewTree() *Tree {
 	return &Tree{0, newNode(nil, nil)}
 }
@@ -66,18 +67,19 @@ func (self *Tree) Describe() string {
 }
 
 type node struct {
-	key []byte
-	value Hasher
+	key       []byte
+	value     Hasher
 	valueHash []byte
-	hash []byte
-	children []*node
+	hash      []byte
+	children  []*node
 }
+
 func newNode(key []byte, value Hasher) (result *node) {
 	result = &node{
-		key: key,
-		value: value,
-		hash: make([]byte, murmur.Size),
-		children: make([]*node, 1 << (8 / parts)),
+		key:      key,
+		value:    value,
+		hash:     make([]byte, murmur.Size),
+		children: make([]*node, 1<<(8/parts)),
 	}
 	if value != nil {
 		result.valueHash = value.Hash()
@@ -116,17 +118,17 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	}
 	fmt.Fprintf(buffer, "\n")
 	self.eachChild(func(node *node) {
-		node.describe(indent + len(fmt.Sprint(self.key)), buffer)
-	});
+		node.describe(indent+len(fmt.Sprint(self.key)), buffer)
+	})
 }
 func (self *node) trimKey(from, to int) {
-	new_key := make([]byte, to - from)
+	new_key := make([]byte, to-from)
 	copy(new_key, self.key[from:to])
 	self.key = new_key
 }
 func (self *node) get(key []byte) (value Hasher, existed bool) {
 	if current := self.getChild(key[0]); current != nil {
-		for i := 0;; i ++ {
+		for i := 0; ; i++ {
 			if i >= len(key) && i >= len(current.key) {
 				value, existed = current.value, current.value != nil
 				return
@@ -139,7 +141,7 @@ func (self *node) get(key []byte) (value Hasher, existed bool) {
 				return
 			}
 		}
-	} 
+	}
 	return
 }
 func (self *node) insert(node *node) (old Hasher, existed bool) {
@@ -149,7 +151,7 @@ func (self *node) insert(node *node) (old Hasher, existed bool) {
 		self.rehash()
 		return
 	} else {
-		for i := 0;; i ++ {
+		for i := 0; ; i++ {
 			if i >= len(node.key) && i >= len(current.key) {
 				old, current.value, existed = current.value, node.value, true
 				current.rehash()

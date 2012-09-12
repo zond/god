@@ -1,11 +1,10 @@
-
 package murmur
 
 import (
-	"testing"
-	"math/rand"
-	"fmt"
 	"crypto/sha1"
+	"fmt"
+	"math/rand"
+	"testing"
 	"time"
 )
 

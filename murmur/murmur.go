@@ -1,10 +1,9 @@
-
 package murmur
 
 import (
-	"unsafe"
 	"bytes"
 	"fmt"
+	"unsafe"
 )
 
 /*
@@ -20,8 +19,8 @@ func init() {
 
 const (
 	BlockSize = 1
-	Size = 16
-	seed = 42
+	Size      = 16
+	seed      = 42
 )
 
 func HashString(s string) []byte {
@@ -55,9 +54,9 @@ func (self *Hash) Get() (result []byte) {
 func (self *Hash) Extrude(result *[]byte) {
 	buf := (*bytes.Buffer)(self).Bytes()
 	C.MurmurHash3_x64_128(
-		*(*unsafe.Pointer)(unsafe.Pointer(&buf)), 
-		C.int(len(buf)), 
-		C.uint32_t(seed), 
+		*(*unsafe.Pointer)(unsafe.Pointer(&buf)),
+		C.int(len(buf)),
+		C.uint32_t(seed),
 		*(*unsafe.Pointer)(unsafe.Pointer(result)))
 	self.Reset()
 }
