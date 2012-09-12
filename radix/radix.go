@@ -11,7 +11,7 @@ type Hasher interface {
 }
 
 const (
-	parts = 2
+	parts = 4
 )
 
 func rip(b []byte) (result []byte) {
