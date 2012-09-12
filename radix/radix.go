@@ -24,11 +24,17 @@ func NewTree() *Tree {
 	return &Tree{0, newNode(nil, nil)}
 }
 func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
+	if key == nil {
+		panic(fmt.Errorf("%v does not allow nil keys", self))
+	}
 	node := newNode(key, value)
 	self.size++
 	return self.root.insert(node)
 }
 func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
+	if key == nil {
+		panic(fmt.Errorf("%v does not allow nil keys", self))
+	}
 	return self.root.get(key)
 }
 func (self *Tree) Size() int {
@@ -36,7 +42,9 @@ func (self *Tree) Size() int {
 }
 func (self *Tree) Describe() string {
 	buffer := bytes.NewBufferString(fmt.Sprintf("<Radix size:%v>\n", self.Size()))
-	self.root.describe(2, buffer)
+	self.root.eachChild(func(node *node) {
+		node.describe(2, buffer)
+	})
 	return string(buffer.Bytes())
 }
 
@@ -58,6 +66,19 @@ func (self *node) indices(i byte) (p1, p2, p3, p4 byte) {
 	p3 = (i & (3 << 2)) >> 2
 	p4 = (i & 3)
 	return
+}
+func (self *node) eachChild(f func(child *node)) {
+	for _, s1 := range self.children {
+		for _, s2 := range s1 {
+			for _, s3 := range s2 {
+				for _, node := range s3 {
+					if node != nil {
+						f(node)
+					}
+				}
+			}
+		}
+	}
 }
 func (self *node) childSlice(i byte) (slice []*node, subi byte) {
 	p1, p2, p3, p4 := self.indices(i)
@@ -90,15 +111,9 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 		fmt.Fprintf(buffer, " => %v", self.value)
 	}
 	fmt.Fprintf(buffer, "\n")
-	for _, s1 := range self.children {
-		for _, s2 := range s1 {
-			for _, s3 := range s2 {
-				for _, node := range s3 {
-					node.describe(indent + len(self.key), buffer)
-				}
-			}
-		}
-	}
+	self.eachChild(func(node *node) {
+		node.describe(indent + len(self.key), buffer)
+	});
 }
 func (self *node) trimKey(from, to int) {
 	new_key := make([]byte, to - from)
@@ -109,7 +124,7 @@ func (self *node) get(key []byte) (value Hasher, existed bool) {
 	if current := self.getChild(key[0]); current != nil {
 		for i := 0;; i ++ {
 			if i >= len(key) && i >= len(current.key) {
-				value, existed = current.value, true
+				value, existed = current.value, current.value != nil
 				return
 			} else if i >= len(key) {
 				return

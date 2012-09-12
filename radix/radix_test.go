@@ -12,6 +12,12 @@ func assertExistance(t *testing.T, tree *Tree, k, v string) {
 	}
 }
 
+func assertNonExistance(t *testing.T, tree *Tree, k string) {
+	if value, existed := tree.Get([]byte(k)); existed || value != nil {
+		t.Errorf("%v should not contain %v, got %v, %v", tree, k, value, existed)
+	}
+}
+
 func TestRadixBasicOps(t *testing.T) {
 	tree := NewTree()
 	tree.Put([]byte("apple"), StringHasher("fruit"))
@@ -26,6 +32,29 @@ func TestRadixBasicOps(t *testing.T) {
 	assertExistance(t, tree, "banana", "fruit")
 	assertExistance(t, tree, "guava", "fruit")
 	assertExistance(t, tree, "guanabana", "city")
+	assertNonExistance(t, tree, "gua")
+}
+
+func TestRadixNilKeyPut(t *testing.T) {
+	defer func() {
+		if err := recover(); err == nil {
+			t.Error("should raise exception!")
+		}
+	}()
+	tree := NewTree()
+	tree.Put(nil, StringHasher("nil"))
+	t.Error("should raise exception!")
+}
+
+func TestRadixNilKeyGet(t *testing.T) {
+	defer func() {
+		if err := recover(); err == nil {
+			t.Error("should raise exception!")
+		}
+	}()
+	tree := NewTree()
+	tree.Get(nil)
+	t.Error("should raise exception!")
 }
 
 func benchTree(b *testing.B, n int) {
