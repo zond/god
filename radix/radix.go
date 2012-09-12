@@ -27,9 +27,8 @@ func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 	if key == nil {
 		panic(fmt.Errorf("%v does not allow nil keys", self))
 	}
-	node := newNode(key, value)
 	self.size++
-	old, existed = self.root.insert(node)
+	old, existed = self.root.insert(newNode(key, value))
 	return
 }
 func (self *Tree) Hash() []byte {
@@ -124,13 +123,13 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	for i := 0; i < indent; i++ {
 		fmt.Fprint(indentation, " ")
 	}
-	fmt.Fprintf(buffer, "%v%v [%v]", string(indentation.Bytes()), string(self.key), self.hash)
+	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), self.key)
 	if self.value != nil {
 		fmt.Fprintf(buffer, " => %v", self.value)
 	}
 	fmt.Fprintf(buffer, "\n")
 	self.eachChild(func(node *node) {
-		node.describe(indent + len(self.key), buffer)
+		node.describe(indent + len(fmt.Sprint(self.key)), buffer)
 	});
 }
 func (self *node) trimKey(from, to int) {

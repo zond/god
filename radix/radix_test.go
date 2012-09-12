@@ -6,6 +6,7 @@ import (
 	"testing"
 	"math/rand"
 	"bytes"
+	"../murmur"
 	"time"
 )
 
@@ -97,7 +98,7 @@ func benchTree(b *testing.B, n int) {
 	var k [][]byte
 	var v []Hasher
 	for i := 0; i < n; i++ {
-		k = append(k, []byte(fmt.Sprint(i)))
+		k = append(k, murmur.HashString(fmt.Sprint(i)))
 		v = append(v, StringHasher(fmt.Sprint(i)))
 	}
 	b.StartTimer()
