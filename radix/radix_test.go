@@ -4,7 +4,14 @@ package radix
 import (
 	"fmt"
 	"testing"
+	"math/rand"
+	"bytes"
+	"time"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func assertExistance(t *testing.T, tree *Tree, k, v string) {
 	if value, existed := tree.Get([]byte(k)); !existed || value != StringHasher(v) {
@@ -15,6 +22,32 @@ func assertExistance(t *testing.T, tree *Tree, k, v string) {
 func assertNonExistance(t *testing.T, tree *Tree, k string) {
 	if value, existed := tree.Get([]byte(k)); existed || value != nil {
 		t.Errorf("%v should not contain %v, got %v, %v", tree, k, value, existed)
+	}
+}
+
+func TestRadixHash(t *testing.T) {
+	tree1 := NewTree()
+	var keys [][]byte
+	var vals []StringHasher
+	n := 10000
+	for i := 0; i < n; i++ {
+		k := []byte(fmt.Sprint(rand.Int63()))
+		v := StringHasher(fmt.Sprint(rand.Int63()))
+		keys = append(keys, k)
+		vals = append(vals, v)
+		tree1.Put(k, v)
+	}
+	tree2 := NewTree()
+	for i := 0; i < n; i++ {
+		index := rand.Int() % len(keys)
+		k := keys[index]
+		v := vals[index]
+		tree2.Put(k, v)
+		keys = append(keys[:index], keys[index + 1:]...)
+		vals = append(vals[:index], vals[index + 1:]...)
+	}
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
 	}
 }
 
@@ -32,6 +65,8 @@ func TestRadixBasicOps(t *testing.T) {
 	assertExistance(t, tree, "banana", "fruit")
 	assertExistance(t, tree, "guava", "fruit")
 	assertExistance(t, tree, "guanabana", "city")
+	tree.Put([]byte("crab"), StringHasher("crustacean"))
+	assertExistance(t, tree, "crab", "crustacean")
 	assertNonExistance(t, tree, "gua")
 }
 

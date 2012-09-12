@@ -29,7 +29,11 @@ func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 	}
 	node := newNode(key, value)
 	self.size++
-	return self.root.insert(node)
+	old, existed = self.root.insert(node)
+	return
+}
+func (self *Tree) Hash() []byte {
+	return self.root.hash
 }
 func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
 	if key == nil {
@@ -51,14 +55,28 @@ func (self *Tree) Describe() string {
 type node struct {
 	key []byte
 	value Hasher
+	valueHash []byte
+	hash []byte
 	children [][][][]*node
 }
-func newNode(key []byte, value Hasher) *node {
-	return &node{
+func newNode(key []byte, value Hasher) (result *node) {
+	result = &node{
 		key: key,
 		value: value,
 		children: make([][][][]*node, 4),
 	}
+	if value != nil {
+		result.valueHash = value.Hash()
+	}
+	return
+}
+func (self *node) rehash() {
+	h := murmur.NewBytes(self.key)
+	h.Write(self.valueHash)
+	self.eachChild(func(node *node) {
+		h.Write(node.hash)
+	})
+	self.hash = h.Get()
 }
 func (self *node) indices(i byte) (p1, p2, p3, p4 byte) {
 	p1 = (i & (3 << 6)) >> 6
@@ -106,7 +124,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	for i := 0; i < indent; i++ {
 		fmt.Fprint(indentation, " ")
 	}
-	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), string(self.key))
+	fmt.Fprintf(buffer, "%v%v [%v]", string(indentation.Bytes()), string(self.key), self.hash)
 	if self.value != nil {
 		fmt.Fprintf(buffer, " => %v", self.value)
 	}
@@ -141,17 +159,28 @@ func (self *node) get(key []byte) (value Hasher, existed bool) {
 func (self *node) insert(node *node) (old Hasher, existed bool) {
 	if current := self.getChild(node.key[0]); current == nil {
 		self.setChild(node.key[0], node)
+		node.rehash()
+		self.rehash()
 		return
 	} else {
 		for i := 0;; i ++ {
-			if i >= len(node.key) {
+			if i >= len(node.key) && i >= len(current.key) {
+				old, current.value, existed = current.value, node.value, true
+				current.rehash()
+				self.rehash()
+				return
+			} else if i >= len(node.key) {
 				self.setChild(node.key[0], node)
 				current.trimKey(i, len(current.key))
 				node.setChild(current.key[0], current)
+				current.rehash()
+				node.rehash()
+				self.rehash()
 				return
 			} else if i >= len(current.key) {
 				node.trimKey(i, len(node.key))
 				old, existed = current.insert(node)
+				self.rehash()
 				return
 			} else if node.key[i] != current.key[i] {
 				extra_node := newNode(make([]byte, i), nil)
@@ -161,6 +190,10 @@ func (self *node) insert(node *node) (old Hasher, existed bool) {
 				extra_node.setChild(node.key[0], node)
 				current.trimKey(i, len(current.key))
 				extra_node.setChild(current.key[0], current)
+				current.rehash()
+				node.rehash()
+				extra_node.rehash()
+				self.rehash()
 				return
 			}
 		}
