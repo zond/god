@@ -9,8 +9,13 @@ import (
 	"time"
 )
 
+var benchmarkTestTree *Tree
+var benchmarkTestKeys [][]byte
+var benchmarkTestValues []Hasher
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
+	benchmarkTestTree = NewTree()
 }
 
 func assertExistance(t *testing.T, tree *Tree, k, v string) {
@@ -94,21 +99,29 @@ func TestRadixNilKeyGet(t *testing.T) {
 
 func benchTree(b *testing.B, n int) {
 	b.StopTimer()
-	var k [][]byte
-	var v []Hasher
-	for i := 0; i < n; i++ {
-		k = append(k, murmur.HashString(fmt.Sprint(i)))
-		v = append(v, StringHasher(fmt.Sprint(i)))
+	for len(benchmarkTestKeys) < n {
+		benchmarkTestKeys = append(benchmarkTestKeys, murmur.HashString(fmt.Sprint(len(benchmarkTestKeys))))
+		benchmarkTestValues = append(benchmarkTestValues, StringHasher(fmt.Sprint(len(benchmarkTestValues))))
 	}
+	for benchmarkTestTree.Size() < n {
+		benchmarkTestTree.Put(benchmarkTestKeys[benchmarkTestTree.Size()], benchmarkTestValues[benchmarkTestTree.Size()])
+	}
+	var keys [][]byte
+	var vals []Hasher
+	for i := 0; i < b.N; i++ {
+		keys = append(keys, murmur.HashString(fmt.Sprint(rand.Int63())))
+		vals = append(vals, StringHasher(fmt.Sprint(rand.Int63())))
+	}
+	var k []byte
+	var v Hasher
 	b.StartTimer()
-	for j := 0; j < b.N/n; j++ {
-		m := NewTree()
-		for i := 0; i < n; i++ {
-			m.Put(k[i], v[i])
-			j, existed := m.Get(k[i])
-			if j != v[i] {
-				b.Fatalf("%v should contain %v, but got %v, %v", m.Describe(), string(k[i]), j, existed)
-			}
+	for i := 0; i < b.N; i++ {
+		k = benchmarkTestKeys[i % len(benchmarkTestKeys)]
+		v = benchmarkTestValues[i % len(benchmarkTestValues)]
+		benchmarkTestTree.Put(k, v)
+		j, existed := benchmarkTestTree.Get(k)
+		if j != v {
+			b.Fatalf("%v should contain %v, but got %v, %v", benchmarkTestTree.Describe(), v, j, existed)
 		}
 	}
 }
