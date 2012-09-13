@@ -92,22 +92,13 @@ func TestRadixBasicOps(t *testing.T) {
 	if old, existed := tree.Put([]byte("nil"), nil); old != nil || existed {
 		t.Error("should not exist yet")
 	}
-	assertExistance(t, tree, "apple", "fruit")
-	assertExistance(t, tree, "crab", "animal")
-	assertExistance(t, tree, "crabapple", "fruit")
-	assertExistance(t, tree, "banana", "fruit")
-	assertExistance(t, tree, "guava", "fruit")
-	assertExistance(t, tree, "guanabana", "city")
 	if value, existed := tree.Get(nil); !existed || value != StringHasher("nil") {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree, nil, "nil", value, existed)
 	}
 	if value, existed := tree.Get([]byte("nil")); !existed || value != nil {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree, "nil", nil, value, existed)
 	}
-	tree.Put([]byte("crab"), StringHasher("crustacean"))
-	assertExistance(t, tree, "crab", "crustacean")
 	assertNonExistance(t, tree, "gua")
-
 }
 
 func benchTree(b *testing.B, n int) {
