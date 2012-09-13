@@ -76,9 +76,12 @@ func TestRadixBasicOps(t *testing.T) {
 	assertOldPut(t, tree, "crab", "animal", "critter")
 	assertNewPut(t, tree, "crabapple", "poop")
 	assertOldPut(t, tree, "crabapple", "fruit", "poop")
-	assertNewPut(t, tree, "banana", "fruit")
-	assertNewPut(t, tree, "guava", "fruit")
-	assertNewPut(t, tree, "guanabana", "city")
+	assertNewPut(t, tree, "banana", "yellow")
+	assertOldPut(t, tree, "banana", "fruit", "yellow")
+	assertNewPut(t, tree, "guava", "fart")
+	assertOldPut(t, tree, "guava", "fruit", "fart")
+	assertNewPut(t, tree, "guanabana", "man")
+	assertOldPut(t, tree, "guanabana", "city", "man")
 	if old, existed := tree.Put(nil, StringHasher("nil")); old != nil || existed {
 		t.Error("should not exist yet")
 	}
