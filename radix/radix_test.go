@@ -70,6 +70,7 @@ func TestRadixHash(t *testing.T) {
 
 func TestRadixBasicOps(t *testing.T) {
 	tree := new(Tree)
+	assertNonExistance(t, tree, "apple")
 	assertNewPut(t, tree, "apple", "stonefruit")
 	assertOldPut(t, tree, "apple", "fruit", "stonefruit")
 	assertNewPut(t, tree, "crab", "critter")
