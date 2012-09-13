@@ -15,12 +15,12 @@ var benchmarkTestValues []Hasher
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	benchmarkTestTree = NewTree()
+	benchmarkTestTree = new(Tree)
 }
 
 func assertExistance(t *testing.T, tree *Tree, k, v string) {
 	if value, existed := tree.Get([]byte(k)); !existed || value != StringHasher(v) {
-		t.Errorf("%v should contain %v => %v, got %v, %v", tree, k, v, value, existed)
+		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), rip([]byte(k)), v, value, existed)
 	}
 }
 
@@ -31,7 +31,7 @@ func assertNonExistance(t *testing.T, tree *Tree, k string) {
 }
 
 func TestRadixHash(t *testing.T) {
-	tree1 := NewTree()
+	tree1 := new(Tree)
 	var keys [][]byte
 	var vals []StringHasher
 	n := 10000
@@ -42,7 +42,7 @@ func TestRadixHash(t *testing.T) {
 		vals = append(vals, v)
 		tree1.Put(k, v)
 	}
-	tree2 := NewTree()
+	tree2 := new(Tree)
 	for i := 0; i < n; i++ {
 		index := rand.Int() % len(keys)
 		k := keys[index]
@@ -57,44 +57,30 @@ func TestRadixHash(t *testing.T) {
 }
 
 func TestRadixBasicOps(t *testing.T) {
-	tree := NewTree()
+	tree := new(Tree)
 	tree.Put([]byte("apple"), StringHasher("fruit"))
 	tree.Put([]byte("crab"), StringHasher("animal"))
 	tree.Put([]byte("crabapple"), StringHasher("fruit"))
 	tree.Put([]byte("banana"), StringHasher("fruit"))
 	tree.Put([]byte("guava"), StringHasher("fruit"))
 	tree.Put([]byte("guanabana"), StringHasher("city"))
+	tree.Put(nil, StringHasher("nil"))
+	tree.Put([]byte("nil"), nil)
 	assertExistance(t, tree, "apple", "fruit")
 	assertExistance(t, tree, "crab", "animal")
 	assertExistance(t, tree, "crabapple", "fruit")
 	assertExistance(t, tree, "banana", "fruit")
 	assertExistance(t, tree, "guava", "fruit")
 	assertExistance(t, tree, "guanabana", "city")
+	if value, existed := tree.Get(nil); !existed || value != StringHasher("nil") {
+		t.Errorf("%v should contain %v => %v, got %v, %v", tree, nil, "nil", value, existed)
+	}
+	if value, existed := tree.Get([]byte("nil")); !existed || value != nil {
+		t.Errorf("%v should contain %v => %v, got %v, %v", tree, "nil", nil, value, existed)
+	}
 	tree.Put([]byte("crab"), StringHasher("crustacean"))
 	assertExistance(t, tree, "crab", "crustacean")
 	assertNonExistance(t, tree, "gua")
-}
-
-func TestRadixNilKeyPut(t *testing.T) {
-	defer func() {
-		if err := recover(); err == nil {
-			t.Error("should raise exception!")
-		}
-	}()
-	tree := NewTree()
-	tree.Put(nil, StringHasher("nil"))
-	t.Error("should raise exception!")
-}
-
-func TestRadixNilKeyGet(t *testing.T) {
-	defer func() {
-		if err := recover(); err == nil {
-			t.Error("should raise exception!")
-		}
-	}()
-	tree := NewTree()
-	tree.Get(nil)
-	t.Error("should raise exception!")
 }
 
 func benchTree(b *testing.B, n int) {
