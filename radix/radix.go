@@ -114,9 +114,11 @@ func (self *node) rehash() {
 	h.Extrude(&self.hash)
 }
 func (self *node) eachChild(f func(child *node)) {
-	for _, child := range self.children {
-		if child != nil {
-			f(child)
+	if self != nil {
+		for _, child := range self.children {
+			if child != nil {
+				f(child)
+			}
 		}
 	}
 }
@@ -194,7 +196,8 @@ func (self *node) del(key []byte) (result *node, old Hasher, existed bool) {
 			result, old, existed = self, nil, false
 			return
 		} else if beyond_self {
-			self.children[key[0]], old, existed = self.children[key[0]].del(key[i:])
+			self.children[key[i]], old, existed = self.children[key[i]].del(key[i:])
+			result = self
 			self.rehash()
 			return
 		} else if self.key[i] != key[i] {

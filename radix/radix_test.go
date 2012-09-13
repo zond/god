@@ -40,6 +40,22 @@ func assertOldPut(t *testing.T, tree *Tree, k, v, old string) {
 	assertExistance(t, tree, k, v)
 }
 
+func assertDelSuccess(t *testing.T, tree *Tree, k, old string) {
+	assertExistance(t, tree, k, old)
+	if value, existed := tree.Del([]byte(k)); !existed || value != StringHasher(old) {
+		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), rip([]byte(k)), old, value, existed)
+	}
+	assertNonExistance(t, tree, k)
+}
+
+func assertDelFailure(t *testing.T, tree *Tree, k string) {
+	assertNonExistance(t, tree, k)
+	if value, existed := tree.Del([]byte(k)); existed || value != nil {
+		t.Errorf("%v should not contain %v, got %v, %v", tree.Describe(), rip([]byte(k)), value, existed)
+	}
+	assertNonExistance(t, tree, k)
+}
+
 func assertNonExistance(t *testing.T, tree *Tree, k string) {
 	if value, existed := tree.Get([]byte(k)); existed || value != nil {
 		t.Errorf("%v should not contain %v, got %v, %v", tree, k, value, existed)
@@ -98,7 +114,19 @@ func TestRadixBasicOps(t *testing.T) {
 	if value, existed := tree.Get([]byte("nil")); !existed || value != nil {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree, "nil", nil, value, existed)
 	}
-	assertNonExistance(t, tree, "gua")
+	assertDelFailure(t, tree, "gua")
+	assertDelSuccess(t, tree, "apple", "fruit")
+	assertDelFailure(t, tree, "apple")
+	assertDelSuccess(t, tree, "crab", "animal")
+	assertDelFailure(t, tree, "crab")
+	assertDelSuccess(t, tree, "crabapple", "fruit")
+	assertDelFailure(t, tree, "crabapple")
+	assertDelSuccess(t, tree, "banana", "fruit")
+	assertDelFailure(t, tree, "banana")
+	assertDelSuccess(t, tree, "guava", "fruit")
+	assertDelFailure(t, tree, "guava")
+	assertDelSuccess(t, tree, "guanabana", "city")
+	assertDelFailure(t, tree, "guanabana")
 }
 
 func benchTree(b *testing.B, n int) {
