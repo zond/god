@@ -66,7 +66,7 @@ func TestRadixHash(t *testing.T) {
 	tree1 := new(Tree)
 	var keys [][]byte
 	var vals []StringHasher
-	n := 100
+	n := 10000
 	for i := 0; i < n; i++ {
 		k := []byte(fmt.Sprint(rand.Int63()))
 		v := StringHasher(fmt.Sprint(rand.Int63()))
@@ -88,16 +88,16 @@ func TestRadixHash(t *testing.T) {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
 	}
 	var deletes []int
-	for i := 0; i < n / 10; i++ {
+	for i := 0; i < n/10; i++ {
 		index := rand.Int() % len(keybackup)
 		deletes = append(deletes, index)
 	}
 	var successes []bool
-	for i := 0; i < n / 10; i++ {
+	for i := 0; i < n/10; i++ {
 		_, ok := tree1.Del(keybackup[deletes[i]])
 		successes = append(successes, ok)
 	}
-	for i := 0; i < n / 10; i++ {
+	for i := 0; i < n/10; i++ {
 		if _, ok := tree2.Del(keybackup[deletes[i]]); ok != successes[i] {
 			t.Errorf("delete success should be %v", successes[i])
 		}
@@ -105,8 +105,6 @@ func TestRadixHash(t *testing.T) {
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
 	}
-	fmt.Println(tree1.Describe())
-	fmt.Println(tree2.Describe())
 }
 
 func TestRadixBasicOps(t *testing.T) {

@@ -136,7 +136,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 }
 func (self *node) each(prefix []byte, f TreeIterator) {
 	if self != nil {
-		key := make([]byte, len(prefix) + len(self.key))
+		key := make([]byte, len(prefix)+len(self.key))
 		copy(key, prefix)
 		copy(key[len(prefix):], self.key)
 		if self.hasValue {
