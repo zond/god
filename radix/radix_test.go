@@ -24,6 +24,18 @@ func assertExistance(t *testing.T, tree *Tree, k, v string) {
 	}
 }
 
+func assertNewPut(t *testing.T, tree *Tree, k, v string) {
+	if value, existed := tree.Put([]byte(k), StringHasher(v)); existed || value != nil {
+		t.Errorf("%v should not contain %v, got %v, %v", tree.Describe(), rip([]byte(k)), value, existed)
+	}
+}
+
+func assertOldPut(t *testing.T, tree *Tree, k, v, old string) {
+	if value, existed := tree.Put([]byte(k), StringHasher(v)); !existed || value != StringHasher(old) {
+		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), rip([]byte(k)), v, value, existed)
+	}
+}
+
 func assertNonExistance(t *testing.T, tree *Tree, k string) {
 	if value, existed := tree.Get([]byte(k)); existed || value != nil {
 		t.Errorf("%v should not contain %v, got %v, %v", tree, k, value, existed)
@@ -58,14 +70,21 @@ func TestRadixHash(t *testing.T) {
 
 func TestRadixBasicOps(t *testing.T) {
 	tree := new(Tree)
-	tree.Put([]byte("apple"), StringHasher("fruit"))
-	tree.Put([]byte("crab"), StringHasher("animal"))
-	tree.Put([]byte("crabapple"), StringHasher("fruit"))
-	tree.Put([]byte("banana"), StringHasher("fruit"))
-	tree.Put([]byte("guava"), StringHasher("fruit"))
-	tree.Put([]byte("guanabana"), StringHasher("city"))
-	tree.Put(nil, StringHasher("nil"))
-	tree.Put([]byte("nil"), nil)
+	assertNewPut(t, tree, "apple", "stonefruit")
+	assertOldPut(t, tree, "apple", "fruit", "stonefruit")
+	assertNewPut(t, tree, "crab", "critter")
+	assertOldPut(t, tree, "crab", "animal", "critter")
+	assertNewPut(t, tree, "crabapple", "poop")
+	assertOldPut(t, tree, "crabapple", "fruit", "poop")
+	assertNewPut(t, tree, "banana", "fruit")
+	assertNewPut(t, tree, "guava", "fruit")
+	assertNewPut(t, tree, "guanabana", "city")
+	if old, existed := tree.Put(nil, StringHasher("nil")); old != nil || existed {
+		t.Error("should not exist yet")
+	}
+	if old, existed := tree.Put([]byte("nil"), nil); old != nil || existed {
+		t.Error("should not exist yet")
+	}
 	assertExistance(t, tree, "apple", "fruit")
 	assertExistance(t, tree, "crab", "animal")
 	assertExistance(t, tree, "crabapple", "fruit")
@@ -81,6 +100,7 @@ func TestRadixBasicOps(t *testing.T) {
 	tree.Put([]byte("crab"), StringHasher("crustacean"))
 	assertExistance(t, tree, "crab", "crustacean")
 	assertNonExistance(t, tree, "gua")
+
 }
 
 func benchTree(b *testing.B, n int) {

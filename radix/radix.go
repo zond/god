@@ -10,6 +10,8 @@ type Hasher interface {
 	Hash() []byte
 }
 
+type TreeIterator func(key []byte, value Hasher)
+
 const (
 	parts = 2
 )
@@ -45,8 +47,10 @@ type Tree struct {
 }
 
 func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
-	self.size++
 	self.root, old, existed = self.root.insert(newNode(rip(key), value, true))
+	if !existed {
+		self.size++
+	}
 	return
 }
 func (self *Tree) Hash() []byte {
@@ -54,6 +58,19 @@ func (self *Tree) Hash() []byte {
 }
 func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
 	return self.root.get(rip(key))
+}
+func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
+	self.root, old, existed = self.root.del(rip(key))
+	if existed {
+		self.size--
+	}
+	return
+}
+func (self *Tree) Up(from, below []byte, f TreeIterator) {
+//	self.root.up(from, below, f)
+}
+func (self *Tree) Down(from, above []byte, f TreeIterator) {
+//	self.root.down(from, above, f)
 }
 func (self *Tree) Size() int {
 	return self.size
@@ -103,12 +120,6 @@ func (self *node) eachChild(f func(child *node)) {
 		}
 	}
 }
-func (self *node) getChild(i byte) *node {
-	return self.children[i]
-}
-func (self *node) setChild(child *node) {
-	self.children[child.key[0]] = child
-}
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	indentation := &bytes.Buffer{}
 	for i := 0; i < indent; i++ {
@@ -143,20 +154,58 @@ func (self *node) get(key []byte) (value Hasher, existed bool) {
 		} else if beyond_key {
 			return
 		} else if beyond_self {
-			if child := self.getChild(key[i]); child == nil {
-				return
-			} else {
-				value, existed = child.get(key[i:])
-				return
-			}
+			value, existed = self.children[key[i]].get(key[i:])
+			return
 		} else if key[i] != self.key[i] {
 			return
 		}
 	}
 	panic("Shouldn't happen")
 }
+func (self *node) del(key []byte) (result *node, old Hasher, existed bool) {
+	if self == nil {
+		return
+	}
+	beyond_key := false
+	beyond_self := false
+	for i := 0; ; i++ {
+		beyond_key = i >= len(key)
+		beyond_self = i >= len(self.key)
+		if beyond_key && beyond_self {
+			n_children := 0
+			var a_child *node
+			for _, child := range self.children {
+				if child != nil {
+					n_children++
+					a_child = child
+				}
+			}
+			if n_children > 1 {
+				self.hasValue, result, old, existed = false, self, self.value, self.hasValue
+			} else if n_children == 1 {
+				a_child.key = append(self.key, a_child.key...)
+				a_child.rehash()
+				result, old, existed = a_child, self.value, self.hasValue
+			} else {
+				result, old, existed = nil, self.value, self.hasValue
+			}
+			return
+		} else if beyond_key {
+			result, old, existed = self, nil, false
+			return
+		} else if beyond_self {
+			self.children[key[0]], old, existed = self.children[key[0]].del(key[i:])
+			self.rehash()
+			return
+		} else if self.key[i] != key[i] {
+			return
+		}
+	}	
+	panic("Shouldn't happen")
+}
 func (self *node) insert(n *node) (result *node, old Hasher, existed bool) {
 	if self == nil {
+		n.rehash()
 		result = n
 		return
 	}
@@ -171,36 +220,27 @@ func (self *node) insert(n *node) (result *node, old Hasher, existed bool) {
 			return
 		} else if beyond_n {
 			self.trimKey(i, len(self.key))
-			n.setChild(self)
+			n.children[self.key[0]] = self
 			result, old, existed = n, nil, false
 			self.rehash()
 			n.rehash()
 			return
 		} else if beyond_self {
 			n.trimKey(i, len(n.key))
-			if child := self.getChild(n.key[0]); child == nil {
-				self.setChild(n)
-				n.rehash()
-				self.rehash()
-				result, old, existed = self, nil, false
-				return
-			} else {
-				var new_child *node
-				new_child, old, existed = child.insert(n)
-				self.setChild(new_child)
-				self.rehash()
-				result = self
-				return
-			}
+			k := n.key[0]
+			self.children[k], old, existed = self.children[k].insert(n)
+			self.rehash()
+			result = self
+			return 
 		} else if n.key[i] != self.key[i] {
 			result, old, existed = newNode(make([]byte, i), nil, false), nil, false
 			copy(result.key, n.key[:i])
 
 			n.trimKey(i, len(n.key))
-			result.setChild(n)
+			result.children[n.key[0]] = n
 			
 			self.trimKey(i, len(self.key))
-			result.setChild(self)
+			result.children[self.key[0]] = self
 
 			n.rehash()
 			self.rehash()
