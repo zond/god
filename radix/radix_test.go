@@ -66,7 +66,7 @@ func TestRadixHash(t *testing.T) {
 	tree1 := new(Tree)
 	var keys [][]byte
 	var vals []StringHasher
-	n := 10000
+	n := 100
 	for i := 0; i < n; i++ {
 		k := []byte(fmt.Sprint(rand.Int63()))
 		v := StringHasher(fmt.Sprint(rand.Int63()))
@@ -74,6 +74,7 @@ func TestRadixHash(t *testing.T) {
 		vals = append(vals, v)
 		tree1.Put(k, v)
 	}
+	keybackup := keys
 	tree2 := new(Tree)
 	for i := 0; i < n; i++ {
 		index := rand.Int() % len(keys)
@@ -86,6 +87,26 @@ func TestRadixHash(t *testing.T) {
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
 	}
+	var deletes []int
+	for i := 0; i < n / 10; i++ {
+		index := rand.Int() % len(keybackup)
+		deletes = append(deletes, index)
+	}
+	var successes []bool
+	for i := 0; i < n / 10; i++ {
+		_, ok := tree1.Del(keybackup[deletes[i]])
+		successes = append(successes, ok)
+	}
+	for i := 0; i < n / 10; i++ {
+		if _, ok := tree2.Del(keybackup[deletes[i]]); ok != successes[i] {
+			t.Errorf("delete success should be %v", successes[i])
+		}
+	}
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+	fmt.Println(tree1.Describe())
+	fmt.Println(tree2.Describe())
 }
 
 func TestRadixBasicOps(t *testing.T) {
@@ -148,8 +169,8 @@ func benchTree(b *testing.B, n int) {
 	var v Hasher
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		k = benchmarkTestKeys[i % len(benchmarkTestKeys)]
-		v = benchmarkTestValues[i % len(benchmarkTestValues)]
+		k = benchmarkTestKeys[i%len(benchmarkTestKeys)]
+		v = benchmarkTestValues[i%len(benchmarkTestValues)]
 		benchmarkTestTree.Put(k, v)
 		j, existed := benchmarkTestTree.Get(k)
 		if j != v {

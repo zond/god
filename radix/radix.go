@@ -17,7 +17,7 @@ const (
 )
 
 func rip(b []byte) (result []byte) {
-	result = make([]byte, parts * len(b))
+	result = make([]byte, parts*len(b))
 	for i, char := range b {
 		for j := 0; j < parts; j++ {
 			result[(i*parts)+j] = (char << byte((8/parts)*j)) >> byte(8-(8/parts))
@@ -26,7 +26,7 @@ func rip(b []byte) (result []byte) {
 	return
 }
 func stitch(b []byte) (result []byte) {
-	result = make([]byte, len(b) / parts)
+	result = make([]byte, len(b)/parts)
 	for i, _ := range result {
 		for j := 0; j < parts; j++ {
 			result[i] += b[(i*parts)+j] << byte((parts-j-1)*(8/parts))
@@ -66,17 +66,14 @@ func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
 	}
 	return
 }
-func (self *Tree) Up(from, below []byte, f TreeIterator) {
-//	self.root.up(from, below, f)
-}
-func (self *Tree) Down(from, above []byte, f TreeIterator) {
-//	self.root.down(from, above, f)
+func (self *Tree) Each(f TreeIterator) {
+	self.root.each([]byte{}, f)
 }
 func (self *Tree) Size() int {
 	return self.size
 }
 func (self *Tree) Describe() string {
-	buffer := bytes.NewBufferString(fmt.Sprintf("<Radix size:%v>\n", self.Size()))
+	buffer := bytes.NewBufferString(fmt.Sprintf("<Radix size:%v hash:%v>\n", self.Size(), self.Hash()))
 	self.root.eachChild(func(node *node) {
 		node.describe(2, buffer)
 	})
@@ -86,7 +83,7 @@ func (self *Tree) Describe() string {
 type node struct {
 	key       []byte
 	value     Hasher
-	hasValue bool
+	hasValue  bool
 	valueHash []byte
 	hash      []byte
 	children  []*node
@@ -113,6 +110,7 @@ func (self *node) rehash() {
 	})
 	h.Extrude(&self.hash)
 }
+
 func (self *node) eachChild(f func(child *node)) {
 	if self != nil {
 		for _, child := range self.children {
@@ -135,6 +133,19 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	self.eachChild(func(node *node) {
 		node.describe(indent+len(fmt.Sprint(self.key)), buffer)
 	})
+}
+func (self *node) each(prefix []byte, f TreeIterator) {
+	if self != nil {
+		key := make([]byte, len(prefix) + len(self.key))
+		copy(key, prefix)
+		copy(key[len(prefix):], self.key)
+		if self.hasValue {
+			f(stitch(key), self.value)
+		}
+		for _, child := range self.children {
+			child.each(key, f)
+		}
+	}
 }
 func (self *node) trimKey(from, to int) {
 	new_key := make([]byte, to-from)
@@ -183,7 +194,9 @@ func (self *node) del(key []byte) (result *node, old Hasher, existed bool) {
 				}
 			}
 			if n_children > 1 {
-				self.hasValue, result, old, existed = false, self, self.value, self.hasValue
+				result, old, existed = self, self.value, self.hasValue
+				self.value, self.valueHash, self.hasValue = nil, nil, false
+				self.rehash()
 			} else if n_children == 1 {
 				a_child.key = append(self.key, a_child.key...)
 				a_child.rehash()
@@ -203,7 +216,7 @@ func (self *node) del(key []byte) (result *node, old Hasher, existed bool) {
 		} else if self.key[i] != key[i] {
 			return
 		}
-	}	
+	}
 	panic("Shouldn't happen")
 }
 func (self *node) insert(n *node) (result *node, old Hasher, existed bool) {
@@ -234,14 +247,14 @@ func (self *node) insert(n *node) (result *node, old Hasher, existed bool) {
 			self.children[k], old, existed = self.children[k].insert(n)
 			self.rehash()
 			result = self
-			return 
+			return
 		} else if n.key[i] != self.key[i] {
 			result, old, existed = newNode(make([]byte, i), nil, false), nil, false
 			copy(result.key, n.key[:i])
 
 			n.trimKey(i, len(n.key))
 			result.children[n.key[0]] = n
-			
+
 			self.trimKey(i, len(self.key))
 			result.children[self.key[0]] = self
 
