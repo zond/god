@@ -69,10 +69,13 @@ type Tree struct {
 	size int
 	root *node
 }
+func NewTree() *Tree {
+	return &Tree{0, newNode(nil, nil, false)}
+}
 
 func (self *Tree) Finger(key []byte) (result *Print) {
 	result = &Print{}
-	if key == nil && self.root != nil {
+	if key == nil {
 		self.root.finger(result, self.root.key)
 	}  else {
 		self.root.finger(result, rip(key))
@@ -92,9 +95,6 @@ func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 	return
 }
 func (self *Tree) Hash() []byte {
-	if self.root == nil {
-		return nil
-	}
 	return self.root.hash
 }
 func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
@@ -268,7 +268,7 @@ func (self *node) del(key []byte) (result *node, old Hasher, existed bool) {
 					a_child = child
 				}
 			}
-			if n_children > 1 {
+			if n_children > 1 || self.key == nil {
 				result, old, existed = self, self.value, self.hasValue
 				self.value, self.valueHash, self.hasValue = nil, nil, false
 				self.rehash()
@@ -306,7 +306,7 @@ func (self *node) insert(n *node) (result *node, old Hasher, existed bool) {
 		beyond_n = i >= len(n.key)
 		beyond_self = i >= len(self.key)
 		if beyond_n && beyond_self {
-			self.value, result, old, existed = n.value, self, self.value, true
+			self.value, self.hasValue, result, old, existed = n.value, true, self, self.value, self.hasValue
 			self.rehash()
 			return
 		} else if beyond_n {

@@ -16,7 +16,7 @@ var benchmarkTestValues []Hasher
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	benchmarkTestTree = new(Tree)
+	benchmarkTestTree = NewTree()
 }
 
 func assertExistance(t *testing.T, tree *Tree, k, v string) {
@@ -64,7 +64,7 @@ func assertNonExistance(t *testing.T, tree *Tree, k string) {
 }
 
 func TestRadixHash(t *testing.T) {
-	tree1 := new(Tree)
+	tree1 := NewTree()
 	var keys [][]byte
 	var vals []StringHasher
 	n := 10000
@@ -76,7 +76,7 @@ func TestRadixHash(t *testing.T) {
 		tree1.Put(k, v)
 	}
 	keybackup := keys
-	tree2 := new(Tree)
+	tree2 := NewTree()
 	for i := 0; i < n; i++ {
 		index := rand.Int() % len(keys)
 		k := keys[index]
@@ -134,8 +134,31 @@ func TestRadixHash(t *testing.T) {
 	})
 }
 
+func TestRadixNilKey(t *testing.T) {
+	tree := NewTree()
+	h := tree.Hash()
+	if value, existed := tree.Get(nil); value != nil || existed {
+		t.Errorf("should not exist")
+	}
+	if value, existed := tree.Put(nil, nil); value != nil || existed {
+		t.Errorf("should not exist")
+	}
+	if value, existed := tree.Get(nil); value != nil || !existed {
+		t.Errorf("should exist")
+	}
+	if value, existed := tree.Del(nil); value != nil || !existed {
+		t.Errorf("should exist")
+	}
+	if value, existed := tree.Get(nil); value != nil || existed {
+		t.Errorf("should not exist")
+	}
+	if bytes.Compare(h, tree.Hash()) != 0 {
+		t.Errorf("should be equal")
+	}
+}
+
 func TestRadixBasicOps(t *testing.T) {
-	tree := new(Tree)
+	tree := NewTree()
 	assertNewPut(t, tree, "apple", "stonefruit")
 	assertOldPut(t, tree, "apple", "fruit", "stonefruit")
 	assertNewPut(t, tree, "crab", "critter")
