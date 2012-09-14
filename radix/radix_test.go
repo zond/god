@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+	"reflect"
 )
 
 var benchmarkTestTree *Tree
@@ -87,6 +88,19 @@ func TestRadixHash(t *testing.T) {
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
 	}
+	if !reflect.DeepEqual(tree1.Finger(nil), tree2.Finger(nil)) {
+		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
+	}
+	tree1.Each(func(key []byte, value Hasher) {
+		f1 := tree1.Finger(key)
+		f2 := tree2.Finger(key)
+		if f1 == nil || f2 == nil {
+			t.Errorf("should not be nil!")
+		}
+		if !reflect.DeepEqual(f1, f2) {
+			t.Errorf("should be equal!")
+		}
+	})
 	var deletes []int
 	for i := 0; i < n/10; i++ {
 		index := rand.Int() % len(keybackup)
@@ -105,6 +119,19 @@ func TestRadixHash(t *testing.T) {
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
 	}
+	if !reflect.DeepEqual(tree1.Finger(nil), tree2.Finger(nil)) {
+		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
+	}
+	tree1.Each(func(key []byte, value Hasher) {
+		f1 := tree1.Finger(key)
+		f2 := tree2.Finger(key)
+		if f1 == nil || f2 == nil {
+			t.Errorf("should not be nil!")
+		}
+		if !reflect.DeepEqual(f1, f2) {
+			t.Errorf("should be equal!")
+		}
+	})
 }
 
 func TestRadixBasicOps(t *testing.T) {
@@ -121,6 +148,24 @@ func TestRadixBasicOps(t *testing.T) {
 	assertOldPut(t, tree, "guava", "fruit", "fart")
 	assertNewPut(t, tree, "guanabana", "man")
 	assertOldPut(t, tree, "guanabana", "city", "man")
+	m := make(map[string]Hasher)
+	tree.Each(func(key []byte, value Hasher) {
+		m[string(key)] = value
+	})
+	comp := map[string]Hasher{
+		"apple": StringHasher("fruit"),
+		"crab": StringHasher("animal"),
+		"crabapple": StringHasher("fruit"),
+		"banana": StringHasher("fruit"),
+		"guava": StringHasher("fruit"),
+		"guanabana": StringHasher("city"),
+	}
+	if !reflect.DeepEqual(m, comp) {
+		t.Errorf("should be equal!")
+	}
+	if !reflect.DeepEqual(tree.ToMap(), comp) {
+		t.Errorf("should be equal!")
+	}
 	if old, existed := tree.Put(nil, StringHasher("nil")); old != nil || existed {
 		t.Error("should not exist yet")
 	}

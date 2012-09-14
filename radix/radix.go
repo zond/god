@@ -1,3 +1,4 @@
+
 package radix
 
 import (
@@ -41,11 +42,48 @@ func (self StringHasher) Hash() []byte {
 	return murmur.HashString(string(self))
 }
 
+type Print struct {
+	Key []byte
+	ValueHash []byte
+	HasValue bool
+	ChildSums [][]byte
+}
+func (self *Print) clear() {
+	self.Key, self.ValueHash, self.HasValue, self.ChildSums = nil, nil, false, nil
+}
+func (self *Print) push(n *node) {
+	self.Key = append(self.Key, n.key...)
+}
+func (self *Print) set(n *node) {
+	self.ValueHash = n.valueHash
+	self.HasValue = n.hasValue
+	self.ChildSums = make([][]byte, len(n.children))
+	for index, child := range n.children {
+		if child != nil {
+			self.ChildSums[index] = child.hash
+		}
+	}
+}
+
 type Tree struct {
 	size int
 	root *node
 }
 
+func (self *Tree) Finger(key []byte) (result *Print) {
+	result = &Print{}
+	if key == nil && self.root != nil {
+		self.root.finger(result, self.root.key)
+	}  else {
+		self.root.finger(result, rip(key))
+	}
+	if result.Key == nil {
+		result = nil
+	} else {
+		result.Key = stitch(result.Key)
+	}
+	return
+}
 func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 	self.root, old, existed = self.root.insert(newNode(rip(key), value, true))
 	if !existed {
@@ -64,6 +102,13 @@ func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
 	if existed {
 		self.size--
 	}
+	return
+}
+func (self *Tree) ToMap() (result map[string]Hasher) {
+	result = make(map[string]Hasher)
+	self.Each(func(key []byte, value Hasher) {
+		result[string(key)] = value
+	})
 	return
 }
 func (self *Tree) Each(f TreeIterator) {
@@ -151,6 +196,33 @@ func (self *node) trimKey(from, to int) {
 	new_key := make([]byte, to-from)
 	copy(new_key, self.key[from:to])
 	self.key = new_key
+}
+func (self *node) finger(result *Print, key []byte) {
+	if self == nil {
+		result.clear()
+		return
+	}
+	result.push(self)
+	beyond_self := false
+	beyond_key := false
+	for i := 0; ; i++ {
+		beyond_self = i >= len(self.key)
+		beyond_key = i >= len(key)
+		if beyond_self && beyond_key {
+			result.set(self)
+			return
+		} else if beyond_key {
+			result.clear()
+			return
+		} else if beyond_self {
+			self.children[key[i]].finger(result, key[i:])
+			return
+		} else if key[i] != self.key[i] {
+			result.clear()
+			return
+		}
+	}
+	panic("Shouldn't happen")
 }
 func (self *node) get(key []byte) (value Hasher, existed bool) {
 	if self == nil {
