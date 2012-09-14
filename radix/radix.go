@@ -7,6 +7,8 @@ import (
 	"fmt"
 )
 
+var nilHash = murmur.HashBytes(nil)
+
 type Hasher interface {
 	Hash() []byte
 }
@@ -16,6 +18,13 @@ type TreeIterator func(key []byte, value Hasher)
 const (
 	parts = 2
 )
+
+func hash(h Hasher) []byte {
+	if h == nil {
+		return nilHash
+	}
+	return h.Hash()
+}
 
 func rip(b []byte) (result []byte) {
 	result = make([]byte, parts*len(b))
@@ -42,25 +51,28 @@ func (self StringHasher) Hash() []byte {
 	return murmur.HashString(string(self))
 }
 
+type SubPrint struct {
+	Key []byte
+	Sum []byte
+}
+
 type Print struct {
 	Key []byte
 	ValueHash []byte
-	HasValue bool
-	ChildSums [][]byte
+	SubPrints []SubPrint
 }
 func (self *Print) clear() {
-	self.Key, self.ValueHash, self.HasValue, self.ChildSums = nil, nil, false, nil
+	self.Key, self.ValueHash, self.SubPrints = nil, nil, nil
 }
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.key...)
 }
 func (self *Print) set(n *node) {
 	self.ValueHash = n.valueHash
-	self.HasValue = n.hasValue
-	self.ChildSums = make([][]byte, len(n.children))
+	self.SubPrints = make([]SubPrint, len(n.children))
 	for index, child := range n.children {
 		if child != nil {
-			self.ChildSums[index] = child.hash
+			self.SubPrints[index] = SubPrint{child.key, child.hash}
 		}
 	}
 }
@@ -75,12 +87,8 @@ func NewTree() *Tree {
 
 func (self *Tree) Finger(key []byte) (result *Print) {
 	result = &Print{}
-	if key == nil {
-		self.root.finger(result, self.root.key)
-	}  else {
-		self.root.finger(result, rip(key))
-	}
-	if result.Key == nil {
+	self.root.finger(result, rip(key))
+	if key != nil && result.Key == nil {
 		result = nil
 	} else {
 		result.Key = stitch(result.Key)
@@ -131,7 +139,6 @@ func (self *Tree) Describe() string {
 type node struct {
 	key       []byte
 	value     Hasher
-	hasValue  bool
 	valueHash []byte
 	hash      []byte
 	children  []*node
@@ -141,12 +148,11 @@ func newNode(key []byte, value Hasher, hasValue bool) (result *node) {
 	result = &node{
 		key:      key,
 		value:    value,
-		hasValue: hasValue,
 		hash:     make([]byte, murmur.Size),
 		children: make([]*node, 1<<(8/parts)),
 	}
-	if value != nil {
-		result.valueHash = value.Hash()
+	if hasValue {
+		result.valueHash = hash(result.value)
 	}
 	return
 }
@@ -187,7 +193,7 @@ func (self *node) each(prefix []byte, f TreeIterator) {
 		key := make([]byte, len(prefix)+len(self.key))
 		copy(key, prefix)
 		copy(key[len(prefix):], self.key)
-		if self.hasValue {
+		if self.valueHash != nil {
 			f(stitch(key), self.value)
 		}
 		for _, child := range self.children {
@@ -237,7 +243,7 @@ func (self *node) get(key []byte) (value Hasher, existed bool) {
 		beyond_self = i >= len(self.key)
 		beyond_key = i >= len(key)
 		if beyond_self && beyond_key {
-			value, existed = self.value, self.hasValue
+			value, existed = self.value, self.valueHash != nil
 			return
 		} else if beyond_key {
 			return
@@ -269,15 +275,15 @@ func (self *node) del(key []byte) (result *node, old Hasher, existed bool) {
 				}
 			}
 			if n_children > 1 || self.key == nil {
-				result, old, existed = self, self.value, self.hasValue
-				self.value, self.valueHash, self.hasValue = nil, nil, false
+				result, old, existed = self, self.value, self.valueHash != nil
+				self.value, self.valueHash = nil, nil
 				self.rehash()
 			} else if n_children == 1 {
 				a_child.key = append(self.key, a_child.key...)
 				a_child.rehash()
-				result, old, existed = a_child, self.value, self.hasValue
+				result, old, existed = a_child, self.value, self.valueHash != nil
 			} else {
-				result, old, existed = nil, self.value, self.hasValue
+				result, old, existed = nil, self.value, self.valueHash != nil
 			}
 			return
 		} else if beyond_key {
@@ -306,7 +312,8 @@ func (self *node) insert(n *node) (result *node, old Hasher, existed bool) {
 		beyond_n = i >= len(n.key)
 		beyond_self = i >= len(self.key)
 		if beyond_n && beyond_self {
-			self.value, self.hasValue, result, old, existed = n.value, true, self, self.value, self.hasValue
+			result, old, existed = self, self.value, self.valueHash != nil
+			self.value, self.valueHash = n.value, hash(n.value)
 			self.rehash()
 			return
 		} else if beyond_n {
