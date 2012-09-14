@@ -92,6 +92,9 @@ func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 	return
 }
 func (self *Tree) Hash() []byte {
+	if self.root == nil {
+		return nil
+	}
 	return self.root.hash
 }
 func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
