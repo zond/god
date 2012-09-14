@@ -29,7 +29,7 @@ func (self *Sync) Tick() bool {
 	return self.tickPrint()
 }
 func (self *Sync) tickPrint() bool {
-	if bytes.Compare(self.sourcePrint.ValueHash, self.destinationPrint.ValueHash) != 0 {
+	if self.destinationPrint == nil || bytes.Compare(self.sourcePrint.ValueHash, self.destinationPrint.ValueHash) != 0 {
 		if value, existed := self.source.Get(self.sourcePrint.Key); existed {
 			self.destination.Put(self.sourcePrint.Key, value)
 			return true

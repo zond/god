@@ -72,7 +72,10 @@ func (self *Print) set(n *node) {
 	self.SubPrints = make([]SubPrint, len(n.children))
 	for index, child := range n.children {
 		if child != nil {
-			self.SubPrints[index] = SubPrint{child.key, child.hash}
+			self.SubPrints[index] = SubPrint{
+				Key: append(self.Key, child.key...),
+				Sum: child.hash,
+			}
 		}
 	}
 }
