@@ -63,14 +63,34 @@ func assertNonExistance(t *testing.T, tree *Tree, k string) {
 	}
 }
 
+func TestRadixSync(t *testing.T) {
+	tree1 := NewTree()
+	n := 1000
+	var k []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = []byte(fmt.Sprint(rand.Int63()))
+		v = StringHasher(fmt.Sprint(rand.Int63()))
+		tree1.Put(k, v)
+	}
+	tree2 := NewTree()
+	s := NewSync(tree1, tree2)
+	s.Run()
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+}
+
 func TestRadixHash(t *testing.T) {
 	tree1 := NewTree()
 	var keys [][]byte
 	var vals []StringHasher
 	n := 10000
+	var k []byte
+	var v StringHasher
 	for i := 0; i < n; i++ {
-		k := []byte(fmt.Sprint(rand.Int63()))
-		v := StringHasher(fmt.Sprint(rand.Int63()))
+		k = []byte(fmt.Sprint(rand.Int63()))
+		v = StringHasher(fmt.Sprint(rand.Int63()))
 		keys = append(keys, k)
 		vals = append(vals, v)
 		tree1.Put(k, v)
@@ -79,8 +99,8 @@ func TestRadixHash(t *testing.T) {
 	tree2 := NewTree()
 	for i := 0; i < n; i++ {
 		index := rand.Int() % len(keys)
-		k := keys[index]
-		v := vals[index]
+		k = keys[index]
+		v = vals[index]
 		tree2.Put(k, v)
 		keys = append(keys[:index], keys[index+1:]...)
 		vals = append(vals[:index], vals[index+1:]...)
@@ -92,8 +112,8 @@ func TestRadixHash(t *testing.T) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
 	tree1.Each(func(key []byte, value Hasher) {
-		f1 := tree1.Finger(key)
-		f2 := tree2.Finger(key)
+		f1 := tree1.Finger(rip(key))
+		f2 := tree2.Finger(rip(key))
 		if f1 == nil || f2 == nil {
 			t.Errorf("should not be nil!")
 		}
@@ -123,8 +143,8 @@ func TestRadixHash(t *testing.T) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
 	tree1.Each(func(key []byte, value Hasher) {
-		f1 := tree1.Finger(key)
-		f2 := tree2.Finger(key)
+		f1 := tree1.Finger(rip(key))
+		f2 := tree2.Finger(rip(key))
 		if f1 == nil || f2 == nil {
 			t.Errorf("should not be nil!")
 		}

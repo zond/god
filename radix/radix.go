@@ -90,11 +90,11 @@ func NewTree() *Tree {
 
 func (self *Tree) Finger(key []byte) (result *Print) {
 	result = &Print{}
-	self.root.finger(result, rip(key))
+	self.root.finger(result, key)
 	if key != nil && result.Key == nil {
 		result = nil
 	} else {
-		result.Key = stitch(result.Key)
+		result.Key = result.Key
 	}
 	return
 }
