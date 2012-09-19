@@ -6,14 +6,6 @@ import (
 	"fmt"
 )
 
-type HashTree interface {
-	Hash() []byte
-	Finger(key []byte) *Print
-	Put(key []byte, value Hasher) (old Hasher, existed bool)
-	Get(key []byte) (value Hasher, existed bool)
-	Del(key []byte) (old Hasher, existed bool)
-}
-
 type Sync struct {
 	source HashTree
 	destination HashTree
