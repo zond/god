@@ -62,10 +62,10 @@ func assertNonExistance(t *testing.T, tree *Tree, k string) {
 		t.Errorf("%v should not contain %v, got %v, %v", tree, k, value, existed)
 	}
 }
-
+/*
 func TestRadixSync(t *testing.T) {
 	tree1 := NewTree()
-	n := 1000
+	n := 10
 	var k []byte
 	var v StringHasher
 	for i := 0; i < n; i++ {
@@ -80,12 +80,12 @@ func TestRadixSync(t *testing.T) {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
 	}
 }
-
+*/
 func TestRadixHash(t *testing.T) {
 	tree1 := NewTree()
 	var keys [][]byte
 	var vals []StringHasher
-	n := 10000
+	n := 10
 	var k []byte
 	var v StringHasher
 	for i := 0; i < n; i++ {
