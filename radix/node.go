@@ -9,7 +9,6 @@ import (
 
 type node struct {
 	segment       []byte
-	key []byte
 	value     Hasher
 	valueHash []byte
 	hash      []byte
@@ -34,7 +33,6 @@ func (self *node) setSegment(part []byte) {
 	self.segment = new_segment
 }
 func (self *node) rehash(key []byte) {
-	self.key = key
 	h := murmur.NewBytes(key)
 	h.Write(self.valueHash)
 	self.eachChild(func(node *node) {
@@ -60,7 +58,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	if self.value != nil {
 		fmt.Fprintf(buffer, " => %v", self.value)
 	}
-	fmt.Fprintf(buffer, " (%v, %v)", self.key, self.hash)
+	fmt.Fprintf(buffer, " (%v)", self.hash)
 	fmt.Fprintf(buffer, "\n")
 	self.eachChild(func(node *node) {
 		node.describe(indent+len(fmt.Sprint(self.segment)), buffer)

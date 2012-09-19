@@ -22,14 +22,19 @@ func init() {
 /*
 func TestRadixSync(t *testing.T) {
 	tree1 := NewTree()
-	n := 10
+	n := 20
 	var k []byte
 	var v StringHasher
-	for i := 0; i < n; i++ {
-		k = []byte(fmt.Sprint(rand.Int63()))
-		v = StringHasher(fmt.Sprint(rand.Int63()))
+	for i := 10; i < n; i++ {
+		k = []byte(fmt.Sprint(i))
+		v = StringHasher(fmt.Sprint(i))
 		tree1.Put(k, v)
 	}
+	fmt.Println(tree1.Describe())
+	fmt.Println(tree1.Finger(nil))
+	fmt.Println(tree1.Finger(rip([]byte("1"))))
+	fmt.Println(tree1.Finger([]byte{3,1}))
+	fmt.Println(tree1.Finger([]byte{3,1,3,0}))
 	tree2 := NewTree()
 	s := NewSync(tree1, tree2)
 	s.Run()

@@ -15,7 +15,7 @@ func NewTree() *Tree {
 }
 
 func (self *Tree) Finger(key []byte) (result *Print) {
-	result = &Print{}
+	result = &Print{nil, nil, make([]SubPrint, 1 << parts)}
 	self.root.finger(result, key)
 	return
 }
