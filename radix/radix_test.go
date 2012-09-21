@@ -223,7 +223,6 @@ func TestRadixBasicOps(t *testing.T) {
 func benchTreeSync(b *testing.B, size, diff int) {
 	b.StopTimer()
 	tree1 := NewTree()
-	tree2 := NewTree()
 	mod := size / diff
 	var k []byte
 	var v Hasher
@@ -231,24 +230,36 @@ func benchTreeSync(b *testing.B, size, diff int) {
 		k = murmur.HashString(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
 		tree1.Put(k, v)
-		if size % mod != 0 {
-			tree2.Put(k, v)
+	}
+	var tree2 *Tree
+	var s *Sync
+	for j := 0; j < b.N; j++ {
+		tree2 = NewTree()
+		for i := 0; i < size; i++ {
+			k = murmur.HashString(fmt.Sprint(i))
+			v = StringHasher(fmt.Sprint(i))
+			if i % mod != 0 {
+				tree2.Put(k, v)
+			}
 		}
-	}
-	b.StartTimer()
-	s := NewSync(tree1, tree2)
-	s.Run()
-	b.StopTimer()
-	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
-		b.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
-	}
-	if !reflect.DeepEqual(tree1, tree2) {
-		b.Errorf("%v and %v are unequal", tree1, tree2)
+		b.StartTimer()
+		s = NewSync(tree1, tree2)
+		s.Run()
+		b.StopTimer()
 	}
 }
 
 func BenchmarkTreeSync100_1(b *testing.B) {
 	benchTreeSync(b, 100, 1)
+}
+func BenchmarkTreeSync100_10(b *testing.B) {
+	benchTreeSync(b, 100, 10)
+}
+func BenchmarkTreeSync100_50(b *testing.B) {
+	benchTreeSync(b, 100, 50)
+}
+func BenchmarkTreeSync100_90(b *testing.B) {
+	benchTreeSync(b, 100, 90)
 }
 
 func benchTree(b *testing.B, n int) {
