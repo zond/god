@@ -75,24 +75,24 @@ func (self *node) each(prefix []byte, f TreeIterator) {
 		}
 	}
 }
-func (self *node) finger(result *Print, segment []byte) {
+func (self *node) finger(allocated *Print, segment []byte) (result *Print) {
 	if self == nil {
 		return
 	}
-	result.push(self)
+	allocated.push(self)
 	beyond_self := false
 	beyond_segment := false
 	for i := 0; ; i++ {
 		beyond_self = i >= len(self.segment)
 		beyond_segment = i >= len(segment)
 		if beyond_self && beyond_segment {
-			result.set(self)
+			allocated.set(self)
+			result = allocated
 			return
 		} else if beyond_segment {
 			return
 		} else if beyond_self {
-			self.children[segment[i]].finger(result, segment[i:])
-			return
+			return self.children[segment[i]].finger(allocated, segment[i:])
 		} else if segment[i] != self.segment[i] {
 			return
 		}

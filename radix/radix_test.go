@@ -19,7 +19,7 @@ func init() {
 	benchmarkTestTree = NewTree()
 }
 
-/*
+
 func TestRadixSync(t *testing.T) {
 	tree1 := NewTree()
 	n := 20
@@ -30,19 +30,18 @@ func TestRadixSync(t *testing.T) {
 		v = StringHasher(fmt.Sprint(i))
 		tree1.Put(k, v)
 	}
-	fmt.Println(tree1.Describe())
-	fmt.Println(tree1.Finger(nil))
-	fmt.Println(tree1.Finger(rip([]byte("1"))))
-	fmt.Println(tree1.Finger([]byte{3,1}))
-	fmt.Println(tree1.Finger([]byte{3,1,3,0}))
 	tree2 := NewTree()
 	s := NewSync(tree1, tree2)
 	s.Run()
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
 	}
+	if !reflect.DeepEqual(tree1, tree2) {
+		t.Errorf("%v and %v are unequal", tree1, tree2)
+	}
 }
-*/
+
+
 func TestRadixHash(t *testing.T) {
 	tree1 := NewTree()
 	var keys [][]byte

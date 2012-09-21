@@ -3,7 +3,6 @@ package radix
 
 import (
 	"bytes"
-	"fmt"
 )
 
 type Sync struct {
@@ -24,7 +23,6 @@ func (self *Sync) Run() bool {
 	return true
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
-	fmt.Println("synchronizing", sourcePrint, "*** AND ***",destinationPrint)
 	if sourcePrint == nil || sourcePrint.ValueHash == nil {
 		// If there isn't supposed to be a value here
 		if destinationPrint != nil && destinationPrint.ValueHash != nil {
@@ -37,16 +35,15 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 			// But the destination has none, or the wrong one
 			key := stitch(sourcePrint.Key)
 			if value, existed := self.source.Get(key); existed {
-				fmt.Println("*** inserting", key)
 				self.destination.Put(key, value)
 			}
 		}
 	}
-	for i := 0; i < 1 << parts; i++ {
-		if bytes.Compare(sourcePrint.SubPrints[i].Sum, destinationPrint.SubPrints[i].Sum) != 0 {	
+	for index, subPrint := range sourcePrint.SubPrints {
+		if destinationPrint == nil || bytes.Compare(subPrint.Sum, destinationPrint.SubPrints[index].Sum) != 0 {	
 			self.synchronize(
-				self.source.Finger(sourcePrint.SubPrints[i].Key), 
-				self.destination.Finger(destinationPrint.SubPrints[i].Key),
+				self.source.Finger(subPrint.Key), 
+				self.destination.Finger(subPrint.Key),
 				)
 		}
 	}
