@@ -65,18 +65,18 @@ type SubPrint struct {
 type Print struct {
 	Key []byte
 	ValueHash []byte
-	SubPrints []SubPrint
+	SubPrints []*SubPrint
 }
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
 }
 func (self *Print) set(n *node) {
 	self.ValueHash = n.valueHash
-	self.SubPrints = make([]SubPrint, len(n.children))
+	self.SubPrints = make([]*SubPrint, len(n.children))
 	for index, child := range n.children {
 		if child != nil {
-			self.SubPrints[index] = SubPrint{
-				Key: append(self.Key, child.segment...),
+			self.SubPrints[index] = &SubPrint{
+				Key: append(append([]byte{}, self.Key...), child.segment...),
 				Sum: child.hash,
 			}
 		}

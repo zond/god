@@ -20,12 +20,12 @@ func init() {
 }
 
 
-func TestRadixSync(t *testing.T) {
+func TestRadixSyncComplete(t *testing.T) {
 	tree1 := NewTree()
-	n := 20
+	n := 1000
 	var k []byte
 	var v StringHasher
-	for i := 10; i < n; i++ {
+	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
 		tree1.Put(k, v)
@@ -41,6 +41,29 @@ func TestRadixSync(t *testing.T) {
 	}
 }
 
+func TestRadixSyncPartial(t *testing.T) {
+	tree1 := NewTree()
+	tree2 := NewTree()
+	n := 1000
+	var k []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = []byte(fmt.Sprint(i))
+		v = StringHasher(fmt.Sprint(i))
+		tree1.Put(k, v)
+		if n % 10 != 0 {
+			tree2.Put(k, v)
+		}
+	}
+	s := NewSync(tree1, tree2)
+	s.Run()
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree1, tree2) {
+		t.Errorf("%v and %v are unequal", tree1, tree2)
+	}
+}
 
 func TestRadixHash(t *testing.T) {
 	tree1 := NewTree()
@@ -195,6 +218,37 @@ func TestRadixBasicOps(t *testing.T) {
 	assertDelFailure(t, tree, "guava")
 	assertDelSuccess(t, tree, "guanabana", "city")
 	assertDelFailure(t, tree, "guanabana")
+}
+
+func benchTreeSync(b *testing.B, size, diff int) {
+	b.StopTimer()
+	tree1 := NewTree()
+	tree2 := NewTree()
+	mod := size / diff
+	var k []byte
+	var v Hasher
+	for i := 0; i < size; i++ {
+		k = murmur.HashString(fmt.Sprint(i))
+		v = StringHasher(fmt.Sprint(i))
+		tree1.Put(k, v)
+		if size % mod != 0 {
+			tree2.Put(k, v)
+		}
+	}
+	b.StartTimer()
+	s := NewSync(tree1, tree2)
+	s.Run()
+	b.StopTimer()
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		b.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree1, tree2) {
+		b.Errorf("%v and %v are unequal", tree1, tree2)
+	}
+}
+
+func BenchmarkTreeSync100_1(b *testing.B) {
+	benchTreeSync(b, 100, 1)
 }
 
 func benchTree(b *testing.B, n int) {

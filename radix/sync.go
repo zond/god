@@ -40,7 +40,10 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 		}
 	}
 	for index, subPrint := range sourcePrint.SubPrints {
-		if destinationPrint == nil || bytes.Compare(subPrint.Sum, destinationPrint.SubPrints[index].Sum) != 0 {	
+		if subPrint != nil && 
+			(destinationPrint == nil || 
+			destinationPrint.SubPrints[index] == nil || 
+			bytes.Compare(subPrint.Sum, destinationPrint.SubPrints[index].Sum) != 0) {	
 			self.synchronize(
 				self.source.Finger(subPrint.Key), 
 				self.destination.Finger(subPrint.Key),
