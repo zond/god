@@ -44,14 +44,15 @@ func TestRadixSyncComplete(t *testing.T) {
 func TestRadixSyncPartial(t *testing.T) {
 	tree1 := NewTree()
 	tree2 := NewTree()
-	n := 1000
+	mod := 2
+	n := 100
 	var k []byte
 	var v StringHasher
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
 		tree1.Put(k, v)
-		if n % 10 != 0 {
+		if i % mod != 0 {
 			tree2.Put(k, v)
 		}
 	}
@@ -220,47 +221,59 @@ func TestRadixBasicOps(t *testing.T) {
 	assertDelFailure(t, tree, "guanabana")
 }
 
-func benchTreeSync(b *testing.B, size, diff int) {
+func benchTreeSync(b *testing.B, size, delta int) {
 	b.StopTimer()
 	tree1 := NewTree()
-	mod := size / diff
+	tree2 := NewTree()
 	var k []byte
 	var v Hasher
 	for i := 0; i < size; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
 		tree1.Put(k, v)
+		tree2.Put(k, v)
 	}
-	var tree2 *Tree
 	var s *Sync
-	for j := 0; j < b.N; j++ {
-		tree2 = NewTree()
-		for i := 0; i < size; i++ {
-			k = murmur.HashString(fmt.Sprint(i))
-			v = StringHasher(fmt.Sprint(i))
-			if i % mod != 0 {
-				tree2.Put(k, v)
-			}
+	for i := 0; i < b.N / delta; i++ {
+		for j := 0; j < delta; j++ {
+			tree2.Del(murmur.HashString(fmt.Sprint(j)))
 		}
 		b.StartTimer()
 		s = NewSync(tree1, tree2)
 		s.Run()
 		b.StopTimer()
+		if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+			b.Fatalf("%v != %v", tree1.Hash(), tree2.Hash())
+		}
 	}
 }
 
-func BenchmarkTreeSync100_1(b *testing.B) {
-	benchTreeSync(b, 100, 1)
+func BenchmarkTreeSync10000_1(b *testing.B) {
+	benchTreeSync(b, 10000, 1)
 }
-func BenchmarkTreeSync100_10(b *testing.B) {
-	benchTreeSync(b, 100, 10)
+func BenchmarkTreeSync10000_10(b *testing.B) {
+	benchTreeSync(b, 10000, 10)
 }
-func BenchmarkTreeSync100_50(b *testing.B) {
-	benchTreeSync(b, 100, 50)
+func BenchmarkTreeSync10000_100(b *testing.B) {
+	benchTreeSync(b, 10000, 100)
 }
-func BenchmarkTreeSync100_90(b *testing.B) {
-	benchTreeSync(b, 100, 90)
+func BenchmarkTreeSync10000_1000(b *testing.B) {
+	benchTreeSync(b, 10000, 1000)
 }
+
+func BenchmarkTreeSync100000_1(b *testing.B) {
+	benchTreeSync(b, 100000, 1)
+}
+func BenchmarkTreeSync100000_10(b *testing.B) {
+	benchTreeSync(b, 100000, 10)
+}
+func BenchmarkTreeSync100000_100(b *testing.B) {
+	benchTreeSync(b, 100000, 100)
+}
+func BenchmarkTreeSync100000_1000(b *testing.B) {
+	benchTreeSync(b, 100000, 1000)
+}
+
 
 func benchTree(b *testing.B, n int) {
 	b.StopTimer()
