@@ -1,4 +1,3 @@
-
 package radix
 
 import (
@@ -6,14 +5,33 @@ import (
 )
 
 type Sync struct {
-	source HashTree
+	source      HashTree
 	destination HashTree
+	from        []byte
+	to          []byte
 }
+
 func NewSync(source, destination HashTree) *Sync {
 	return &Sync{
-		source: source,
+		source:      source,
 		destination: destination,
 	}
+}
+
+/*
+ Inclusive
+*/
+func (self *Sync) From(from []byte) *Sync {
+	self.from = from
+	return self
+}
+
+/*
+ Exclusive
+*/
+func (self *Sync) To(to []byte) *Sync {
+	self.to = to
+	return self
 }
 func (self *Sync) Run() bool {
 	if bytes.Compare(self.source.Hash(), self.destination.Hash()) == 0 {
@@ -23,31 +41,28 @@ func (self *Sync) Run() bool {
 	return true
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
-	if sourcePrint == nil || sourcePrint.ValueHash == nil {
-		// If there isn't supposed to be a value here
-		if destinationPrint != nil && destinationPrint.ValueHash != nil {
-			// But the destination has one
-			self.destination.Del(stitch(sourcePrint.Key))
-		}
-	} else {
-		// If there is supposed to be a value here
-		if destinationPrint == nil || bytes.Compare(sourcePrint.ValueHash, destinationPrint.ValueHash) != 0 {
-			// But the destination has none, or the wrong one
-			key := stitch(sourcePrint.Key)
-			if value, existed := self.source.Get(key); existed {
-				self.destination.Put(key, value)
+	if sourcePrint != nil {
+		if self.from == nil || bytes.Compare(self.from, sourcePrint.Key) > -1 {
+			if self.to == nil || bytes.Compare(self.to, sourcePrint.Key) > 0 {
+				if destinationPrint == nil || bytes.Compare(sourcePrint.ValueHash, destinationPrint.ValueHash) != 0 {
+					key := stitch(sourcePrint.Key)
+					if value, existed := self.source.Get(key); existed {
+						self.destination.Put(key, value)
+					}
+				}
 			}
 		}
 	}
 	for index, subPrint := range sourcePrint.SubPrints {
-		if subPrint != nil && 
-			(destinationPrint == nil || 
-			destinationPrint.SubPrints[index] == nil || 
-			bytes.Compare(subPrint.Sum, destinationPrint.SubPrints[index].Sum) != 0) {	
-			self.synchronize(
-				self.source.Finger(subPrint.Key), 
-				self.destination.Finger(subPrint.Key),
+		if subPrint != nil {
+			if destinationPrint == nil ||
+				destinationPrint.SubPrints[index] == nil ||
+				bytes.Compare(subPrint.Sum, destinationPrint.SubPrints[index].Sum) != 0 {
+				self.synchronize(
+					self.source.Finger(subPrint.Key),
+					self.destination.Finger(subPrint.Key),
 				)
+			}
 		}
 	}
 }

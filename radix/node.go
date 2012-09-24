@@ -1,4 +1,3 @@
-
 package radix
 
 import (
@@ -8,7 +7,7 @@ import (
 )
 
 type node struct {
-	segment       []byte
+	segment   []byte
 	value     Hasher
 	valueHash []byte
 	hash      []byte
@@ -17,7 +16,7 @@ type node struct {
 
 func newNode(segment []byte, value Hasher, hasValue bool) (result *node) {
 	result = &node{
-		segment:      segment,
+		segment:  segment,
 		value:    value,
 		hash:     make([]byte, murmur.Size),
 		children: make([]*node, 1<<(8/parts)),

@@ -1,4 +1,3 @@
-
 package radix
 
 import (
@@ -10,6 +9,7 @@ type Tree struct {
 	size int
 	root *node
 }
+
 func NewTree() *Tree {
 	return &Tree{0, newNode(nil, nil, false)}
 }
@@ -57,4 +57,3 @@ func (self *Tree) Describe() string {
 	})
 	return string(buffer.Bytes())
 }
-

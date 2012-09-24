@@ -5,9 +5,9 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
+	"reflect"
 	"testing"
 	"time"
-	"reflect"
 )
 
 var benchmarkTestTree *Tree
@@ -18,7 +18,6 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 	benchmarkTestTree = NewTree()
 }
-
 
 func TestRadixSyncComplete(t *testing.T) {
 	tree1 := NewTree()
@@ -52,7 +51,7 @@ func TestRadixSyncPartial(t *testing.T) {
 		k = []byte(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
 		tree1.Put(k, v)
-		if i % mod != 0 {
+		if i%mod != 0 {
 			tree2.Put(k, v)
 		}
 	}
@@ -181,11 +180,11 @@ func TestRadixBasicOps(t *testing.T) {
 		m[string(key)] = value
 	})
 	comp := map[string]Hasher{
-		"apple": StringHasher("fruit"),
-		"crab": StringHasher("animal"),
+		"apple":     StringHasher("fruit"),
+		"crab":      StringHasher("animal"),
 		"crabapple": StringHasher("fruit"),
-		"banana": StringHasher("fruit"),
-		"guava": StringHasher("fruit"),
+		"banana":    StringHasher("fruit"),
+		"guava":     StringHasher("fruit"),
 		"guanabana": StringHasher("city"),
 	}
 	if !reflect.DeepEqual(m, comp) {
@@ -234,7 +233,7 @@ func benchTreeSync(b *testing.B, size, delta int) {
 		tree2.Put(k, v)
 	}
 	var s *Sync
-	for i := 0; i < b.N / delta; i++ {
+	for i := 0; i < b.N/delta; i++ {
 		for j := 0; j < delta; j++ {
 			tree2.Del(murmur.HashString(fmt.Sprint(j)))
 		}
@@ -273,7 +272,6 @@ func BenchmarkTreeSync100000_100(b *testing.B) {
 func BenchmarkTreeSync100000_1000(b *testing.B) {
 	benchTreeSync(b, 100000, 1000)
 }
-
 
 func benchTree(b *testing.B, n int) {
 	b.StopTimer()
