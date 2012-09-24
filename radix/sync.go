@@ -42,9 +42,13 @@ func (self *Sync) Run() bool {
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint != nil {
+		// If there is a node at source		
 		if self.from == nil || bytes.Compare(self.from, sourcePrint.Key) > -1 {
+			// If the key at source is within limits		
 			if self.to == nil || bytes.Compare(self.to, sourcePrint.Key) > 0 {
+				// See above			
 				if destinationPrint == nil || bytes.Compare(sourcePrint.ValueHash, destinationPrint.ValueHash) != 0 {
+					// If the key at destination is missing or wrong				
 					key := stitch(sourcePrint.Key)
 					if value, existed := self.source.Get(key); existed {
 						self.destination.Put(key, value)
