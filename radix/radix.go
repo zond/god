@@ -1,4 +1,3 @@
-
 package radix
 
 import (
@@ -63,10 +62,11 @@ type SubPrint struct {
 }
 
 type Print struct {
-	Key []byte
+	Key       []byte
 	ValueHash []byte
 	SubPrints []*SubPrint
 }
+
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
 }
@@ -82,4 +82,3 @@ func (self *Print) set(n *node) {
 		}
 	}
 }
-
