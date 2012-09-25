@@ -19,7 +19,7 @@ func NewSync(source, destination HashTree) *Sync {
 }
 
 /*
- Inclusive
+Inclusive
 */
 func (self *Sync) From(from []byte) *Sync {
 	self.from = from
@@ -27,7 +27,7 @@ func (self *Sync) From(from []byte) *Sync {
 }
 
 /*
- Exclusive
+Exclusive
 */
 func (self *Sync) To(to []byte) *Sync {
 	self.to = to
