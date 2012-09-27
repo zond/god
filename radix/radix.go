@@ -54,7 +54,7 @@ type SubPrint struct {
 	Sum []byte
 }
 
-func (self *SubPrint) match(other *SubPrint) bool {
+func (self *SubPrint) equals(other *SubPrint) bool {
 	if self == nil {
 		return other == nil
 	}
@@ -64,20 +64,22 @@ func (self *SubPrint) match(other *SubPrint) bool {
 type Print struct {
 	Key       []byte
 	ValueHash []byte
+	Version   uint32
 	SubPrints []*SubPrint
 }
 
-func (self *Print) match(other *Print) bool {
+func (self *Print) coveredBy(other *Print) bool {
 	if self == nil {
 		return other == nil
 	}
-	return other != nil && bytes.Compare(other.ValueHash, self.ValueHash) == 0
+	return other != nil && (other.Version > self.Version || bytes.Compare(other.ValueHash, self.ValueHash) == 0)
 }
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
 }
 func (self *Print) set(n *node) {
 	self.ValueHash = n.valueHash
+	self.Version = n.version
 	self.SubPrints = make([]*SubPrint, len(n.children))
 	for index, child := range n.children {
 		if child != nil {

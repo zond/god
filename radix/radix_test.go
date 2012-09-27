@@ -19,6 +19,34 @@ func init() {
 	benchmarkTestTree = NewTree()
 }
 
+func TestRadixSyncVersions(t *testing.T) {
+	tree1 := NewTree()
+	tree3 := NewTree()
+	n := 10
+	var k []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = []byte{byte(i)}
+		v = StringHasher(fmt.Sprint(i))
+		tree1.Put(k, v)
+		if i == 2 {
+			tree3.PutVersion(k, StringHasher("other version"), 2)
+		} else {
+			tree3.Put(k, v)
+		}
+	}
+	tree2 := NewTree()
+	tree2.PutVersion([]byte{2}, StringHasher("other version"), 2)
+	s := NewSync(tree1, tree2)
+	s.Run()
+	if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree3, tree2) {
+		t.Errorf("%v and %v are unequal", tree3, tree2)
+	}
+}
+
 func TestRadixSyncLimits(t *testing.T) {
 	tree1 := NewTree()
 	tree3 := NewTree()

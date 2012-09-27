@@ -62,9 +62,9 @@ func (self *Sync) withinRightLimit(key []byte) bool {
 	return false
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
-	if sourcePrint != nil && self.withinLimits(sourcePrint.Key) {
+	if sourcePrint != nil && sourcePrint.ValueHash != nil && self.withinLimits(sourcePrint.Key) {
 		// If there is a node at source	and it is within our limits	
-		if !sourcePrint.match(destinationPrint) {
+		if !sourcePrint.coveredBy(destinationPrint) {
 			// If the key at destination is missing or wrong				
 			key := stitch(sourcePrint.Key)
 			if value, version, existed := self.source.GetVersion(key); existed {
@@ -74,7 +74,7 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	}
 	for index, subPrint := range sourcePrint.SubPrints {
 		if subPrint != nil && self.withinRightLimit(subPrint.Key) {
-			if destinationPrint == nil || !subPrint.match(destinationPrint.SubPrints[index]) {
+			if destinationPrint == nil || !subPrint.equals(destinationPrint.SubPrints[index]) {
 				self.synchronize(
 					self.source.Finger(subPrint.Key),
 					self.destination.Finger(subPrint.Key),

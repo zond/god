@@ -15,7 +15,7 @@ func NewTree() *Tree {
 }
 
 func (self *Tree) Finger(key []byte) (result *Print) {
-	return self.root.finger(&Print{nil, nil, nil}, key)
+	return self.root.finger(&Print{nil, nil, 0, nil}, key)
 }
 func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 	self.root, old, _, existed = self.root.insert(nil, true, newNode(rip(key), value, 0, true))
