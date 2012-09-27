@@ -11,14 +11,21 @@ type Tree struct {
 }
 
 func NewTree() *Tree {
-	return &Tree{0, newNode(nil, nil, false)}
+	return &Tree{0, newNode(nil, nil, 0, false)}
 }
 
 func (self *Tree) Finger(key []byte) (result *Print) {
 	return self.root.finger(&Print{nil, nil, nil}, key)
 }
 func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
-	self.root, old, existed = self.root.insert(nil, newNode(rip(key), value, true))
+	self.root, old, _, existed = self.root.insert(nil, true, newNode(rip(key), value, 0, true))
+	if !existed {
+		self.size++
+	}
+	return
+}
+func (self *Tree) PutVersion(key []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool) {
+	self.root, old, oldVersion, existed = self.root.insert(nil, false, newNode(rip(key), value, version, true))
 	if !existed {
 		self.size++
 	}
@@ -28,6 +35,10 @@ func (self *Tree) Hash() []byte {
 	return self.root.hash
 }
 func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
+	value, _, existed = self.GetVersion(key)
+	return
+}
+func (self *Tree) GetVersion(key []byte) (value Hasher, version uint32, existed bool) {
 	return self.root.get(rip(key))
 }
 func (self *Tree) Del(key []byte) (old Hasher, existed bool) {

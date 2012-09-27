@@ -4,6 +4,13 @@ import (
 	"bytes"
 )
 
+type HashTree interface {
+	Hash() []byte
+	Finger(key []byte) *Print
+	PutVersion(key []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool)
+	GetVersion(key []byte) (value Hasher, version uint32, existed bool)
+}
+
 type Sync struct {
 	source      HashTree
 	destination HashTree
@@ -60,8 +67,8 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 		if !sourcePrint.match(destinationPrint) {
 			// If the key at destination is missing or wrong				
 			key := stitch(sourcePrint.Key)
-			if value, existed := self.source.Get(key); existed {
-				self.destination.Put(key, value)
+			if value, version, existed := self.source.GetVersion(key); existed {
+				self.destination.PutVersion(key, value, version)
 			}
 		}
 	}

@@ -9,15 +9,17 @@ import (
 type node struct {
 	segment   []byte
 	value     Hasher
+	version   uint32
 	valueHash []byte
 	hash      []byte
 	children  []*node
 }
 
-func newNode(segment []byte, value Hasher, hasValue bool) (result *node) {
+func newNode(segment []byte, value Hasher, version uint32, hasValue bool) (result *node) {
 	result = &node{
 		segment:  segment,
 		value:    value,
+		version:  version,
 		hash:     make([]byte, murmur.Size),
 		children: make([]*node, 1<<(8/parts)),
 	}
@@ -34,6 +36,7 @@ func (self *node) setSegment(part []byte) {
 func (self *node) rehash(key []byte) {
 	h := murmur.NewBytes(key)
 	h.Write(self.valueHash)
+	h.Write([]byte{byte(self.version >> 24), byte(self.version >> 16), byte(self.version >> 8), byte(self.version)})
 	self.eachChild(func(node *node) {
 		h.Write(node.hash)
 	})
@@ -57,7 +60,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	if self.value != nil {
 		fmt.Fprintf(buffer, " => %v", self.value)
 	}
-	fmt.Fprintf(buffer, " (%v)", self.hash)
+	fmt.Fprintf(buffer, " (%v, %v)", self.version, self.hash)
 	fmt.Fprintf(buffer, "\n")
 	self.eachChild(func(node *node) {
 		node.describe(indent+len(fmt.Sprint(self.segment)), buffer)
@@ -98,7 +101,7 @@ func (self *node) finger(allocated *Print, segment []byte) (result *Print) {
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) get(segment []byte) (value Hasher, existed bool) {
+func (self *node) get(segment []byte) (value Hasher, version uint32, existed bool) {
 	if self == nil {
 		return
 	}
@@ -108,12 +111,12 @@ func (self *node) get(segment []byte) (value Hasher, existed bool) {
 		beyond_self = i >= len(self.segment)
 		beyond_segment = i >= len(segment)
 		if beyond_self && beyond_segment {
-			value, existed = self.value, self.valueHash != nil
+			value, version, existed = self.value, self.version, self.valueHash != nil
 			return
 		} else if beyond_segment {
 			return
 		} else if beyond_self {
-			value, existed = self.children[segment[i]].get(segment[i:])
+			value, version, existed = self.children[segment[i]].get(segment[i:])
 			return
 		} else if segment[i] != self.segment[i] {
 			return
@@ -165,7 +168,7 @@ func (self *node) del(prefix, segment []byte) (result *node, old Hasher, existed
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) insert(prefix []byte, n *node) (result *node, old Hasher, existed bool) {
+func (self *node) insert(prefix []byte, autoVersion bool, n *node) (result *node, old Hasher, version uint32, existed bool) {
 	if self == nil {
 		n.rehash(append(prefix, n.segment...))
 		result = n
@@ -177,14 +180,19 @@ func (self *node) insert(prefix []byte, n *node) (result *node, old Hasher, exis
 		beyond_n = i >= len(n.segment)
 		beyond_self = i >= len(self.segment)
 		if beyond_n && beyond_self {
-			result, old, existed = self, self.value, self.valueHash != nil
+			result, old, version, existed = self, self.value, self.version, self.valueHash != nil
 			self.value, self.valueHash = n.value, hash(n.value)
+			if autoVersion {
+				self.version++
+			} else {
+				self.version = n.version
+			}
 			self.rehash(append(prefix, self.segment...))
 			return
 		} else if beyond_n {
 			self.setSegment(self.segment[i:])
 			n.children[self.segment[0]] = self
-			result, old, existed = n, nil, false
+			result, old, version, existed = n, nil, 0, false
 			prefix = append(prefix, self.segment...)
 			self.rehash(prefix)
 			n.rehash(append(prefix, n.segment...))
@@ -194,12 +202,12 @@ func (self *node) insert(prefix []byte, n *node) (result *node, old Hasher, exis
 			// k is pre-calculated here because n.segment may change when n is inserted
 			k := n.segment[0]
 			prefix = append(prefix, self.segment...)
-			self.children[k], old, existed = self.children[k].insert(prefix, n)
+			self.children[k], old, version, existed = self.children[k].insert(prefix, autoVersion, n)
 			self.rehash(prefix)
 			result = self
 			return
 		} else if n.segment[i] != self.segment[i] {
-			result, old, existed = newNode(nil, nil, false), nil, false
+			result, old, version, existed = newNode(nil, nil, 0, false), nil, 0, false
 			result.setSegment(n.segment[:i])
 
 			n.setSegment(n.segment[i:])
