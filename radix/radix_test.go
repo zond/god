@@ -19,6 +19,35 @@ func init() {
 	benchmarkTestTree = NewTree()
 }
 
+func TestRadixSyncLimits(t *testing.T) {
+	tree1 := NewTree()
+	tree3 := NewTree()
+	n := 10
+	from := 3
+	to := 7
+	fromKey := []byte{byte(from)}
+	toKey := []byte{byte(to)}
+	var k []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = []byte{byte(i)}
+		v = StringHasher(fmt.Sprint(i))
+		tree1.Put(k, v)
+		if i >= from && i < to {
+			tree3.Put(k, v)
+		}
+	}
+	tree2 := NewTree()
+	s := NewSync(tree1, tree2).From(fromKey).To(toKey)
+	s.Run()
+	if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree3, tree2) {
+		t.Errorf("%v and %v are unequal", tree3, tree2)
+	}
+}
+
 func TestRadixSyncComplete(t *testing.T) {
 	tree1 := NewTree()
 	n := 1000
@@ -37,6 +66,49 @@ func TestRadixSyncComplete(t *testing.T) {
 	}
 	if !reflect.DeepEqual(tree1, tree2) {
 		t.Errorf("%v and %v are unequal", tree1, tree2)
+	}
+}
+
+func TestRadixSyncRandomLimits(t *testing.T) {
+	tree1 := NewTree()
+	n := 10
+	var k []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = murmur.HashString(fmt.Sprint(i))
+		v = StringHasher(fmt.Sprint(i))
+		tree1.Put(k, v)
+	}
+	var keys [][]byte
+	tree1.Each(func(key []byte, value Hasher) {
+		keys = append(keys, key)
+	})
+	var fromKey []byte
+	var toKey []byte
+	var tree2 *Tree
+	var tree3 *Tree
+	var s *Sync
+	for fromIndex, _ := range keys {
+		for toIndex, _ := range keys {
+			fromKey = keys[fromIndex]
+			toKey = keys[toIndex]
+			tree2 = NewTree()
+			tree1.Each(func(key []byte, value Hasher) {
+				if bytes.Compare(key, fromKey) > -1 && bytes.Compare(key, toKey) < 0 {
+					tree2.Put(key, value)
+				}
+			})
+			tree3 = NewTree()
+			s = NewSync(tree1, tree3).From(fromKey).To(toKey)
+			s.Run()
+			if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
+				t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
+			}
+			if !reflect.DeepEqual(tree3, tree2) {
+				t.Errorf("%v and %v are unequal", tree3, tree2)
+			}
+
+		}
 	}
 }
 

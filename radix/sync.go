@@ -22,7 +22,7 @@ func NewSync(source, destination HashTree) *Sync {
 Inclusive
 */
 func (self *Sync) From(from []byte) *Sync {
-	self.from = from
+	self.from = rip(from)
 	return self
 }
 
@@ -30,7 +30,7 @@ func (self *Sync) From(from []byte) *Sync {
 Exclusive
 */
 func (self *Sync) To(to []byte) *Sync {
-	self.to = to
+	self.to = rip(to)
 	return self
 }
 func (self *Sync) Run() bool {
@@ -41,7 +41,7 @@ func (self *Sync) Run() bool {
 	return true
 }
 func (self *Sync) withinLimits(key []byte) bool {
-	if self.from == nil || bytes.Compare(self.from, key) > -1 {
+	if self.from == nil || bytes.Compare(key, self.from) > -1 {
 		if self.withinRightLimit(key) {
 			return true
 		}
@@ -49,7 +49,7 @@ func (self *Sync) withinLimits(key []byte) bool {
 	return false
 }
 func (self *Sync) withinRightLimit(key []byte) bool {
-	if self.to == nil || bytes.Compare(self.to, key) > 0 {
+	if self.to == nil || bytes.Compare(key, self.to) < 0 {
 		return true
 	}
 	return false
