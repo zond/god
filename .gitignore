@@ -27,3 +27,5 @@ bench1
 radix/profile/memprofile
 radix/profile/cpuprofile
 radix/profile/profile
+.*.swp
+

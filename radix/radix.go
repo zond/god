@@ -2,6 +2,7 @@ package radix
 
 import (
 	"../murmur"
+	"bytes"
 )
 
 var nilHash = murmur.HashBytes(nil)
@@ -61,12 +62,25 @@ type SubPrint struct {
 	Sum []byte
 }
 
+func (self *SubPrint) match(other *SubPrint) bool {
+	if self == nil {
+		return other == nil
+	}
+	return other != nil && bytes.Compare(other.Sum, self.Sum) == 0
+}
+
 type Print struct {
 	Key       []byte
 	ValueHash []byte
 	SubPrints []*SubPrint
 }
 
+func (self *Print) match(other *Print) bool {
+	if self == nil {
+		return other == nil
+	}
+	return other != nil && bytes.Compare(other.ValueHash, self.ValueHash) == 0
+}
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
 }
