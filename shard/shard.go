@@ -87,7 +87,6 @@ func (self *Shard) listenMulticast() {
 		panic(fmt.Errorf("While trying to open %v: %v", self.clusterAddress, err))
 	} else {
 		self.clusterConnection = connection
-		log.Printf("Started listening to %v", self.clusterAddress)
 		message := make([]byte, 512)
 		var err error
 		for err == nil {
@@ -95,7 +94,9 @@ func (self *Shard) listenMulticast() {
 				log.Printf("Got %v", decodeUdpMessage(message))
 			}
 		}
-		log.Printf("Stopped listening to %v: %v", self.clusterConnection, err)
+		if opErr, ok := err.(*net.OpError); !ok || opErr.Err.Error() != "use of closed network connection" {
+			panic(fmt.Errorf("While trying to listen to %v: %v", self.clusterAddress, err))
+		}
 	}
 }
 func (self *Shard) Stop() {
