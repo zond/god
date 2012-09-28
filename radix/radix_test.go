@@ -39,11 +39,31 @@ func TestRadixSyncVersions(t *testing.T) {
 	tree2.PutVersion([]byte{2}, StringHasher("other version"), 2)
 	s := NewSync(tree1, tree2)
 	s.Run()
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should not be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+	if reflect.DeepEqual(tree1, tree2) {
+		t.Errorf("%v and %v are equal", tree1, tree2)
+	}
 	if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
 	}
 	if !reflect.DeepEqual(tree3, tree2) {
 		t.Errorf("%v and %v are unequal", tree3, tree2)
+	}
+	tree1.PutVersion([]byte{2}, StringHasher("yet another version"), 3)
+	s.Run()
+	if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should not be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
+	}
+	if reflect.DeepEqual(tree3, tree2) {
+		t.Errorf("%v and %v are equal", tree3, tree2)
+	}
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree1, tree2) {
+		t.Errorf("%v and %v are unequal", tree1, tree2)
 	}
 }
 
