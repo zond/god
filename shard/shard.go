@@ -2,7 +2,6 @@ package shard
 
 import (
 	"fmt"
-	"log"
 	"net"
 )
 
@@ -82,6 +81,12 @@ func (self *Shard) Verify() (err error) {
 	}
 	return
 }
+func (self *Shard) handleMulticast(message udpMessage) {
+	switch message.message {
+	case join:
+		// send a response with our peer list
+	}
+}
 func (self *Shard) listenMulticast() {
 	if connection, err := net.ListenMulticastUDP("udp", nil, self.clusterAddress); err != nil {
 		panic(fmt.Errorf("While trying to open %v: %v", self.clusterAddress, err))
@@ -91,7 +96,7 @@ func (self *Shard) listenMulticast() {
 		var err error
 		for err == nil {
 			if _, err = self.clusterConnection.Read(message); err == nil {
-				log.Printf("Got %v", decodeUdpMessage(message))
+				self.handleMulticast(decodeUdpMessage(message))
 			}
 		}
 		if opErr, ok := err.(*net.OpError); !ok || opErr.Err.Error() != "use of closed network connection" {
