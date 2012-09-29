@@ -35,8 +35,11 @@ func (self *node) setSegment(part []byte) {
 }
 func (self *node) rehash(key []byte) {
 	h := murmur.NewBytes(key)
-	h.Write(self.valueHash)
-	h.Write([]byte{byte(self.version >> 24), byte(self.version >> 16), byte(self.version >> 8), byte(self.version)})
+	if subTree, ok := self.value.(*Tree); ok {
+		h.Write(subTree.Hash())
+	} else {
+		h.Write(self.valueHash)
+	}
 	self.eachChild(func(node *node) {
 		h.Write(node.hash)
 	})
