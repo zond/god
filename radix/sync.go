@@ -4,12 +4,57 @@ import (
 	"bytes"
 )
 
+const (
+	subTreeError = "Illegal, only one level of sub trees supported"
+)
+
 type HashTree interface {
 	Hash() []byte
 	Finger(key []byte) *Print
 	PutVersion(key []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool)
 	GetVersion(key []byte) (value Hasher, version uint32, existed bool)
 	Del(key []byte) (old Hasher, existed bool)
+	SubHash(subKey []byte) []byte
+	SubFinger(key, subKey []byte) (result *Print)
+	SubPutVersion(key, subKey []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool)
+	SubGetVersion(key, subKey []byte) (value Hasher, version uint32, existed bool)
+	SubDel(key, subKey []byte) (old Hasher, existed bool)
+}
+
+type subTreeWrapper struct {
+	parentTree HashTree
+	key        []byte
+}
+
+func (self *subTreeWrapper) Hash() (hash []byte) {
+	return self.parentTree.SubHash(self.key)
+}
+func (self *subTreeWrapper) Finger(subKey []byte) *Print {
+	return self.parentTree.SubFinger(self.key, subKey)
+}
+func (self *subTreeWrapper) PutVersion(subKey []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool) {
+	return self.parentTree.SubPutVersion(self.key, subKey, value, version)
+}
+func (self *subTreeWrapper) GetVersion(subKey []byte) (value Hasher, version uint32, existed bool) {
+	return self.parentTree.SubGetVersion(self.key, subKey)
+}
+func (self *subTreeWrapper) Del(subKey []byte) (old Hasher, existed bool) {
+	return self.parentTree.SubDel(self.key, subKey)
+}
+func (self *subTreeWrapper) SubHash(key []byte) []byte {
+	panic(subTreeError)
+}
+func (self *subTreeWrapper) SubFinger(key, subKey []byte) (result *Print) {
+	panic(subTreeError)
+}
+func (self *subTreeWrapper) SubPutVersion(key, subKey []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool) {
+	panic(subTreeError)
+}
+func (self *subTreeWrapper) SubGetVersion(key, subKey []byte) (value Hasher, version uint32, existed bool) {
+	panic(subTreeError)
+}
+func (self *subTreeWrapper) SubDel(key, subKey []byte) (old Hasher, existed bool) {
+	panic(subTreeError)
 }
 
 type Sync struct {
@@ -79,8 +124,12 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 		if !sourcePrint.coveredBy(destinationPrint) {
 			// If the key at destination is missing or wrong				
 			self.stitch(sourcePrint.Key, &key)
-			if value, version, existed := self.source.GetVersion(key); existed {
-				self.destination.PutVersion(key, value, version)
+			if sourcePrint.SubTree {
+				NewSync(&subTreeWrapper{self.source, key}, &subTreeWrapper{self.destination, key}).Run()
+			} else {
+				if value, version, existed := self.source.GetVersion(key); existed {
+					self.destination.PutVersion(key, value, version)
+				}
 			}
 		}
 		if self.destructive && sourcePrint.ValueHash != nil {

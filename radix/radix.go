@@ -65,6 +65,7 @@ type Print struct {
 	Key       []byte
 	ValueHash []byte
 	Version   uint32
+	SubTree   bool
 	SubPrints []*SubPrint
 }
 
@@ -80,6 +81,7 @@ func (self *Print) push(n *node) {
 func (self *Print) set(n *node) {
 	self.ValueHash = n.valueHash
 	self.Version = n.version
+	_, self.SubTree = n.value.(*Tree)
 	self.SubPrints = make([]*SubPrint, len(n.children))
 	for index, child := range n.children {
 		if child != nil {
