@@ -127,7 +127,15 @@ func TestSyncSubTree(t *testing.T) {
 			}
 		}
 	}
-	fmt.Println(tree1.Describe())
+	tree2 := NewTree()
+	s := NewSync(tree1, tree2)
+	s.Run()
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree1, tree2) {
+		t.Errorf("%v and %v are unequal", tree1, tree2)
+	}
 }
 
 func TestSyncDestructive(t *testing.T) {
