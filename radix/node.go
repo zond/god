@@ -3,6 +3,7 @@ package radix
 import (
 	"../murmur"
 	"bytes"
+	"encoding/hex"
 	"fmt"
 )
 
@@ -59,14 +60,19 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	for i := 0; i < indent; i++ {
 		fmt.Fprint(indentation, " ")
 	}
-	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), self.segment)
+	encodedSegment := stringEncode(self.segment)
+	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), encodedSegment)
 	if self.value != nil {
-		fmt.Fprintf(buffer, " => %v", self.value)
+		if subTree, ok := self.value.(*Tree); ok {
+			fmt.Fprintf(buffer, " => %v", subTree.describeIndented(indent+2))
+		} else {
+			fmt.Fprintf(buffer, " => %v", self.value)
+		}
 	}
-	fmt.Fprintf(buffer, " (%v, %v)", self.version, self.hash)
+	fmt.Fprintf(buffer, " (%v, %v)", self.version, hex.EncodeToString(self.hash))
 	fmt.Fprintf(buffer, "\n")
 	self.eachChild(func(node *node) {
-		node.describe(indent+len(fmt.Sprint(self.segment)), buffer)
+		node.describe(indent+len(encodedSegment), buffer)
 	})
 }
 func (self *node) each(prefix []byte, f TreeIterator) {

@@ -2,6 +2,7 @@ package radix
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 )
 
@@ -111,9 +112,17 @@ func (self *Tree) SubDel(key, subKey []byte) (old Hasher, existed bool) {
 func (self *Tree) ToMap() (result map[string]Hasher) {
 	result = make(map[string]Hasher)
 	self.Each(func(key []byte, value Hasher) {
-		result[string(key)] = value
+		result[hex.EncodeToString(key)] = value
 	})
 	return
+}
+func (self *Tree) String() string {
+	buffer := bytes.NewBufferString(fmt.Sprintf("radix.Tree["))
+	self.Each(func(key []byte, value Hasher) {
+		fmt.Fprintf(buffer, "%v:%v, ", hex.EncodeToString(key), value)
+	})
+	fmt.Fprint(buffer, "]")
+	return string(buffer.Bytes())
 }
 func (self *Tree) Each(f TreeIterator) {
 	self.root.each(nil, f)
@@ -121,10 +130,13 @@ func (self *Tree) Each(f TreeIterator) {
 func (self *Tree) Size() int {
 	return self.size
 }
-func (self *Tree) Describe() string {
-	buffer := bytes.NewBufferString(fmt.Sprintf("<Radix size:%v hash:%v>\n", self.Size(), self.Hash()))
+func (self *Tree) describeIndented(indent int) string {
+	buffer := bytes.NewBufferString(fmt.Sprintf("<Radix size:%v hash:%v>\n", self.Size(), hex.EncodeToString(self.Hash())))
 	self.root.eachChild(func(node *node) {
-		node.describe(2, buffer)
+		node.describe(indent, buffer)
 	})
 	return string(buffer.Bytes())
+}
+func (self *Tree) Describe() string {
+	return self.describeIndented(2)
 }

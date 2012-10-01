@@ -3,6 +3,7 @@ package radix
 import (
 	"../murmur"
 	"bytes"
+	"fmt"
 )
 
 var nilHash = murmur.HashBytes(nil)
@@ -16,6 +17,8 @@ type TreeIterator func(key []byte, value Hasher)
 const (
 	parts = 2
 )
+
+var encodeChars = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
 
 func hash(h Hasher) []byte {
 	if h == nil {
@@ -32,6 +35,13 @@ func rip(b []byte) (result []byte) {
 		}
 	}
 	return
+}
+func stringEncode(b []byte) string {
+	buffer := new(bytes.Buffer)
+	for _, c := range b {
+		fmt.Fprint(buffer, encodeChars[c])
+	}
+	return string(buffer.Bytes())
 }
 func stitch(b []byte) (result []byte) {
 	result = make([]byte, len(b)/parts)

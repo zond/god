@@ -3,6 +3,7 @@ package radix
 import (
 	"../murmur"
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -19,7 +20,7 @@ func init() {
 	benchmarkTestTree = NewTree()
 }
 
-func TestRadixSyncVersions(t *testing.T) {
+func TestSyncVersions(t *testing.T) {
 	tree1 := NewTree()
 	tree3 := NewTree()
 	n := 10
@@ -67,7 +68,7 @@ func TestRadixSyncVersions(t *testing.T) {
 	}
 }
 
-func TestRadixSyncLimits(t *testing.T) {
+func TestSyncLimits(t *testing.T) {
 	tree1 := NewTree()
 	tree3 := NewTree()
 	n := 10
@@ -96,7 +97,40 @@ func TestRadixSyncLimits(t *testing.T) {
 	}
 }
 
-func TestRadixSyncDestructive(t *testing.T) {
+func TestRipStitch(t *testing.T) {
+	var b []byte
+	for i := 0; i < 1000; i++ {
+		b = make([]byte, rand.Int()%30)
+		for j := 0; j < len(b); j++ {
+			b[j] = byte(rand.Int())
+		}
+		if bytes.Compare(stitch(rip(b)), b) != 0 {
+			t.Errorf("%v != %v", stitch(rip(b)), b)
+		}
+	}
+}
+
+func TestSyncSubTree(t *testing.T) {
+	tree1 := NewTree()
+	n := 10
+	var k, sk []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = []byte(murmur.HashString(fmt.Sprint(i)))
+		v = StringHasher(fmt.Sprint(i))
+		if i%2 == 0 {
+			tree1.Put(k, v)
+		} else {
+			for j := 0; j < 10; j++ {
+				sk = []byte(fmt.Sprint(j))
+				tree1.SubPut(k, sk, v)
+			}
+		}
+	}
+	fmt.Println(tree1.Describe())
+}
+
+func TestSyncDestructive(t *testing.T) {
 	tree1 := NewTree()
 	tree3 := NewTree()
 	n := 1000
@@ -122,7 +156,7 @@ func TestRadixSyncDestructive(t *testing.T) {
 	}
 }
 
-func TestRadixSyncComplete(t *testing.T) {
+func TestSyncComplete(t *testing.T) {
 	tree1 := NewTree()
 	n := 1000
 	var k []byte
@@ -143,7 +177,7 @@ func TestRadixSyncComplete(t *testing.T) {
 	}
 }
 
-func TestRadixSyncRandomLimits(t *testing.T) {
+func TestSyncRandomLimits(t *testing.T) {
 	tree1 := NewTree()
 	n := 10
 	var k []byte
@@ -186,7 +220,7 @@ func TestRadixSyncRandomLimits(t *testing.T) {
 	}
 }
 
-func TestRadixSyncPartial(t *testing.T) {
+func TestSyncPartial(t *testing.T) {
 	tree1 := NewTree()
 	tree2 := NewTree()
 	mod := 2
@@ -211,7 +245,7 @@ func TestRadixSyncPartial(t *testing.T) {
 	}
 }
 
-func TestRadixHash(t *testing.T) {
+func TestTreeHash(t *testing.T) {
 	tree1 := NewTree()
 	var keys [][]byte
 	var vals []StringHasher
@@ -284,7 +318,7 @@ func TestRadixHash(t *testing.T) {
 	})
 }
 
-func TestRadixNilKey(t *testing.T) {
+func TestTreeNilKey(t *testing.T) {
 	tree := NewTree()
 	h := tree.Hash()
 	if value, existed := tree.Get(nil); value != nil || existed {
@@ -307,7 +341,7 @@ func TestRadixNilKey(t *testing.T) {
 	}
 }
 
-func TestRadixBasicOps(t *testing.T) {
+func TestTreeBasicOps(t *testing.T) {
 	tree := NewTree()
 	assertNewPut(t, tree, "apple", "stonefruit")
 	assertOldPut(t, tree, "apple", "fruit", "stonefruit")
@@ -323,15 +357,15 @@ func TestRadixBasicOps(t *testing.T) {
 	assertOldPut(t, tree, "guanabana", "city", "man")
 	m := make(map[string]Hasher)
 	tree.Each(func(key []byte, value Hasher) {
-		m[string(key)] = value
+		m[hex.EncodeToString(key)] = value
 	})
 	comp := map[string]Hasher{
-		"apple":     StringHasher("fruit"),
-		"crab":      StringHasher("animal"),
-		"crabapple": StringHasher("fruit"),
-		"banana":    StringHasher("fruit"),
-		"guava":     StringHasher("fruit"),
-		"guanabana": StringHasher("city"),
+		hex.EncodeToString([]byte("apple")):     StringHasher("fruit"),
+		hex.EncodeToString([]byte("crab")):      StringHasher("animal"),
+		hex.EncodeToString([]byte("crabapple")): StringHasher("fruit"),
+		hex.EncodeToString([]byte("banana")):    StringHasher("fruit"),
+		hex.EncodeToString([]byte("guava")):     StringHasher("fruit"),
+		hex.EncodeToString([]byte("guanabana")): StringHasher("city"),
 	}
 	if !reflect.DeepEqual(m, comp) {
 		t.Errorf("should be equal!")
