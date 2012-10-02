@@ -20,8 +20,8 @@ func newTreeWith(key []byte, value Hasher, version uint32) (result *Tree) {
 	return
 }
 
-func (self *Tree) getSubTree(key []byte) (subTree *Tree) {
-	if value, existed := self.Get(key); existed {
+func (self *Tree) getSubTree(key []byte) (subTree *Tree, version uint32) {
+	if value, version, existed := self.GetVersion(key); existed {
 		subTree, _ = value.(*Tree)
 	}
 	return
@@ -29,8 +29,8 @@ func (self *Tree) getSubTree(key []byte) (subTree *Tree) {
 func (self *Tree) Finger(key []byte) (result *Print) {
 	return self.root.finger(&Print{nil, nil, 0, false, nil}, key)
 }
-func (self *Tree) SubFinger(key, subKey []byte) (result *Print) {
-	if subTree := self.getSubTree(key); subTree != nil {
+func (self *Tree) SubFinger(key, subKey []byte, version uint32) (result *Print) {
+	if subTree, subTreeVersion := self.getSubTree(key); subTree != nil && subTreeVersion == version {
 		result = subTree.Finger(subKey)
 	}
 	return
@@ -43,10 +43,9 @@ func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
 	return
 }
 func (self *Tree) SubPut(key, subKey []byte, value Hasher) (old Hasher, existed bool) {
-	if subTree := self.getSubTree(key); subTree != nil {
-		old, existed = subTree.Put(subKey, value)
-	} else {
-		self.Put(key, newTreeWith(subKey, value, 0))
+	self.root, old, _, existed = self.root.insert(nil, true, newNode(rip(key), newTreeWith(subKey, value, 0), 0, true))
+	if !existed {
+		self.size++
 	}
 	return
 }
@@ -57,11 +56,12 @@ func (self *Tree) PutVersion(key []byte, value Hasher, version uint32) (old Hash
 	}
 	return
 }
-func (self *Tree) SubPutVersion(key, subKey []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool) {
-	if subTree := self.getSubTree(key); subTree != nil {
-		old, oldVersion, existed = subTree.PutVersion(subKey, value, version)
-	} else {
-		self.Put(key, newTreeWith(subKey, value, version))
+func (self *Tree) SubPutVersion(key, subKey []byte, value Hasher, version, subVersion uint32) {
+	if subTree, subTreeVersion := self.getSubTree(key); subTree != nil && subTreeVersion == version {
+		self.root, _, _, existed := self.root.insert(nil, false, newNode(rip(key), newTreeWith(subKey, value, subVersion), version, true))
+		if !existed {
+			self.size++
+		}
 	}
 	return
 }
