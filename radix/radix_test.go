@@ -147,6 +147,61 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 	}
 }
 
+func TestSyncSubTreeVersions(t *testing.T) {
+	tree1 := NewTree()
+	tree3 := NewTree()
+	n := 10
+	var k, sk []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = []byte(murmur.HashString(fmt.Sprint(i)))
+		v = StringHasher(fmt.Sprint(i))
+		if i%2 == 0 {
+			tree3.Put(k, v)
+			tree1.Put(k, v)
+		} else {
+			for j := 0; j < 10; j++ {
+				sk = []byte(fmt.Sprint(j))
+				tree1.SubPut(k, sk, v)
+				if i == 1 && j == 3 {
+					tree3.SubPutVersion(k, sk, StringHasher("another value"), 0, 0, 2)
+				} else {
+					tree3.SubPut(k, sk, v)
+				}
+			}
+		}
+	}
+	tree2 := NewTree()
+	tree2.SubPutVersion([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), StringHasher("another value"), 0, 0, 2)
+	s := NewSync(tree1, tree2)
+	s.Run()
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
+		t.Errorf("should not be equal")
+	}
+	if reflect.DeepEqual(tree1, tree2) {
+		t.Errorf("should not be equal")
+	}
+	if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree3, tree2) {
+		t.Errorf("\n%v and \n%v are unequal", tree3.Describe(), tree2.Describe())
+	}
+	tree1.SubPutVersion([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), StringHasher("another value again"), 0, 0, 3)
+	s.Run()
+	if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
+		t.Errorf("should not be equal")
+	}
+	if reflect.DeepEqual(tree3, tree2) {
+		t.Errorf("should not be equal")
+	}
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree1, tree2) {
+		t.Errorf("\n%v and \n%v are unequal", tree1.Describe(), tree2.Describe())
+	}
+}
 func TestSyncSubTree(t *testing.T) {
 	tree1 := NewTree()
 	n := 10
