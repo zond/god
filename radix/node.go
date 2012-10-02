@@ -36,7 +36,11 @@ func (self *node) setSegment(part []byte) {
 }
 func (self *node) rehash(key []byte) {
 	h := murmur.NewBytes(key)
-	h.Write(self.valueHash)
+	if subTree, ok := self.value.(*Tree); ok {
+		h.Write(subTree.Hash())
+	} else {
+		h.Write(self.valueHash)
+	}
 	self.eachChild(func(node *node) {
 		h.Write(node.hash)
 	})
@@ -129,49 +133,7 @@ func (self *node) get(segment []byte) (value Hasher, version uint32, existed boo
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) delSubKey(prefix, segment, subKey []byte) (result *node, old Hasher, existed bool) {
-	result = self
-	if subTree, ok := self.value.(*Tree); ok {
-		old, existed = subTree.Del(subKey)
-		self.valueHash = subTree.Hash()
-		if subTree.Size() == 0 {
-			result, _, _ = self.delMe(prefix, segment, nil)
-		} else {
-			self.rehash(append(prefix, segment...))
-		}
-	}
-	return
-}
-func (self *node) delMe(prefix, segment []byte) (result *node, old Hasher, existed bool) {
-	n_children := 0
-	var a_child *node
-	for _, child := range self.children {
-		if child != nil {
-			n_children++
-			a_child = child
-		}
-	}
-	if n_children > 1 || self.segment == nil {
-		result, old, existed = self, self.value, self.valueHash != nil
-		self.value, self.valueHash = nil, nil
-		self.rehash(append(prefix, segment...))
-	} else if n_children == 1 {
-		a_child.setSegment(append(self.segment, a_child.segment...))
-		result, old, existed = a_child, self.value, self.valueHash != nil
-	} else {
-		result, old, existed = nil, self.value, self.valueHash != nil
-	}
-	return
-}
-func (self *node) delHere(prefix, segment, subKey []byte) (result *node, old Hasher, existed bool) {
-	if subKey != nil {
-		result, old, existed = self.delSubKey(prefix, segment, subKey)
-	} else {
-		result, old, existed = self.delMe(prefix, segment)
-	}
-	return
-}
-func (self *node) del(prefix, segment, subKey []byte) (result *node, old Hasher, existed bool) {
+func (self *node) del(prefix, segment []byte) (result *node, old Hasher, existed bool) {
 	if self == nil {
 		return
 	}
@@ -181,14 +143,31 @@ func (self *node) del(prefix, segment, subKey []byte) (result *node, old Hasher,
 		beyond_segment = i >= len(segment)
 		beyond_self = i >= len(self.segment)
 		if beyond_segment && beyond_self {
-			result, old, existed = self.delHere(prefix, segment, subKey)
+			n_children := 0
+			var a_child *node
+			for _, child := range self.children {
+				if child != nil {
+					n_children++
+					a_child = child
+				}
+			}
+			if n_children > 1 || self.segment == nil {
+				result, old, existed = self, self.value, self.valueHash != nil
+				self.value, self.valueHash = nil, nil
+				self.rehash(append(prefix, segment...))
+			} else if n_children == 1 {
+				a_child.setSegment(append(self.segment, a_child.segment...))
+				result, old, existed = a_child, self.value, self.valueHash != nil
+			} else {
+				result, old, existed = nil, self.value, self.valueHash != nil
+			}
 			return
 		} else if beyond_segment {
 			result, old, existed = self, nil, false
 			return
 		} else if beyond_self {
 			prefix = append(prefix, self.segment...)
-			self.children[segment[i]], old, existed = self.children[segment[i]].del(prefix, segment[i:], subKey)
+			self.children[segment[i]], old, existed = self.children[segment[i]].del(prefix, segment[i:])
 			result = self
 			self.rehash(prefix)
 			return
@@ -197,36 +176,6 @@ func (self *node) del(prefix, segment, subKey []byte) (result *node, old Hasher,
 		}
 	}
 	panic("Shouldn't happen")
-}
-func (self *node) insertHere(prefix []byte, autoVersion bool, n *node) (result *node, old Hasher, version uint32, existed bool) {
-	if insert, ok := n.value.(subInsert); ok {
-		if destinationTree, ok := self.value.(*Tree); ok {
-			result, old, version, existed = self.insertSubKey(prefix, autoVersion, insert, destinationTree)
-		} else {
-			result, old, version, existed = self.insertMe(prefix, autoVersion, newNode(n.key, newTreeWith(insert.key, insert.value, insert.version), 
-		}
-	} else {
-		result, old, version, existed = self.insertMe(prefix, autoVersion, n)
-	}
-	return
-}
-func (self *node) insertMe(prefix []byte, autoVersion bool, n *node) (result *node, old Hasher, version uint32, existed bool) {
-	result, old, version, existed = self, self.value, self.version, self.valueHash != nil
-	self.value, self.valueHash = n.value, n.valueHash
-	if autoVersion {
-		self.version++
-	} else {
-		self.version = n.version
-	}
-	self.rehash(append(prefix, self.segment...))
-	return
-}
-func (self *node) insertSubKey(prefix, autoVersion bool, insert subInsert, destinationTree *Tree) (result *node, old Hasher, version uint32, existed bool) {
-	result = self
-	destinationTree.root, old, version, existed = destinationTree.root.insert(nil, autoVersion, newNode(rip(insert.key), insert.value, insert.version, true))
-	self.valueHash = subTree.Hash()
-	self.rehash(append(prefix, self.segment...))
-	return
 }
 func (self *node) insert(prefix []byte, autoVersion bool, n *node) (result *node, old Hasher, version uint32, existed bool) {
 	if self == nil {
@@ -240,7 +189,15 @@ func (self *node) insert(prefix []byte, autoVersion bool, n *node) (result *node
 		beyond_n = i >= len(n.segment)
 		beyond_self = i >= len(self.segment)
 		if beyond_n && beyond_self {
-			result, old, version, existed = self.insertHere(prefix, autoVersion, n)
+			result, old, version, existed = self, self.value, self.version, self.valueHash != nil
+			self.value, self.valueHash = n.value, hash(n.value)
+			if autoVersion {
+				self.version++
+			} else {
+				self.version = n.version
+			}
+			self.rehash(append(prefix, self.segment...))
+			return
 		} else if beyond_n {
 			self.setSegment(self.segment[i:])
 			n.children[self.segment[0]] = self

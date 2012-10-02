@@ -7,7 +7,6 @@ import (
 )
 
 var nilHash = murmur.HashBytes(nil)
-var encodeChars = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
 
 type Hasher interface {
 	Hash() []byte
@@ -18,6 +17,15 @@ type TreeIterator func(key []byte, value Hasher)
 const (
 	parts = 2
 )
+
+var encodeChars = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
+
+func hash(h Hasher) []byte {
+	if h == nil {
+		return nilHash
+	}
+	return h.Hash()
+}
 
 func rip(b []byte) (result []byte) {
 	result = make([]byte, parts*len(b))
@@ -49,16 +57,6 @@ type StringHasher string
 
 func (self StringHasher) Hash() []byte {
 	return murmur.HashString(string(self))
-}
-
-type subInsert struct {
-	key     []byte
-	value   Hasher
-	version uint32
-}
-
-func (self subInsert) Hash() {
-	return value.Hash()
 }
 
 type SubPrint struct {
