@@ -36,11 +36,7 @@ func (self *node) setSegment(part []byte) {
 }
 func (self *node) rehash(key []byte) {
 	h := murmur.NewBytes(key)
-	if subTree, ok := self.value.(*Tree); ok {
-		h.Write(subTree.Hash())
-	} else {
-		h.Write(self.valueHash)
-	}
+	h.Write(self.valueHash)
 	self.eachChild(func(node *node) {
 		h.Write(node.hash)
 	})
@@ -153,7 +149,7 @@ func (self *node) del(prefix, segment []byte) (result *node, old Hasher, existed
 			}
 			if n_children > 1 || self.segment == nil {
 				result, old, existed = self, self.value, self.valueHash != nil
-				self.value, self.valueHash = nil, nil
+				self.value, self.valueHash, self.version = nil, nil, 0
 				self.rehash(append(prefix, segment...))
 			} else if n_children == 1 {
 				a_child.setSegment(append(self.segment, a_child.segment...))

@@ -10,50 +10,52 @@ const (
 
 type HashTree interface {
 	Hash() []byte
+
 	Finger(key []byte) *Print
-	PutVersion(key []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool)
 	GetVersion(key []byte) (value Hasher, version uint32, existed bool)
-	Del(key []byte) (old Hasher, existed bool)
-	SubHash(subKey []byte) []byte
-	SubFinger(key, subKey []byte) (result *Print)
-	SubPutVersion(key, subKey []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool)
-	SubGetVersion(key, subKey []byte) (value Hasher, version uint32, existed bool)
-	SubDel(key, subKey []byte) (old Hasher, existed bool)
+	PutVersion(key []byte, value Hasher, expected, version uint32)
+	DelVersion(key []byte, expected uint32)
+
+	SubFinger(key, subKey []byte, expected uint32) (result *Print)
+	SubGetVersion(key, subKey []byte, expected uint32) (value Hasher, version uint32, existed bool)
+	SubPutVersion(key, subKey []byte, value Hasher, expected, subExpected, subVersion uint32)
+	SubDelVersion(key, subKey []byte, expected, subExpected uint32)
 }
 
 type subTreeWrapper struct {
 	parentTree HashTree
 	key        []byte
+	version    uint32
 }
 
 func (self *subTreeWrapper) Hash() (hash []byte) {
-	return self.parentTree.SubHash(self.key)
+	if p := self.parentTree.Finger(rip(self.key)); p != nil {
+		hash = p.ValueHash
+	}
+	return
 }
 func (self *subTreeWrapper) Finger(subKey []byte) *Print {
-	return self.parentTree.SubFinger(self.key, subKey)
-}
-func (self *subTreeWrapper) PutVersion(subKey []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool) {
-	return self.parentTree.SubPutVersion(self.key, subKey, value, version)
+	return self.parentTree.SubFinger(self.key, subKey, self.version)
 }
 func (self *subTreeWrapper) GetVersion(subKey []byte) (value Hasher, version uint32, existed bool) {
-	return self.parentTree.SubGetVersion(self.key, subKey)
+	return self.parentTree.SubGetVersion(self.key, subKey, self.version)
 }
-func (self *subTreeWrapper) Del(subKey []byte) (old Hasher, existed bool) {
-	return self.parentTree.SubDel(self.key, subKey)
+func (self *subTreeWrapper) PutVersion(subKey []byte, value Hasher, expected, version uint32) {
+	self.parentTree.SubPutVersion(self.key, subKey, value, self.version, expected, version)
 }
-func (self *subTreeWrapper) SubHash(key []byte) []byte {
+func (self *subTreeWrapper) DelVersion(subKey []byte, expected uint32) {
+	self.parentTree.SubDelVersion(self.key, subKey, self.version, expected)
+}
+func (self *subTreeWrapper) SubFinger(key, subKey []byte, expected uint32) (result *Print) {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubFinger(key, subKey []byte) (result *Print) {
+func (self *subTreeWrapper) SubGetVersion(key, subKey []byte, expected uint32) (value Hasher, version uint32, existed bool) {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubPutVersion(key, subKey []byte, value Hasher, version uint32) (old Hasher, oldVersion uint32, existed bool) {
+func (self *subTreeWrapper) SubPutVersion(key, subKey []byte, value Hasher, expected, subExpected, subVersion uint32) {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubGetVersion(key, subKey []byte) (value Hasher, version uint32, existed bool) {
-	panic(subTreeError)
-}
-func (self *subTreeWrapper) SubDel(key, subKey []byte) (old Hasher, existed bool) {
+func (self *subTreeWrapper) SubDelVersion(key, subKey []byte, expected, subExpected uint32) {
 	panic(subTreeError)
 }
 
@@ -112,38 +114,32 @@ func (self *Sync) withinRightLimit(key []byte) bool {
 	}
 	return false
 }
-func (self *Sync) stitch(ripped []byte, stitched *[]byte) {
-	if *stitched == nil {
-		*stitched = stitch(ripped)
-	}
-}
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
-	if sourcePrint != nil && sourcePrint.ValueHash != nil && self.withinLimits(sourcePrint.Key) {
-		// If there is a node at source	and it is within our limits	
-		var key []byte
-		if !sourcePrint.coveredBy(destinationPrint) {
-			// If the key at destination is missing or wrong				
-			self.stitch(sourcePrint.Key, &key)
-			if sourcePrint.SubTree {
-				NewSync(&subTreeWrapper{self.source, key}, &subTreeWrapper{self.destination, key}).Run()
-			} else {
-				if value, version, existed := self.source.GetVersion(key); existed {
-					self.destination.PutVersion(key, value, version)
+	if sourcePrint != nil {
+		if sourcePrint.ValueHash != nil && self.withinLimits(sourcePrint.Key) {
+			// If there is a node at source	and it is within our limits	
+			if !sourcePrint.coveredBy(destinationPrint) {
+				// If the key at destination is missing or wrong				
+				if sourcePrint.SubTree {
+					NewSync(&subTreeWrapper{self.source, sourcePrint.Key, sourcePrint.version()}, &subTreeWrapper{self.destination, sourcePrint.Key, destinationPrint.version()}).Run()
+				} else {
+					if value, version, existed := self.source.GetVersion(sourcePrint.Key); existed && version == sourcePrint.version() {
+						self.destination.PutVersion(sourcePrint.Key, value, destinationPrint.version(), sourcePrint.version())
+					}
 				}
 			}
+			if self.destructive && sourcePrint.ValueHash != nil {
+				self.source.DelVersion(sourcePrint.Key, sourcePrint.version())
+			}
 		}
-		if self.destructive && sourcePrint.ValueHash != nil {
-			self.stitch(sourcePrint.Key, &key)
-			self.source.Del(key)
-		}
-	}
-	for index, subPrint := range sourcePrint.SubPrints {
-		if subPrint != nil && self.withinRightLimit(subPrint.Key) {
-			if destinationPrint == nil || !subPrint.equals(destinationPrint.SubPrints[index]) {
-				self.synchronize(
-					self.source.Finger(subPrint.Key),
-					self.destination.Finger(subPrint.Key),
-				)
+		for index, subPrint := range sourcePrint.SubPrints {
+			if subPrint != nil && self.withinRightLimit(subPrint.Key) {
+				if destinationPrint == nil || !subPrint.equals(destinationPrint.SubPrints[index]) {
+					self.synchronize(
+						self.source.Finger(subPrint.Key),
+						self.destination.Finger(subPrint.Key),
+					)
+				}
 			}
 		}
 	}
