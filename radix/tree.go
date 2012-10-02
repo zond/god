@@ -131,7 +131,11 @@ func (self *Tree) PutVersion(key []byte, value Hasher, expected, version uint32)
 func (self *Tree) DelVersion(key []byte, expected uint32) {
 	ripped := rip(key)
 	if _, current, existed := self.root.get(ripped); existed && current == expected {
-		self.root, _, _ = self.root.del(nil, ripped)
+		var existed bool
+		self.root, _, existed = self.root.del(nil, ripped)
+		if existed {
+			self.size--
+		}
 	}
 }
 
