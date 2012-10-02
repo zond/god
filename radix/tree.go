@@ -58,19 +58,25 @@ func (self *Tree) Describe() string {
 	return self.describeIndented(2)
 }
 
-func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
-	self.root, old, _, existed = self.root.insert(nil, true, newNode(rip(key), value, 0, true))
+func (self *Tree) put(key []nibble, value Hasher) (old Hasher, existed bool) {
+	self.root, old, _, existed = self.root.insert(nil, true, newNode(key, value, 0, true))
 	if !existed {
 		self.size++
 	}
 	return
+}
+func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
+	return self.put(rip(key), value)
 }
 func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
 	value, _, existed = self.root.get(rip(key))
 	return
 }
 func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
-	self.root, old, existed = self.root.del(nil, rip(key))
+	return self.del(rip(key))
+}
+func (self *Tree) del(key []nibble) (old Hasher, existed bool) {
+	self.root, old, existed = self.root.del(nil, key)
 	if existed {
 		self.size--
 	}
@@ -104,12 +110,13 @@ func (self *Tree) SubGet(key, subKey []byte) (value Hasher, existed bool) {
 	return
 }
 func (self *Tree) SubDel(key, subKey []byte) (old Hasher, existed bool) {
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	ripped := rip(key)
+	if subTree, _ := self.getSubTree(ripped); subTree != nil {
 		old, existed = subTree.Del(key)
 		if subTree.Size() == 0 {
-			self.Del(key)
+			self.del(ripped)
 		} else {
-			self.Put(key, subTree)
+			self.put(ripped, subTree)
 		}
 	}
 	return
