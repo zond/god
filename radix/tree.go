@@ -122,7 +122,7 @@ func (self *Tree) GetVersion(key []byte) (value Hasher, version uint32, existed 
 func (self *Tree) PutVersion(key []byte, value Hasher, expected, version uint32) {
 	ripped := rip(key)
 	if _, current, existed := self.root.get(ripped); !existed || current == expected {
-		self.root, _, _, _ = self.root.insert(nil, false, newNode(ripped, value, version, true))
+		self.root, _, _, existed = self.root.insert(nil, false, newNode(ripped, value, version, true))
 		if !existed {
 			self.size++
 		}
