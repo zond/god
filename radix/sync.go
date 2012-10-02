@@ -118,18 +118,19 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint != nil {
 		if sourcePrint.ValueHash != nil && self.withinLimits(sourcePrint.Key) {
 			// If there is a node at source	and it is within our limits	
+			key := stitch(sourcePrint.Key)
 			if !sourcePrint.coveredBy(destinationPrint) {
 				// If the key at destination is missing or wrong				
 				if sourcePrint.SubTree {
-					NewSync(&subTreeWrapper{self.source, sourcePrint.Key, sourcePrint.version()}, &subTreeWrapper{self.destination, sourcePrint.Key, destinationPrint.version()}).Run()
+					NewSync(&subTreeWrapper{self.source, key, sourcePrint.version()}, &subTreeWrapper{self.destination, key, destinationPrint.version()}).Run()
 				} else {
-					if value, version, existed := self.source.GetVersion(sourcePrint.Key); existed && version == sourcePrint.version() {
-						self.destination.PutVersion(sourcePrint.Key, value, destinationPrint.version(), sourcePrint.version())
+					if value, version, existed := self.source.GetVersion(key); existed && version == sourcePrint.version() {
+						self.destination.PutVersion(key, value, destinationPrint.version(), sourcePrint.version())
 					}
 				}
 			}
 			if self.destructive && sourcePrint.ValueHash != nil {
-				self.source.DelVersion(sourcePrint.Key, sourcePrint.version())
+				self.source.DelVersion(key, sourcePrint.version())
 			}
 		}
 		for index, subPrint := range sourcePrint.SubPrints {
