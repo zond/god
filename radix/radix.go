@@ -4,6 +4,7 @@ import (
 	"../murmur"
 	"bytes"
 	"fmt"
+	"unsafe"
 )
 
 var nilHash = murmur.HashBytes(nil)
@@ -14,6 +15,11 @@ type Hasher interface {
 }
 
 type TreeIterator func(key []byte, value Hasher)
+type nibble byte
+
+func toBytes(n []nibble) []byte {
+	return *((*[]byte)(unsafe.Pointer(&n)))
+}
 
 const (
 	parts = 2
@@ -26,11 +32,11 @@ func hash(h Hasher) []byte {
 	return h.Hash()
 }
 
-func rip(b []byte) (result []byte) {
-	result = make([]byte, parts*len(b))
+func rip(b []byte) (result []nibble) {
+	result = make([]nibble, parts*len(b))
 	for i, char := range b {
 		for j := 0; j < parts; j++ {
-			result[(i*parts)+j] = (char << byte((8/parts)*j)) >> byte(8-(8/parts))
+			result[(i*parts)+j] = nibble((char << byte((8/parts)*j)) >> byte(8-(8/parts)))
 		}
 	}
 	return
@@ -42,11 +48,11 @@ func stringEncode(b []byte) string {
 	}
 	return string(buffer.Bytes())
 }
-func stitch(b []byte) (result []byte) {
+func stitch(b []nibble) (result []byte) {
 	result = make([]byte, len(b)/parts)
 	for i, _ := range result {
 		for j := 0; j < parts; j++ {
-			result[i] += b[(i*parts)+j] << byte((parts-j-1)*(8/parts))
+			result[i] += byte(b[(i*parts)+j] << byte((parts-j-1)*(8/parts)))
 		}
 	}
 	return
@@ -59,7 +65,7 @@ func (self StringHasher) Hash() []byte {
 }
 
 type SubPrint struct {
-	Key []byte
+	Key []nibble
 	Sum []byte
 }
 
@@ -71,7 +77,7 @@ func (self *SubPrint) equals(other *SubPrint) bool {
 }
 
 type Print struct {
-	Key       []byte
+	Key       []nibble
 	ValueHash []byte
 	Version   uint32
 	SubTree   bool
@@ -95,7 +101,7 @@ func (self *Print) set(n *node) {
 	for index, child := range n.children {
 		if child != nil {
 			self.SubPrints[index] = &SubPrint{
-				Key: append(append([]byte{}, self.Key...), child.segment...),
+				Key: append(append([]nibble{}, self.Key...), child.segment...),
 				Sum: child.hash,
 			}
 		}

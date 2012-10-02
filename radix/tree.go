@@ -16,7 +16,7 @@ func NewTree() (result *Tree) {
 	result.root.rehash(nil)
 	return
 }
-func newTreeWith(key []byte, value Hasher, version uint32) (result *Tree) {
+func newTreeWith(key []nibble, value Hasher, version uint32) (result *Tree) {
 	result = NewTree()
 	result.PutVersion(key, value, 0, version)
 	return
@@ -77,33 +77,34 @@ func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
 	return
 }
 
-func (self *Tree) getSubTree(key []byte) (subTree *Tree, version uint32) {
+func (self *Tree) getSubTree(key []nibble) (subTree *Tree, version uint32) {
 	var value Hasher
 	var existed bool
-	if value, version, existed = self.root.get(rip(key)); existed {
+	if value, version, existed = self.root.get(key); existed {
 		subTree, _ = value.(*Tree)
 	}
 	return
 }
 
 func (self *Tree) SubPut(key, subKey []byte, value Hasher) (old Hasher, existed bool) {
-	subTree, subTreeVersion := self.getSubTree(key)
+	ripped := rip(key)
+	subTree, subTreeVersion := self.getSubTree(ripped)
 	if subTree == nil {
-		subTree = newTreeWith(subKey, value, 0)
+		subTree = newTreeWith(rip(subKey), value, 0)
 	} else {
 		old, existed = subTree.Put(subKey, value)
 	}
-	self.PutVersion(key, subTree, subTreeVersion, subTreeVersion)
+	self.PutVersion(ripped, subTree, subTreeVersion, subTreeVersion)
 	return
 }
 func (self *Tree) SubGet(key, subKey []byte) (value Hasher, existed bool) {
-	if subTree, _ := self.getSubTree(key); subTree != nil {
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
 		value, existed = subTree.Get(subKey)
 	}
 	return
 }
 func (self *Tree) SubDel(key, subKey []byte) (old Hasher, existed bool) {
-	if subTree, _ := self.getSubTree(key); subTree != nil {
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
 		old, existed = subTree.Del(key)
 		if subTree.Size() == 0 {
 			self.Del(key)
@@ -114,46 +115,44 @@ func (self *Tree) SubDel(key, subKey []byte) (old Hasher, existed bool) {
 	return
 }
 
-func (self *Tree) Finger(key []byte) (result *Print) {
+func (self *Tree) Finger(key []nibble) (result *Print) {
 	return self.root.finger(&Print{nil, nil, 0, false, nil}, key)
 }
-func (self *Tree) GetVersion(key []byte) (value Hasher, version uint32, existed bool) {
-	value, version, existed = self.root.get(rip(key))
+func (self *Tree) GetVersion(key []nibble) (value Hasher, version uint32, existed bool) {
+	value, version, existed = self.root.get(key)
 	return
 }
-func (self *Tree) PutVersion(key []byte, value Hasher, expected, version uint32) {
-	ripped := rip(key)
-	if _, current, existed := self.root.get(ripped); !existed || current == expected {
-		self.root, _, _, existed = self.root.insert(nil, false, newNode(ripped, value, version, true))
+func (self *Tree) PutVersion(key []nibble, value Hasher, expected, version uint32) {
+	if _, current, existed := self.root.get(key); !existed || current == expected {
+		self.root, _, _, existed = self.root.insert(nil, false, newNode(key, value, version, true))
 		if !existed {
 			self.size++
 		}
 	}
 }
-func (self *Tree) DelVersion(key []byte, expected uint32) {
-	ripped := rip(key)
-	if _, current, existed := self.root.get(ripped); existed && current == expected {
+func (self *Tree) DelVersion(key []nibble, expected uint32) {
+	if _, current, existed := self.root.get(key); existed && current == expected {
 		var existed bool
-		self.root, _, existed = self.root.del(nil, ripped)
+		self.root, _, existed = self.root.del(nil, key)
 		if existed {
 			self.size--
 		}
 	}
 }
 
-func (self *Tree) SubFinger(key, subKey []byte, expected uint32) (result *Print) {
+func (self *Tree) SubFinger(key, subKey []nibble, expected uint32) (result *Print) {
 	if subTree, subTreeVersion := self.getSubTree(key); subTree != nil && subTreeVersion == expected {
 		result = subTree.Finger(subKey)
 	}
 	return
 }
-func (self *Tree) SubGetVersion(key, subKey []byte, expected uint32) (value Hasher, version uint32, existed bool) {
+func (self *Tree) SubGetVersion(key, subKey []nibble, expected uint32) (value Hasher, version uint32, existed bool) {
 	if subTree, subTreeVersion := self.getSubTree(key); subTree != nil && subTreeVersion == expected {
 		value, version, existed = subTree.GetVersion(subKey)
 	}
 	return
 }
-func (self *Tree) SubPutVersion(key, subKey []byte, value Hasher, expected, subExpected, subVersion uint32) {
+func (self *Tree) SubPutVersion(key, subKey []nibble, value Hasher, expected, subExpected, subVersion uint32) {
 	if subTree, subTreeVersion := self.getSubTree(key); subTree == nil || subTreeVersion == expected {
 		if subTree == nil {
 			subTree = newTreeWith(subKey, value, subVersion)
@@ -164,7 +163,7 @@ func (self *Tree) SubPutVersion(key, subKey []byte, value Hasher, expected, subE
 	}
 	return
 }
-func (self *Tree) SubDelVersion(key, subKey []byte, expected, subExpected uint32) {
+func (self *Tree) SubDelVersion(key, subKey []nibble, expected, subExpected uint32) {
 	if subTree, subTreeVersion := self.getSubTree(key); subTree != nil && subTreeVersion == expected {
 		subTree.DelVersion(subKey, subExpected)
 		if subTree.Size() == 0 {

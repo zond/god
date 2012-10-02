@@ -8,7 +8,7 @@ import (
 )
 
 type node struct {
-	segment   []byte
+	segment   []nibble
 	value     Hasher
 	version   uint32
 	valueHash []byte
@@ -16,7 +16,7 @@ type node struct {
 	children  []*node
 }
 
-func newNode(segment []byte, value Hasher, version uint32, hasValue bool) (result *node) {
+func newNode(segment []nibble, value Hasher, version uint32, hasValue bool) (result *node) {
 	result = &node{
 		segment:  segment,
 		value:    value,
@@ -29,13 +29,13 @@ func newNode(segment []byte, value Hasher, version uint32, hasValue bool) (resul
 	}
 	return
 }
-func (self *node) setSegment(part []byte) {
-	new_segment := make([]byte, len(part))
+func (self *node) setSegment(part []nibble) {
+	new_segment := make([]nibble, len(part))
 	copy(new_segment, part)
 	self.segment = new_segment
 }
-func (self *node) rehash(key []byte) {
-	h := murmur.NewBytes(key)
+func (self *node) rehash(key []nibble) {
+	h := murmur.NewBytes(toBytes(key))
 	h.Write(self.valueHash)
 	self.eachChild(func(node *node) {
 		h.Write(node.hash)
@@ -56,7 +56,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	for i := 0; i < indent; i++ {
 		fmt.Fprint(indentation, " ")
 	}
-	encodedSegment := stringEncode(self.segment)
+	encodedSegment := stringEncode(toBytes(self.segment))
 	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), encodedSegment)
 	if self.value != nil {
 		if subTree, ok := self.value.(*Tree); ok {
@@ -71,7 +71,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 		node.describe(indent+len(encodedSegment), buffer)
 	})
 }
-func (self *node) each(prefix []byte, f TreeIterator) {
+func (self *node) each(prefix []nibble, f TreeIterator) {
 	if self != nil {
 		prefix = append(prefix, self.segment...)
 		if self.valueHash != nil {
@@ -82,7 +82,7 @@ func (self *node) each(prefix []byte, f TreeIterator) {
 		}
 	}
 }
-func (self *node) finger(allocated *Print, segment []byte) (result *Print) {
+func (self *node) finger(allocated *Print, segment []nibble) (result *Print) {
 	if self == nil {
 		return
 	}
@@ -106,7 +106,7 @@ func (self *node) finger(allocated *Print, segment []byte) (result *Print) {
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) get(segment []byte) (value Hasher, version uint32, existed bool) {
+func (self *node) get(segment []nibble) (value Hasher, version uint32, existed bool) {
 	if self == nil {
 		return
 	}
@@ -129,7 +129,7 @@ func (self *node) get(segment []byte) (value Hasher, version uint32, existed boo
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) del(prefix, segment []byte) (result *node, old Hasher, existed bool) {
+func (self *node) del(prefix, segment []nibble) (result *node, old Hasher, existed bool) {
 	if self == nil {
 		return
 	}
@@ -188,7 +188,7 @@ func (self *node) del(prefix, segment []byte) (result *node, old Hasher, existed
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) insert(prefix []byte, autoVersion bool, n *node) (result *node, old Hasher, version uint32, existed bool) {
+func (self *node) insert(prefix []nibble, autoVersion bool, n *node) (result *node, old Hasher, version uint32, existed bool) {
 	if self == nil {
 		n.rehash(append(prefix, n.segment...))
 		result = n
