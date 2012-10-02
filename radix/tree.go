@@ -11,8 +11,10 @@ type Tree struct {
 	root *node
 }
 
-func NewTree() *Tree {
-	return &Tree{0, newNode(nil, nil, 0, false)}
+func NewTree() (result *Tree) {
+	result = &Tree{0, newNode(nil, nil, 0, false)}
+	result.root.rehash(nil)
+	return
 }
 func newTreeWith(key []byte, value Hasher, version uint32) (result *Tree) {
 	result = NewTree()

@@ -164,8 +164,23 @@ func (self *node) del(prefix, segment []byte) (result *node, old Hasher, existed
 		} else if beyond_self {
 			prefix = append(prefix, self.segment...)
 			self.children[segment[i]], old, existed = self.children[segment[i]].del(prefix, segment[i:])
-			result = self
-			self.rehash(prefix)
+			if self.valueHash == nil && prefix != nil {
+				n_children := 0
+				for _, child := range self.children {
+					if child != nil {
+						n_children++
+					}
+				}
+				if n_children == 0 {
+					result = nil
+				} else {
+					result = self
+					self.rehash(prefix)
+				}
+			} else {
+				result = self
+				self.rehash(prefix)
+			}
 			return
 		} else if self.segment[i] != segment[i] {
 			return

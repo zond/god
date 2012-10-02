@@ -110,6 +110,43 @@ func TestRipStitch(t *testing.T) {
 	}
 }
 
+func TestSyncSubTreeDestructive(t *testing.T) {
+	tree1 := NewTree()
+	tree3 := NewTree()
+	n := 10
+	var k, sk []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = []byte(murmur.HashString(fmt.Sprint(i)))
+		v = StringHasher(fmt.Sprint(i))
+		if i%2 == 0 {
+			tree1.Put(k, v)
+			tree3.Put(k, v)
+		} else {
+			for j := 0; j < 10; j++ {
+				sk = []byte(fmt.Sprint(j))
+				tree1.SubPut(k, sk, v)
+				tree3.SubPut(k, sk, v)
+			}
+		}
+	}
+	tree2 := NewTree()
+	s := NewSync(tree3, tree2).Destroy()
+	s.Run()
+	if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
+		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
+	}
+	if !reflect.DeepEqual(tree1, tree2) {
+		t.Errorf("\n%v and \n%v are unequal", tree1.Describe(), tree2.Describe())
+	}
+	if tree3.Size() != 0 {
+		t.Errorf("should be empty")
+	}
+	if !reflect.DeepEqual(tree3, NewTree()) {
+		t.Errorf("%v and %v should be equal", tree3.Describe(), NewTree().Describe())
+	}
+}
+
 func TestSyncSubTree(t *testing.T) {
 	tree1 := NewTree()
 	n := 10
@@ -161,6 +198,9 @@ func TestSyncDestructive(t *testing.T) {
 	}
 	if tree3.Size() != 0 {
 		t.Errorf("%v should be size 0, is size %v", tree3, tree3.Size())
+	}
+	if !reflect.DeepEqual(tree3, NewTree()) {
+		t.Errorf("should be equal")
 	}
 }
 
