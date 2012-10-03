@@ -31,6 +31,10 @@ func HashInt(i int) []byte {
 	return NewString(fmt.Sprint(i)).Get()
 }
 
+func HashInt64(i int64) []byte {
+	return NewString(fmt.Sprint(i)).Get()
+}
+
 func HashBytes(b []byte) []byte {
 	return NewBytes(b).Get()
 }
