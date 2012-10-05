@@ -8,7 +8,7 @@ import (
 )
 
 type Node struct {
-	nodes    Ring
+	ring     Ring
 	position []byte
 	addr     string
 	listener *net.TCPListener
@@ -17,9 +17,9 @@ type Node struct {
 
 func NewNode(addr string) (result *Node) {
 	return &Node{
-		nodes: Ring{},
-		addr:  addr,
-		lock:  new(sync.RWMutex),
+		ring: Ring{},
+		addr: addr,
+		lock: new(sync.RWMutex),
 	}
 }
 func (self *Node) SetPosition(position []byte) *Node {
@@ -35,12 +35,12 @@ func (self *Node) String() string {
 func (self *Node) getSuccessor() Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.nodes.surrounding(self.position).Successor
+	return self.ring.surrounding(self.position).Successor
 }
 func (self *Node) getPredecessor() Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.nodes.surrounding(self.position).Predecessor
+	return self.ring.surrounding(self.position).Predecessor
 }
 func (self *Node) getListener() *net.TCPListener {
 	self.lock.RLock()
@@ -93,7 +93,7 @@ func (self *Node) Start() (err error) {
 		}
 		self.setAddr(udpConn.LocalAddr().String())
 	}
-	self.nodes.add(self.remote())
+	self.ring.add(self.remote())
 	var addr *net.TCPAddr
 	if addr, err = net.ResolveTCPAddr("tcp", self.getAddr()); err != nil {
 		return
@@ -112,15 +112,15 @@ func (self *Node) Start() (err error) {
 	return
 }
 func (self *Node) findSurrounding(position []byte, result *Surrounding) (err error) {
-	*result = self.nodes.surrounding(position)
+	*result = self.ring.surrounding(position)
 	if result.Predecessor.Addr != self.getAddr() {
 		err = result.Predecessor.call("Node.FindSurrounding", position, result)
 	}
 	return
 }
-func (self *Node) notify(caller Remote, nodes *Ring) error {
-	self.nodes.add(caller)
-	*nodes = self.nodes
+func (self *Node) notify(caller Remote, ring *Ring) error {
+	self.ring.add(caller)
+	*ring = self.ring
 	return nil
 }
 func (self *Node) MustJoin(addr string) {
@@ -129,7 +129,7 @@ func (self *Node) MustJoin(addr string) {
 	}
 }
 func (self *Node) Join(addr string) (err error) {
-	if err = board.call(addr, "Node.Notify", self.remote(), &self.nodes); err != nil {
+	if err = board.call(addr, "Node.Notify", self.remote(), &self.ring); err != nil {
 		return
 	}
 	return
