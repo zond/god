@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func assertSurrounding(t *testing.T, r *Remotes, pos, pred, succ byte) {
+func assertSurrounding(t *testing.T, r *Ring, pos, pred, succ byte) {
 	surr := r.surrounding([]byte{pos})
 	if surr.Predecessor.Pos[0] != pred {
 		t.Errorf("Wrong Predecessor for %v in %v, wanted %v but got %v", pos, r, pred, surr.Predecessor)
@@ -14,8 +14,8 @@ func assertSurrounding(t *testing.T, r *Remotes, pos, pred, succ byte) {
 	}
 }
 
-func TestRemotes(t *testing.T) {
-	r := &Remotes{}
+func TestRing(t *testing.T) {
+	r := &Ring{}
 	r.add(Remote{[]byte{0}, "a"})
 	r.add(Remote{[]byte{1}, "b"})
 	r.add(Remote{[]byte{2}, "c"})

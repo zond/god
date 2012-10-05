@@ -8,7 +8,7 @@ import (
 )
 
 type Node struct {
-	nodes    Remotes
+	nodes    Ring
 	position []byte
 	addr     string
 	listener *net.TCPListener
@@ -17,7 +17,7 @@ type Node struct {
 
 func NewNode(addr string) (result *Node) {
 	return &Node{
-		nodes: Remotes{},
+		nodes: Ring{},
 		addr:  addr,
 		lock:  new(sync.RWMutex),
 	}
@@ -118,7 +118,7 @@ func (self *Node) findSurrounding(position []byte, result *Surrounding) (err err
 	}
 	return
 }
-func (self *Node) notify(caller Remote, nodes *Remotes) error {
+func (self *Node) notify(caller Remote, nodes *Ring) error {
 	self.nodes.add(caller)
 	*nodes = self.nodes
 	return nil

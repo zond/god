@@ -32,49 +32,49 @@ func (self Surrounding) contains(position []byte) bool {
 	return between(position, self.Predecessor.Pos, self.Successor.Pos)
 }
 
-type Remotes struct {
-	Content []Remote
+type Ring struct {
+	Nodes []Remote
 }
 
-func (self *Remotes) add(remote Remote) {
-	for index, current := range self.Content {
+func (self *Ring) add(remote Remote) {
+	for index, current := range self.Nodes {
 		if current.Addr == remote.Addr {
-			self.Content = append(self.Content[:index], self.Content[index+1:]...)
+			self.Nodes = append(self.Nodes[:index], self.Nodes[index+1:]...)
 		}
 	}
-	i := sort.Search(len(self.Content), func(i int) bool {
-		return remote.less(self.Content[i])
+	i := sort.Search(len(self.Nodes), func(i int) bool {
+		return remote.less(self.Nodes[i])
 	})
-	if i < len(self.Content) {
-		self.Content = append(self.Content[:i], append([]Remote{remote}, self.Content[i:]...)...)
+	if i < len(self.Nodes) {
+		self.Nodes = append(self.Nodes[:i], append([]Remote{remote}, self.Nodes[i:]...)...)
 	} else {
-		self.Content = append(self.Content, remote)
+		self.Nodes = append(self.Nodes, remote)
 	}
 }
-func (self *Remotes) surrounding(pos []byte) (result Surrounding) {
-	i := sort.Search(len(self.Content), func(i int) bool {
-		return bytes.Compare(pos, self.Content[i].Pos) < 0
+func (self *Ring) surrounding(pos []byte) (result Surrounding) {
+	i := sort.Search(len(self.Nodes), func(i int) bool {
+		return bytes.Compare(pos, self.Nodes[i].Pos) < 0
 	})
-	if i < len(self.Content) {
-		result.Successor = self.Content[i]
+	if i < len(self.Nodes) {
+		result.Successor = self.Nodes[i]
 	} else {
-		result.Successor = self.Content[0]
+		result.Successor = self.Nodes[0]
 	}
 	j := sort.Search(i, func(i int) bool {
-		return bytes.Compare(pos, self.Content[i].Pos) < 1
+		return bytes.Compare(pos, self.Nodes[i].Pos) < 1
 	})
-	if j < len(self.Content) {
-		if bytes.Compare(self.Content[j].Pos, pos) == 0 {
-			result.Predecessor = self.Content[j]
+	if j < len(self.Nodes) {
+		if bytes.Compare(self.Nodes[j].Pos, pos) == 0 {
+			result.Predecessor = self.Nodes[j]
 		} else {
 			if j > 0 {
-				result.Predecessor = self.Content[j-1]
+				result.Predecessor = self.Nodes[j-1]
 			} else {
-				result.Predecessor = self.Content[len(self.Content)-1]
+				result.Predecessor = self.Nodes[len(self.Nodes)-1]
 			}
 		}
 	} else {
-		result.Predecessor = self.Content[len(self.Content)-1]
+		result.Predecessor = self.Nodes[len(self.Nodes)-1]
 	}
 	return
 }
