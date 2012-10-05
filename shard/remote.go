@@ -57,20 +57,24 @@ func (self *Remotes) surrounding(pos []byte) (result Surrounding) {
 	})
 	if i < len(self.Content) {
 		result.Successor = self.Content[i]
-		if i > 0 {
-			result.Predecessor = self.Content[i-1]
-		} else {
-			result.Predecessor = self.Content[len(self.Content)-1]
-		}
 	} else {
 		result.Successor = self.Content[0]
+	}
+	j := sort.Search(i, func(i int) bool {
+		return bytes.Compare(pos, self.Content[i].Pos) < 1
+	})
+	if j < len(self.Content) {
+		if bytes.Compare(self.Content[j].Pos, pos) == 0 {
+			result.Predecessor = self.Content[j]
+		} else {
+			if j > 0 {
+				result.Predecessor = self.Content[j-1]
+			} else {
+				result.Predecessor = self.Content[len(self.Content)-1]
+			}
+		}
+	} else {
 		result.Predecessor = self.Content[len(self.Content)-1]
 	}
 	return
-}
-func (self *Remotes) first() Remote {
-	return self.Content[0]
-}
-func (self *Remotes) last() Remote {
-	return self.Content[len(self.Content)-1]
 }
