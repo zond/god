@@ -23,12 +23,12 @@ func (self Remote) call(service string, args, reply interface{}) error {
 	return board.call(self.Addr, service, args, reply)
 }
 
-type Surrounding struct {
+type Segment struct {
 	Predecessor Remote
 	Successor   Remote
 }
 
-func (self Surrounding) contains(position []byte) bool {
+func (self Segment) contains(position []byte) bool {
 	return between(position, self.Predecessor.Pos, self.Successor.Pos)
 }
 
@@ -51,7 +51,7 @@ func (self *Ring) add(remote Remote) {
 		self.Nodes = append(self.Nodes, remote)
 	}
 }
-func (self *Ring) surrounding(pos []byte) (result Surrounding) {
+func (self *Ring) segment(pos []byte) (result Segment) {
 	i := sort.Search(len(self.Nodes), func(i int) bool {
 		return bytes.Compare(pos, self.Nodes[i].Pos) < 0
 	})
