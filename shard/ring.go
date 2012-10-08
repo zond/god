@@ -36,9 +36,15 @@ type Ring struct {
 	Nodes []Remote
 }
 
+func (self *Ring) size() int {
+	return len(self.Nodes)
+}
 func (self *Ring) add(remote Remote) {
 	for index, current := range self.Nodes {
 		if current.Addr == remote.Addr {
+			if bytes.Compare(current.Pos, remote.Pos) == 0 {
+				return
+			}
 			self.Nodes = append(self.Nodes[:index], self.Nodes[index+1:]...)
 		}
 	}
@@ -51,30 +57,51 @@ func (self *Ring) add(remote Remote) {
 		self.Nodes = append(self.Nodes, remote)
 	}
 }
-func (self *Ring) segment(pos []byte) (result Segment) {
+func (self *Ring) segmentIndices(leftPos, rightPos []byte) (predecessorIndex, successorIndex int) {
 	i := sort.Search(len(self.Nodes), func(i int) bool {
-		return bytes.Compare(pos, self.Nodes[i].Pos) < 0
+		return bytes.Compare(rightPos, self.Nodes[i].Pos) < 0
 	})
 	if i < len(self.Nodes) {
-		result.Successor = self.Nodes[i]
+		successorIndex = i
 	} else {
-		result.Successor = self.Nodes[0]
+		successorIndex = 0
 	}
-	j := sort.Search(i, func(i int) bool {
-		return bytes.Compare(pos, self.Nodes[i].Pos) < 1
+	startSearch := 0
+	stopSearch := successorIndex
+	if bytes.Compare(leftPos, rightPos) > 0 {
+		startSearch = successorIndex
+		stopSearch = len(self.Nodes)
+	}
+	j := sort.Search(stopSearch-startSearch, func(i int) bool {
+		return bytes.Compare(leftPos, self.Nodes[i+startSearch].Pos) < 1
 	})
+	j += startSearch
 	if j < len(self.Nodes) {
-		if bytes.Compare(self.Nodes[j].Pos, pos) == 0 {
-			result.Predecessor = self.Nodes[j]
+		if bytes.Compare(self.Nodes[j].Pos, leftPos) == 0 {
+			predecessorIndex = j
 		} else {
 			if j > 0 {
-				result.Predecessor = self.Nodes[j-1]
+				predecessorIndex = j - 1
 			} else {
-				result.Predecessor = self.Nodes[len(self.Nodes)-1]
+				predecessorIndex = len(self.Nodes) - 1
 			}
 		}
 	} else {
-		result.Predecessor = self.Nodes[len(self.Nodes)-1]
+		predecessorIndex = len(self.Nodes) - 1
 	}
+	return
+}
+func (self *Ring) clean(predecessor, successor []byte) {
+	predecessorIndex, successorIndex := self.segmentIndices(predecessor, successor)
+	if successorIndex > predecessorIndex {
+		self.Nodes = append(self.Nodes[:predecessorIndex+1], self.Nodes[successorIndex:]...)
+	} else {
+		self.Nodes = self.Nodes[successorIndex : predecessorIndex+1]
+	}
+}
+func (self *Ring) segment(pos []byte) (result Segment) {
+	predecessorIndex, successorIndex := self.segmentIndices(pos, pos)
+	result.Predecessor = self.Nodes[predecessorIndex]
+	result.Successor = self.Nodes[successorIndex]
 	return
 }

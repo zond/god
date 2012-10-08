@@ -2,22 +2,24 @@ package shard
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/rpc"
 	"sync"
 )
 
 type Node struct {
-	ring     Ring
-	position []byte
-	addr     string
-	listener *net.TCPListener
-	lock     *sync.RWMutex
+	ring        *Ring
+	predecessor *Remote
+	position    []byte
+	addr        string
+	listener    *net.TCPListener
+	lock        *sync.RWMutex
 }
 
 func NewNode(addr string) (result *Node) {
 	return &Node{
-		ring: Ring{},
+		ring: &Ring{},
 		addr: addr,
 		lock: new(sync.RWMutex),
 	}
@@ -35,12 +37,18 @@ func (self *Node) String() string {
 func (self *Node) getSuccessor() Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
+	if self.ring.size() == 0 {
+		return self.remote()
+	}
 	return self.ring.segment(self.position).Successor
 }
 func (self *Node) getPredecessor() Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.ring.segment(self.position).Predecessor
+	if self.predecessor == nil {
+		return self.remote()
+	}
+	return *self.predecessor
 }
 func (self *Node) getListener() *net.TCPListener {
 	self.lock.RLock()
@@ -83,17 +91,12 @@ func (self *Node) MustStart() {
 }
 func (self *Node) Start() (err error) {
 	if self.getAddr() == "" {
-		var udpAddr *net.UDPAddr
-		if udpAddr, err = net.ResolveUDPAddr("udp", "www.internic.net:80"); err != nil {
+		var foundAddr string
+		if foundAddr, err = findAddress(); err != nil {
 			return
 		}
-		var udpConn *net.UDPConn
-		if udpConn, err = net.DialUDP("udp", nil, udpAddr); err != nil {
-			return
-		}
-		self.setAddr(udpConn.LocalAddr().String())
+		self.setAddr(foundAddr)
 	}
-	self.ring.add(self.remote())
 	var addr *net.TCPAddr
 	if addr, err = net.ResolveTCPAddr("tcp", self.getAddr()); err != nil {
 		return
@@ -107,26 +110,46 @@ func (self *Node) Start() (err error) {
 	if err = server.RegisterName("Node", (*nodeServer)(self)); err != nil {
 		return
 	}
-	fmt.Println(self, "listening on", self.getAddr())
+	log.Print(self, "listening on", self.getAddr())
+	self.lock.Lock()
+	self.ring.add(self.remote())
+	selfRemote := self.remote()
+	self.predecessor = &selfRemote
+	self.lock.Unlock()
 	go server.Accept(self.getListener())
 	return
 }
 func (self *Node) findSegment(position []byte, result *Segment) (err error) {
+	self.lock.RLock()
 	*result = self.ring.segment(position)
+	self.lock.RUnlock()
 	if result.Predecessor.Addr != self.getAddr() {
 		err = result.Predecessor.call("Node.FindSegment", position, result)
 	}
 	return
 }
 func (self *Node) notify(caller Remote, ring *Ring) error {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	self.ring.add(caller)
-	*ring = self.ring
+	*self.predecessor = self.ring.segment(self.position).Predecessor
+	*ring = *self.ring
 	return nil
 }
 func (self *Node) MustJoin(addr string) {
 	if err := self.Join(addr); err != nil {
 		panic(err)
 	}
+}
+func (self *Node) notifySuccessor() (err error) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	segment := self.ring.segment(self.getPosition())
+	err = segment.Successor.call("Node.Notify", self.remote(), &self.ring)
+	if self.predecessor != nil {
+		self.ring.clean((*self.predecessor).Pos, self.position)
+	}
+	return
 }
 func (self *Node) Join(addr string) (err error) {
 	if err = board.call(addr, "Node.Notify", self.remote(), &self.ring); err != nil {
