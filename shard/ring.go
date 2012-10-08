@@ -94,9 +94,9 @@ func (self *Ring) segmentIndices(leftPos, rightPos []byte) (predecessorIndex, su
 func (self *Ring) clean(predecessor, successor []byte) {
 	predecessorIndex, successorIndex := self.segmentIndices(predecessor, successor)
 	if successorIndex > predecessorIndex {
-		self.Nodes = append(self.Nodes[:predecessorIndex+1], self.Nodes[successorIndex:]...)
+		self.Nodes = append(self.Nodes[:predecessorIndex+1], self.Nodes[successorIndex-1:]...)
 	} else {
-		self.Nodes = self.Nodes[successorIndex : predecessorIndex+1]
+		self.Nodes = self.Nodes[successorIndex-1 : predecessorIndex+1]
 	}
 }
 func (self *Ring) segment(pos []byte) (result Segment) {
