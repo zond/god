@@ -8,6 +8,15 @@ import (
 	"net"
 	"net/rpc"
 	"sync"
+	"time"
+)
+
+type nodeState int
+
+const (
+	created = iota
+	started
+	stopped
 )
 
 type Node struct {
@@ -17,6 +26,7 @@ type Node struct {
 	addr        string
 	listener    *net.TCPListener
 	lock        *sync.RWMutex
+	state       nodeState
 }
 
 func NewNode(addr string) (result *Node) {
@@ -25,6 +35,7 @@ func NewNode(addr string) (result *Node) {
 		position: murmur.HashInt64(rand.Int63()),
 		addr:     addr,
 		lock:     new(sync.RWMutex),
+		state:    created,
 	}
 }
 func (self *Node) SetPosition(position []byte) *Node {
@@ -44,6 +55,20 @@ func (self *Node) Describe() string {
 	return string(buffer.Bytes())
 }
 
+func (self *Node) hasState(s nodeState) bool {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.state == s
+}
+func (self *Node) changeState(old, neu nodeState) bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	if self.state != old {
+		return false
+	}
+	self.state = neu
+	return true
+}
 func (self *Node) getPredecessor() *Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -79,7 +104,9 @@ func (self *Node) remote() Remote {
 }
 
 func (self *Node) Stop() {
-	self.getListener().Close()
+	if self.changeState(started, stopped) {
+		self.getListener().Close()
+	}
 }
 func (self *Node) MustStart() {
 	if err := self.Start(); err != nil {
@@ -87,6 +114,9 @@ func (self *Node) MustStart() {
 	}
 }
 func (self *Node) Start() (err error) {
+	if !self.changeState(created, started) {
+		return fmt.Errorf("%v can only be started when in state 'created'")
+	}
 	if self.getAddr() == "" {
 		var foundAddr string
 		if foundAddr, err = findAddress(); err != nil {
@@ -113,7 +143,14 @@ func (self *Node) Start() (err error) {
 	self.predecessor = &selfRemote
 	self.lock.Unlock()
 	go server.Accept(self.getListener())
+	go self.notifyPeriodically()
 	return
+}
+func (self *Node) notifyPeriodically() {
+	for self.hasState(started) {
+		self.notifySuccessor()
+		time.Sleep(time.Second)
+	}
 }
 func (self *Node) notify(caller Remote, ring *Ring) error {
 	self.lock.Lock()
@@ -124,10 +161,16 @@ func (self *Node) notify(caller Remote, ring *Ring) error {
 	return nil
 }
 func (self *Node) notifySuccessor() (err error) {
+	self.lock.RLock()
+	_, _, successor := self.ring.remotes(self.getPosition())
+	self.lock.RUnlock()
+	newRing := &Ring{}
+	if err = successor.call("Node.Notify", self.remote(), newRing); err != nil {
+		return
+	}
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	_, _, successor := self.ring.remotes(self.getPosition())
-	err = successor.call("Node.Notify", self.remote(), &self.ring)
+	self.ring = newRing
 	if self.predecessor != nil {
 		self.ring.clean(self.predecessor.Pos, self.position)
 	}
