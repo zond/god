@@ -2,6 +2,7 @@ package shard
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 )
 
@@ -19,17 +20,11 @@ func (self Remote) less(other Remote) bool {
 	}
 	return val < 0
 }
+func (self Remote) String() string {
+	return fmt.Sprintf("[%v@%v]", hexEncode(self.Pos), self.Addr)
+}
 func (self Remote) call(service string, args, reply interface{}) error {
 	return board.call(self.Addr, service, args, reply)
-}
-
-type Segment struct {
-	Predecessor Remote
-	Successor   Remote
-}
-
-func (self Segment) contains(position []byte) bool {
-	return between(position, self.Predecessor.Pos, self.Successor.Pos)
 }
 
 type Ring struct {
@@ -57,51 +52,67 @@ func (self *Ring) add(remote Remote) {
 		self.Nodes = append(self.Nodes, remote)
 	}
 }
-func (self *Ring) segmentIndices(leftPos, rightPos []byte) (predecessorIndex, successorIndex int) {
+func (self *Ring) remotes(pos []byte) (before, at, after *Remote) {
+	beforeIndex, atIndex, afterIndex := self.indices(pos)
+	before = &self.Nodes[beforeIndex]
+	if atIndex != -1 {
+		at = &self.Nodes[atIndex]
+	}
+	after = &self.Nodes[afterIndex]
+	return
+}
+func (self *Ring) indices(pos []byte) (before, at, after int) {
+	// Find the first position in self.Nodes where the position 
+	// is greather than or equal to the searched for position.
 	i := sort.Search(len(self.Nodes), func(i int) bool {
-		return bytes.Compare(rightPos, self.Nodes[i].Pos) < 0
+		return bytes.Compare(pos, self.Nodes[i].Pos) < 1
 	})
-	if i < len(self.Nodes) {
-		successorIndex = i
+	// If we didn't find any position like that
+	if i == len(self.Nodes) {
+		after = 0
+		before = len(self.Nodes) - 1
+		at = -1
+		return
+	}
+	// If we did, then we know that the position before (or the last position) 
+	// is the one that is before the searched for position.
+	if i == 0 {
+		before = len(self.Nodes) - 1
 	} else {
-		successorIndex = 0
+		before = i - 1
 	}
-	startSearch := 0
-	stopSearch := successorIndex
-	if bytes.Compare(leftPos, rightPos) > 0 {
-		startSearch = successorIndex
-		stopSearch = len(self.Nodes)
-	}
-	j := sort.Search(stopSearch-startSearch, func(i int) bool {
-		return bytes.Compare(leftPos, self.Nodes[i+startSearch].Pos) < 1
-	})
-	j += startSearch
-	if j < len(self.Nodes) {
-		if bytes.Compare(self.Nodes[j].Pos, leftPos) == 0 {
-			predecessorIndex = j
+	// If we found a position that is equal to the searched for position 
+	// just keep searching for a position that is guaranteed to be greater 
+	// than the searched for position.
+	// If we did not find a position that is equal, then we know that the found
+	// position is greater than.
+	cmp := bytes.Compare(pos, self.Nodes[i].Pos)
+	if cmp == 0 {
+		at = i
+		j := sort.Search(len(self.Nodes)-i, func(k int) bool {
+			return bytes.Compare(pos, self.Nodes[k+i].Pos) < 0
+		})
+		j += i
+		if j < len(self.Nodes) {
+			after = j
 		} else {
-			if j > 0 {
-				predecessorIndex = j - 1
-			} else {
-				predecessorIndex = len(self.Nodes) - 1
-			}
+			after = 0
 		}
 	} else {
-		predecessorIndex = len(self.Nodes) - 1
+		at = -1
+		after = i
 	}
 	return
 }
 func (self *Ring) clean(predecessor, successor []byte) {
-	predecessorIndex, successorIndex := self.segmentIndices(predecessor, successor)
-	if successorIndex > predecessorIndex {
-		self.Nodes = append(self.Nodes[:predecessorIndex+1], self.Nodes[successorIndex-1:]...)
-	} else {
-		self.Nodes = self.Nodes[successorIndex-1 : predecessorIndex+1]
+	_, _, from := self.indices(predecessor)
+	to, at, _ := self.indices(successor)
+	if at != -1 {
+		to = at
 	}
-}
-func (self *Ring) segment(pos []byte) (result Segment) {
-	predecessorIndex, successorIndex := self.segmentIndices(pos, pos)
-	result.Predecessor = self.Nodes[predecessorIndex]
-	result.Successor = self.Nodes[successorIndex]
-	return
+	if from > to {
+		self.Nodes = self.Nodes[to:from]
+	} else {
+		self.Nodes = append(self.Nodes[:from], self.Nodes[to:]...)
+	}
 }

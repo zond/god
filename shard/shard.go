@@ -36,14 +36,14 @@ func hexEncode(b []byte) (result string) {
 	return string(buffer.Bytes())
 }
 
-func between(needle, start, end []byte) (result bool) {
-	switch bytes.Compare(start, end) {
+func between(needle, fromInc, toExc []byte) (result bool) {
+	switch bytes.Compare(fromInc, toExc) {
 	case 0:
 		result = true
 	case -1:
-		result = bytes.Compare(start, needle) < 1 && bytes.Compare(needle, end) < 0
+		result = bytes.Compare(fromInc, needle) < 1 && bytes.Compare(needle, toExc) < 0
 	case 1:
-		result = bytes.Compare(start, needle) < 1 || bytes.Compare(needle, end) < 0
+		result = bytes.Compare(fromInc, needle) < 1 || bytes.Compare(needle, toExc) < 0
 	default:
 		panic("Shouldn't happen")
 	}
