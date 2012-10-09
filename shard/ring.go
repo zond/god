@@ -3,6 +3,7 @@ package shard
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"sort"
 )
 
@@ -31,6 +32,11 @@ type Ring struct {
 	Nodes []Remote
 }
 
+func (self *Ring) describe(buffer io.Writer) {
+	for index, node := range self.Nodes {
+		fmt.Fprintf(buffer, "%v: %v\n", index, node)
+	}
+}
 func (self *Ring) size() int {
 	return len(self.Nodes)
 }

@@ -2,6 +2,7 @@ package shard
 
 import (
 	"../murmur"
+	"bytes"
 	"fmt"
 	"math/rand"
 	"net"
@@ -34,6 +35,13 @@ func (self *Node) SetPosition(position []byte) *Node {
 }
 func (self *Node) String() string {
 	return fmt.Sprintf("<%v@%v predecessor=%v>", hexEncode(self.getPosition()), self.getAddr(), self.getPredecessor())
+}
+func (self *Node) Describe() string {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	buffer := bytes.NewBufferString(fmt.Sprintf("%v@%v predecessor=%v\n", hexEncode(self.position), self.addr, self.predecessor))
+	self.ring.describe(buffer)
+	return string(buffer.Bytes())
 }
 
 func (self *Node) getPredecessor() *Remote {
@@ -134,6 +142,5 @@ func (self *Node) Join(addr string) (err error) {
 	if err = board.call(addr, "Node.Notify", self.remote(), &self.ring); err != nil {
 		return
 	}
-	fmt.Println("ring is now", self.ring)
 	return
 }
