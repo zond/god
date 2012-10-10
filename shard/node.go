@@ -172,6 +172,7 @@ func (self *Node) notifySuccessor() (err error) {
 	defer self.lock.Unlock()
 	self.ring = newRing
 	if self.predecessor != nil {
+		self.ring.add(*self.predecessor)
 		self.ring.clean(self.predecessor.Pos, self.position)
 	}
 	return
