@@ -1,4 +1,4 @@
-package shard
+package discord
 
 import (
 	"../murmur"
@@ -26,6 +26,7 @@ type Node struct {
 	listener    *net.TCPListener
 	lock        *sync.RWMutex
 	state       nodeState
+	exports     map[string]interface{}
 }
 
 func NewNode(addr string) (result *Node) {
@@ -33,9 +34,17 @@ func NewNode(addr string) (result *Node) {
 		ring:     &Ring{},
 		position: make([]byte, murmur.Size),
 		addr:     addr,
+		exports:  make(map[string]interface{}),
 		lock:     new(sync.RWMutex),
 		state:    created,
 	}
+}
+func (self *Node) Export(name string, api interface{}) error {
+	if self.hasState(created) {
+		self.exports[name] = api
+		return nil
+	}
+	return fmt.Errorf("%v can only export when in state 'created'")
 }
 func (self *Node) SetPosition(position []byte) *Node {
 	self.lock.Lock()
@@ -45,7 +54,7 @@ func (self *Node) SetPosition(position []byte) *Node {
 	return self
 }
 func (self *Node) String() string {
-	return fmt.Sprintf("<%v@%v predecessor=%v>", hexEncode(self.getPosition()), self.getAddr(), self.getPredecessor())
+	return fmt.Sprintf("<%v@%v predecessor=%v>", hexEncode(self.GetPosition()), self.getAddr(), self.getPredecessor())
 }
 func (self *Node) Describe() string {
 	self.lock.RLock()
@@ -99,13 +108,13 @@ func (self *Node) getAddr() string {
 	defer self.lock.RUnlock()
 	return self.addr
 }
-func (self *Node) getPosition() (result []byte) {
+func (self *Node) GetPosition() (result []byte) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.position[:]
 }
 func (self *Node) remote() Remote {
-	return Remote{self.getPosition(), self.getAddr()}
+	return Remote{self.GetPosition(), self.getAddr()}
 }
 
 func (self *Node) Stop() {
@@ -142,6 +151,11 @@ func (self *Node) Start() (err error) {
 	if err = server.RegisterName("Node", (*nodeServer)(self)); err != nil {
 		return
 	}
+	for name, api := range self.exports {
+		if err = server.RegisterName(name, api); err != nil {
+			return
+		}
+	}
 	selfRemote := self.remote()
 	self.lock.Lock()
 	self.ring.add(selfRemote)
@@ -168,10 +182,10 @@ func (self *Node) ping() {
 func (self *Node) pingPredecessor() {
 	if predecessor := self.getPredecessor(); predecessor != nil {
 		var x int
-		if err := predecessor.call("Node.Ping", 0, &x); err != nil {
+		if err := predecessor.Call("Node.Ping", 0, &x); err != nil {
 			self.lock.Lock()
 			defer self.lock.Unlock()
-			predecessor, _, _ = self.ring.remotes(self.getPosition())
+			predecessor, _, _ = self.ring.remotes(self.GetPosition())
 			self.predecessor = predecessor
 		}
 	}
@@ -186,10 +200,10 @@ func (self *Node) notify(caller Remote, ring *Ring) error {
 }
 func (self *Node) notifySuccessor() {
 	self.lock.RLock()
-	_, _, successor := self.ring.remotes(self.getPosition())
+	_, _, successor := self.ring.remotes(self.GetPosition())
 	self.lock.RUnlock()
 	newRing := &Ring{}
-	if err := successor.call("Node.Notify", self.remote(), newRing); err != nil {
+	if err := successor.Call("Node.Notify", self.remote(), newRing); err != nil {
 		self.lock.Lock()
 		defer self.lock.Unlock()
 		self.ring.remove(*successor)
@@ -209,7 +223,7 @@ func (self *Node) MustJoin(addr string) {
 	}
 }
 func (self *Node) Join(addr string) (err error) {
-	if bytes.Compare(self.getPosition(), make([]byte, murmur.Size)) == 0 {
+	if bytes.Compare(self.GetPosition(), make([]byte, murmur.Size)) == 0 {
 		newRing := &Ring{}
 		if err = board.call(addr, "Node.Ring", 0, newRing); err != nil {
 			return
@@ -220,5 +234,19 @@ func (self *Node) Join(addr string) (err error) {
 	if err = board.call(addr, "Node.Notify", self.remote(), &self.ring); err != nil {
 		return
 	}
+	return
+}
+func (self *Node) getSuccessor(key []byte, result *Remote) (err error) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	predecessor, match, successor := self.ring.remotes(key)
+	if match != nil {
+		predecessor = match
+	}
+	if predecessor.Addr == self.addr {
+		*result = *successor
+		return
+	}
+	err = predecessor.Call("Node.GetSuccessor", key, result)
 	return
 }

@@ -1,4 +1,4 @@
-package shard
+package discord
 
 import (
 	"bytes"

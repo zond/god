@@ -1,9 +1,11 @@
-package shard
+package discord
 
 import (
 	"net/rpc"
 	"sync"
 )
+
+var board = newSwitchboard()
 
 type switchboard struct {
 	lock    *sync.RWMutex

@@ -1,4 +1,4 @@
-package shard
+package discord
 
 import (
 	"../murmur"
@@ -8,8 +8,6 @@ import (
 	"math/big"
 	"sort"
 )
-
-var board = newSwitchboard()
 
 type Remote struct {
 	Pos  []byte
@@ -26,7 +24,7 @@ func (self Remote) less(other Remote) bool {
 func (self Remote) String() string {
 	return fmt.Sprintf("[%v@%v]", hexEncode(self.Pos), self.Addr)
 }
-func (self Remote) call(service string, args, reply interface{}) error {
+func (self Remote) Call(service string, args, reply interface{}) error {
 	return board.call(self.Addr, service, args, reply)
 }
 

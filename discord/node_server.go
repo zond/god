@@ -1,4 +1,4 @@
-package shard
+package discord
 
 type nodeServer Node
 
@@ -12,4 +12,7 @@ func (self *nodeServer) Ring(x int, nodes *Ring) error {
 func (self *nodeServer) Ping(x int, y *int) error {
 	(*Node)(self).ping()
 	return nil
+}
+func (self *nodeServer) GetSuccessor(key []byte, successor *Remote) error {
+	return (*Node)(self).getSuccessor(key, successor)
 }
