@@ -1,9 +1,11 @@
 package shard
 
 import (
+	"../murmur"
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"sort"
 )
 
@@ -67,6 +69,11 @@ func (self *Ring) remotes(pos []byte) (before, at, after *Remote) {
 	after = &self.Nodes[afterIndex]
 	return
 }
+
+/*
+indices searches the ring for a position, and returns the last index before the position,
+the index where the positon can be found (or -1) and the first index after the position.
+*/
 func (self *Ring) indices(pos []byte) (before, at, after int) {
 	// Find the first position in self.Nodes where the position 
 	// is greather than or equal to the searched for position.
@@ -109,6 +116,34 @@ func (self *Ring) indices(pos []byte) (before, at, after int) {
 		after = i
 	}
 	return
+}
+func (self *Ring) getSlot() []byte {
+	biggestSpace := new(big.Int)
+	biggestSpaceIndex := 0
+	for i := 0; i < len(self.Nodes); i++ {
+		this := new(big.Int).SetBytes(self.Nodes[i].Pos)
+		var next *big.Int
+		if i+1 < len(self.Nodes) {
+			next = new(big.Int).SetBytes(self.Nodes[i].Pos)
+		} else {
+			max := make([]byte, murmur.Size+1)
+			max[0] = 1
+			next = new(big.Int).Add(new(big.Int).SetBytes(max), new(big.Int).SetBytes(self.Nodes[0].Pos))
+		}
+		thisSpace := new(big.Int).Sub(next, this)
+		if biggestSpace.Cmp(thisSpace) < 0 {
+			biggestSpace = thisSpace
+			biggestSpaceIndex = i
+		}
+	}
+	return new(big.Int).Add(new(big.Int).SetBytes(self.Nodes[biggestSpaceIndex].Pos), new(big.Int).Div(biggestSpace, big.NewInt(2))).Bytes()
+}
+func (self *Ring) remove(remote Remote) {
+	for index, current := range self.Nodes {
+		if current.Addr == remote.Addr {
+			self.Nodes = append(self.Nodes[:index], self.Nodes[index+1:]...)
+		}
+	}
 }
 func (self *Ring) clean(predecessor, successor []byte) {
 	_, _, from := self.indices(predecessor)
