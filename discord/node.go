@@ -53,6 +53,18 @@ func (self *Node) SetPosition(position []byte) *Node {
 	self.predecessor = nil
 	return self
 }
+func (self *Node) GetNodes() (result []Remote) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	result = make([]Remote, len(self.ring.Nodes))
+	copy(result, self.ring.Nodes)
+	return
+}
+func (self *Node) GetPosition() (result []byte) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.position[:]
+}
 func (self *Node) String() string {
 	return fmt.Sprintf("<%v@%v predecessor=%v>", hexEncode(self.GetPosition()), self.getAddr(), self.getPredecessor())
 }
@@ -107,11 +119,6 @@ func (self *Node) getAddr() string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.addr
-}
-func (self *Node) GetPosition() (result []byte) {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	return self.position[:]
 }
 func (self *Node) remote() Remote {
 	return Remote{self.GetPosition(), self.getAddr()}
