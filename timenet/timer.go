@@ -3,6 +3,7 @@ package timenet
 import (
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type PeerProducer interface {
 }
 
 type Timer struct {
+	lock          *sync.RWMutex
 	offset        int64
 	dilations     *dilations
 	peerProducer  PeerProducer
@@ -28,6 +30,7 @@ type Timer struct {
 
 func NewTimer(producer PeerProducer) *Timer {
 	return &Timer{
+		lock:          &sync.RWMutex{},
 		peerProducer:  producer,
 		dilations:     &dilations{},
 		peerLatencies: make(map[string]times),
@@ -37,9 +40,13 @@ func (self *Timer) adjustments() int64 {
 	return self.offset + self.dilations.delta()
 }
 func (self *Timer) ActualTime() int64 {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	return time.Now().UnixNano() + self.adjustments()
 }
 func (self *Timer) ContinuousTime() int64 {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	temporaryEffect, permanentEffect := self.dilations.effect()
 	self.offset += permanentEffect
 	return time.Now().UnixNano() + self.offset + temporaryEffect
@@ -72,19 +79,27 @@ func (self *Timer) timeAndLatency(peer Peer) (peerTime, latency, myTime int64) {
 	latency = -time.Now().UnixNano()
 	peerTime = peer.ActualTime()
 	latency += time.Now().UnixNano()
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	myTime = self.ActualTime()
 	peerTime += latency / 2
 	return
 }
 func (self *Timer) Conform(peer Peer) {
 	peerTime, _, myTime := self.timeAndLatency(peer)
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	self.offset += (peerTime - myTime)
 }
 func (self *Timer) Sample() {
+	self.lock.RLock()
 	id, peer, oldLatencies := self.randomPeer()
+	self.lock.RUnlock()
 
 	peerTime, latency, myTime := self.timeAndLatency(peer)
 
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	oldestLatencyIndex := 0
 	if len(oldLatencies) > loglen {
 		oldestLatencyIndex = len(oldLatencies) - loglen
