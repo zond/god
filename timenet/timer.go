@@ -25,6 +25,7 @@ type Timer struct {
 	offset        int64
 	dilations     *dilations
 	peerProducer  PeerProducer
+	peerErrors    map[string]int64
 	peerLatencies map[string]times
 }
 
@@ -33,6 +34,7 @@ func NewTimer(producer PeerProducer) *Timer {
 		lock:          &sync.RWMutex{},
 		peerProducer:  producer,
 		dilations:     &dilations{},
+		peerErrors:    make(map[string]int64),
 		peerLatencies: make(map[string]times),
 	}
 }
@@ -51,28 +53,34 @@ func (self *Timer) ContinuousTime() int64 {
 	self.offset += permanentEffect
 	return time.Now().UnixNano() + self.offset + temporaryEffect
 }
-func (self *Timer) adjust(adjustment int64) {
+func (self *Timer) adjust(id string, adjustment int64) {
+	self.peerErrors[id] = adjustment
 	self.dilations.add(adjustment)
 }
 func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies times) {
 	currentPeers := self.peerProducer.Peers()
 	chosenIndex := rand.Int() % len(currentPeers)
-	newPeerLatencies := make(map[string]times)
-	for thisId, thisPeer := range currentPeers {
-		if theseLatencies, ok := self.peerLatencies[thisId]; ok {
-			newPeerLatencies[thisId] = theseLatencies
+	for thisId, theseLatencies := range self.peerLatencies {
+		if currentPeer, ok := currentPeers[thisId]; ok {
 			if chosenIndex < 1 {
+				peer = currentPeer
+				id = thisId
 				peerLatencies = theseLatencies
 			}
+			delete(currentPeers, thisId)
+		} else {
+			delete(self.peerLatencies, thisId)
+			delete(self.peerErrors, thisId)
 		}
+		chosenIndex--
+	}
+	for thisId, thisPeer := range currentPeers {
 		if chosenIndex < 1 {
 			peer = thisPeer
 			id = thisId
-		} else {
-			chosenIndex--
 		}
+		chosenIndex--
 	}
-	self.peerLatencies = newPeerLatencies
 	return
 }
 func (self *Timer) timeAndLatency(peer Peer) (peerTime, latency, myTime int64) {
@@ -93,7 +101,7 @@ func (self *Timer) Conform(peer Peer) {
 }
 func (self *Timer) Sample() {
 	self.lock.RLock()
-	id, peer, oldLatencies := self.randomPeer()
+	peerId, peer, oldLatencies := self.randomPeer()
 	self.lock.RUnlock()
 
 	peerTime, latency, myTime := self.timeAndLatency(peer)
@@ -105,11 +113,11 @@ func (self *Timer) Sample() {
 		oldestLatencyIndex = len(oldLatencies) - loglen
 	}
 	newLatencies := append(oldLatencies[oldestLatencyIndex:], latency)
-	self.peerLatencies[id] = newLatencies
+	self.peerLatencies[peerId] = newLatencies
 
 	mean, deviation := newLatencies.stats()
 	if math.Abs(float64(latency-mean)) < float64(deviation) {
-		self.adjust(peerTime - myTime)
+		self.adjust(peerId, peerTime-myTime)
 	}
 }
 func (self *Timer) sleep() {
