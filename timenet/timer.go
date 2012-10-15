@@ -19,38 +19,18 @@ type PeerProducer interface {
 	Peers() map[string]Peer
 }
 
-type latencies []int64
-
-func (self latencies) stats() (mean, deviation int64) {
-	var sum int64
-	for _, latency := range self {
-		sum += latency
-	}
-	mean = sum / int64(len(self))
-	var squareSum int64
-	var diff int64
-	for _, latency := range self {
-		diff = latency - mean
-		squareSum += diff * diff
-	}
-	if len(self) > 2 {
-		deviation = int64(math.Sqrt(float64(squareSum / (int64(len(self)) - 1))))
-	}
-	return
-}
-
 type Timer struct {
 	offset        int64
 	dilations     *dilations
 	peerProducer  PeerProducer
-	peerLatencies map[string]latencies
+	peerLatencies map[string]times
 }
 
 func NewTimer(producer PeerProducer) *Timer {
 	return &Timer{
 		peerProducer:  producer,
 		dilations:     &dilations{},
-		peerLatencies: make(map[string]latencies),
+		peerLatencies: make(map[string]times),
 	}
 }
 func (self *Timer) adjustments() int64 {
@@ -67,10 +47,10 @@ func (self *Timer) ContinuousTime() int64 {
 func (self *Timer) adjust(adjustment int64) {
 	self.dilations.add(adjustment)
 }
-func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies latencies) {
+func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies times) {
 	currentPeers := self.peerProducer.Peers()
 	chosenIndex := rand.Int() % len(currentPeers)
-	newPeerLatencies := make(map[string]latencies)
+	newPeerLatencies := make(map[string]times)
 	for thisId, thisPeer := range currentPeers {
 		if theseLatencies, ok := self.peerLatencies[thisId]; ok {
 			newPeerLatencies[thisId] = theseLatencies

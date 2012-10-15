@@ -33,7 +33,7 @@ func newTestPeerProducer() testPeerProducer {
 
 func (self testPeerProducer) makePeer() testPeer {
 	timer := NewTimer(self)
-	timer.offset = int64(rand.Int() % 1000000000)
+	timer.offset = int64(rand.Int63() % int64(10000000000))
 	return testPeer{timer}
 }
 func (self testPeerProducer) deviance() (result int64) {
@@ -70,12 +70,30 @@ func TestSample(t *testing.T) {
 	producer.add("2", peer2)
 	producer.add("3", peer3)
 	producer.add("4", peer4)
+	var current1, current2, current3, current4 int64
+	var last1, last2, last3, last4 int64
 	for {
 		fmt.Println("deviance:", producer.deviance())
-		fmt.Println(time.Unix(0, peer1.Timer.ContinuousTime()))
-		fmt.Println(time.Unix(0, peer2.Timer.ContinuousTime()))
-		fmt.Println(time.Unix(0, peer3.Timer.ContinuousTime()))
-		fmt.Println(time.Unix(0, peer4.Timer.ContinuousTime()))
+		current1 = peer1.Timer.ContinuousTime()
+		fmt.Println(time.Unix(0, current1))
+		if last1 != 0 && current1 < last1 {
+			t.Fatalf("%v gave %v which is less than %v", peer1, current1, last1)
+		}
+		current2 = peer2.Timer.ContinuousTime()
+		fmt.Println(time.Unix(0, current2))
+		if last2 != 0 && current2 < last2 {
+			t.Fatalf("%v gave %v which is less than %v", peer2, current2, last2)
+		}
+		current3 = peer3.Timer.ContinuousTime()
+		fmt.Println(time.Unix(0, current3))
+		if last3 != 0 && current3 < last3 {
+			t.Fatalf("%v gave %v which is less than %v", peer3, current3, last3)
+		}
+		current4 = peer4.Timer.ContinuousTime()
+		fmt.Println(time.Unix(0, current4))
+		if last4 != 0 && current4 < last4 {
+			t.Fatalf("%v gave %v which is less than %v", peer4, current4, last4)
+		}
 		fmt.Println("sampling...")
 		peer1.Sample()
 		peer2.Sample()
