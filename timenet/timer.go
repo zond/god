@@ -68,13 +68,22 @@ func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies times) {
 	self.peerLatencies = newPeerLatencies
 	return
 }
+func (self *Timer) timeAndLatency(peer Peer) (peerTime, latency, myTime int64) {
+	latency = -time.Now().UnixNano()
+	peerTime = peer.ActualTime()
+	latency += time.Now().UnixNano()
+	myTime = self.ActualTime()
+	peerTime += latency / 2
+	return
+}
+func (self *Timer) Conform(peer Peer) {
+	peerTime, _, myTime := self.timeAndLatency(peer)
+	self.offset += (peerTime - myTime)
+}
 func (self *Timer) Sample() {
 	id, peer, oldLatencies := self.randomPeer()
-	latency := -time.Now().UnixNano()
-	peerTime := peer.ActualTime()
-	latency += time.Now().UnixNano()
-	myTime := self.ActualTime()
-	peerTime += latency / 2
+
+	peerTime, latency, myTime := self.timeAndLatency(peer)
 
 	oldestLatencyIndex := 0
 	if len(oldLatencies) > loglen {
