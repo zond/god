@@ -13,68 +13,69 @@ func init() {
 }
 
 type testPeer struct {
-	timer *Timer
-	name  string
+	*Timer
 }
 
-func (self testPeer) Time() (result int64) {
-	time.Sleep(time.Duration(rand.Int()%5) * time.Millisecond)
-	result = self.timer.ActualTime()
-	time.Sleep(time.Duration(rand.Int()%5) * time.Millisecond)
+func (self testPeer) ActualTime() (result int64) {
+	time.Sleep((10 + time.Duration(rand.Int()%1)) * time.Millisecond)
+	result = self.Timer.ActualTime()
+	time.Sleep((10 + time.Duration(rand.Int()%1)) * time.Millisecond)
 	return
-}
-func (self testPeer) Name() string {
-	return self.name
-}
-func (self testPeer) Sample() {
-	self.timer.Sample()
 }
 
 type testPeerProducer struct {
-	peers []testPeer
+	peers map[string]testPeer
 }
 
-func (self *testPeerProducer) makePeer(name string) testPeer {
-	timer := NewTimer(self)
-	timer.offset = int64(rand.Int() % 100000000)
-	return testPeer{timer, name}
+func newTestPeerProducer() testPeerProducer {
+	return testPeerProducer{make(map[string]testPeer)}
 }
-func (self *testPeerProducer) deviance() (result int64) {
+
+func (self testPeerProducer) makePeer() testPeer {
+	timer := NewTimer(self)
+	timer.offset = int64(rand.Int() % 1000000000)
+	return testPeer{timer}
+}
+func (self testPeerProducer) deviance() (result int64) {
 	var mean int64
 	for _, timer := range self.peers {
-		mean += timer.timer.adjustments()
+		mean += timer.adjustments()
 	}
 	mean /= int64(len(self.peers))
 	var delta int64
 	for _, timer := range self.peers {
-		delta = timer.timer.adjustments() - mean
+		delta = timer.adjustments() - mean
 		result += delta * delta
 	}
 	return int64(math.Sqrt(float64(result / int64(len(self.peers)))))
 }
-func (self *testPeerProducer) add(p testPeer) {
-	self.peers = append(self.peers, p)
+func (self testPeerProducer) add(n string, p testPeer) {
+	self.peers[n] = p
 }
-func (self *testPeerProducer) Peer() Peer {
-	return self.peers[rand.Int()%len(self.peers)]
+func (self testPeerProducer) Peers() (result map[string]Peer) {
+	result = make(map[string]Peer)
+	for n, p := range self.peers {
+		result[n] = p
+	}
+	return
 }
 
 func TestSample(t *testing.T) {
-	producer := testPeerProducer{}
-	peer1 := producer.makePeer("1")
-	peer2 := producer.makePeer("2")
-	peer3 := producer.makePeer("3")
-	peer4 := producer.makePeer("4")
-	producer.add(peer1)
-	producer.add(peer2)
-	producer.add(peer3)
-	producer.add(peer4)
+	producer := newTestPeerProducer()
+	peer1 := producer.makePeer()
+	peer2 := producer.makePeer()
+	peer3 := producer.makePeer()
+	peer4 := producer.makePeer()
+	producer.add("1", peer1)
+	producer.add("2", peer2)
+	producer.add("3", peer3)
+	producer.add("4", peer4)
 	for {
 		fmt.Println("deviance:", producer.deviance())
-		fmt.Println(time.Unix(0, peer1.timer.ContinuousTime()))
-		fmt.Println(time.Unix(0, peer2.timer.ContinuousTime()))
-		fmt.Println(time.Unix(0, peer3.timer.ContinuousTime()))
-		fmt.Println(time.Unix(0, peer4.timer.ContinuousTime()))
+		fmt.Println(time.Unix(0, peer1.Timer.ContinuousTime()))
+		fmt.Println(time.Unix(0, peer2.Timer.ContinuousTime()))
+		fmt.Println(time.Unix(0, peer3.Timer.ContinuousTime()))
+		fmt.Println(time.Unix(0, peer4.Timer.ContinuousTime()))
 		fmt.Println("sampling...")
 		peer1.Sample()
 		peer2.Sample()

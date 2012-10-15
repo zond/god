@@ -2,6 +2,7 @@ package timenet
 
 import (
 	"math"
+	"math/rand"
 	"time"
 )
 
@@ -11,12 +12,11 @@ const (
 )
 
 type Peer interface {
-	Time() (time int64)
-	Name() (name string)
+	ActualTime() (time int64)
 }
 
 type PeerProducer interface {
-	Peer() Peer
+	Peers() map[string]Peer
 }
 
 type latencies []int64
@@ -37,59 +37,6 @@ func (self latencies) stats() (mean, deviation int64) {
 		deviation = int64(math.Sqrt(float64(squareSum / (int64(len(self)) - 1))))
 	}
 	return
-}
-
-type dilation struct {
-	delta int64
-	from  int64
-}
-
-func newDilation(delta int64) dilation {
-	return dilation{delta, time.Now().UnixNano()}
-}
-func (self dilation) effect() (effect int64, done bool) {
-	absDelta := self.delta
-	if absDelta < 0 {
-		absDelta *= -1
-	}
-	passed := float64(time.Now().UnixNano() - self.from)
-	duration := float64(dilationFactor * absDelta)
-	if passed > duration {
-		effect = self.delta
-		done = true
-	} else {
-		effect = int64(float64(self.delta) * (passed / duration))
-		done = false
-	}
-	return
-}
-
-type dilations struct {
-	content []dilation
-}
-
-func (self *dilations) delta() (sum int64) {
-	for _, dilation := range self.content {
-		sum += dilation.delta
-	}
-	return
-}
-func (self *dilations) effect() (temporaryEffect, permanentEffect int64) {
-	newContent := make([]dilation, 0, len(self.content))
-	for _, dilation := range self.content {
-		thisEffect, done := dilation.effect()
-		if done {
-			permanentEffect += thisEffect
-		} else {
-			temporaryEffect += thisEffect
-			newContent = append(newContent, dilation)
-		}
-	}
-	self.content = newContent
-	return
-}
-func (self *dilations) add(delta int64) {
-	self.content = append(self.content, newDilation(delta))
 }
 
 type Timer struct {
@@ -120,21 +67,41 @@ func (self *Timer) ContinuousTime() int64 {
 func (self *Timer) adjust(adjustment int64) {
 	self.dilations.add(adjustment)
 }
+func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies latencies) {
+	currentPeers := self.peerProducer.Peers()
+	chosenIndex := rand.Int() % len(currentPeers)
+	newPeerLatencies := make(map[string]latencies)
+	for thisId, thisPeer := range currentPeers {
+		if theseLatencies, ok := self.peerLatencies[thisId]; ok {
+			newPeerLatencies[thisId] = theseLatencies
+			if chosenIndex < 1 {
+				peerLatencies = theseLatencies
+			}
+		}
+		if chosenIndex < 1 {
+			peer = thisPeer
+			id = thisId
+		} else {
+			chosenIndex--
+		}
+	}
+	self.peerLatencies = newPeerLatencies
+	return
+}
 func (self *Timer) Sample() {
-	peer := self.peerProducer.Peer()
+	id, peer, oldLatencies := self.randomPeer()
 	latency := -time.Now().UnixNano()
-	peerTime := peer.Time()
+	peerTime := peer.ActualTime()
 	latency += time.Now().UnixNano()
 	myTime := self.ActualTime()
 	peerTime += latency / 2
 
-	oldLatencies := self.peerLatencies[peer.Name()]
 	oldestLatencyIndex := 0
 	if len(oldLatencies) > loglen {
 		oldestLatencyIndex = len(oldLatencies) - loglen
 	}
 	newLatencies := append(oldLatencies[oldestLatencyIndex:], latency)
-	self.peerLatencies[peer.Name()] = newLatencies
+	self.peerLatencies[id] = newLatencies
 
 	mean, deviation := newLatencies.stats()
 	if math.Abs(float64(latency-mean)) < float64(deviation) {
