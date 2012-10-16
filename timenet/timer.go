@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	loglen         = 10
-	dilationFactor = 10
+	loglen = 10
 )
 
 type Peer interface {

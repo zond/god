@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+const (
+	dilationFactor = 5
+)
+
 type dilation struct {
 	delta int64
 	from  int64
