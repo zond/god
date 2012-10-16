@@ -70,6 +70,10 @@ func TestSample(t *testing.T) {
 	producer.add("2", peer2)
 	producer.add("3", peer3)
 	producer.add("4", peer4)
+	peer1.Start()
+	peer2.Start()
+	peer3.Start()
+	peer4.Start()
 	var current1, current2, current3, current4 int64
 	var last1, last2, last3, last4 int64
 	for {
@@ -94,11 +98,6 @@ func TestSample(t *testing.T) {
 		if last4 != 0 && current4 < last4 {
 			t.Fatalf("%v gave %v which is less than %v", peer4, current4, last4)
 		}
-		fmt.Println("Sampling...")
-		peer1.Sample()
-		peer2.Sample()
-		peer3.Sample()
-		peer4.Sample()
 		time.Sleep(time.Second)
 	}
 }

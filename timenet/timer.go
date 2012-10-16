@@ -146,14 +146,24 @@ func (self *Timer) Sample() {
 	}
 }
 func (self *Timer) sleep() {
-	time.Sleep(time.Second)
+	err := self.Error()
+	stability := self.Stability()
+	if err == -1 || stability == -1 {
+		time.Sleep(time.Second)
+	} else {
+		sleepyTime := ((time.Duration(stability) * time.Second) << 7) / time.Duration(err)
+		if sleepyTime < time.Second {
+			sleepyTime = time.Second
+		}
+		time.Sleep(sleepyTime)
+	}
 }
-func (self *Timer) Start() {
+func (self *Timer) Run() {
 	for {
 		self.Sample()
 		self.sleep()
 	}
 }
-func (self *Timer) Run() {
-	go self.Start()
+func (self *Timer) Start() {
+	go self.Run()
 }
