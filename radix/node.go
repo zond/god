@@ -10,13 +10,13 @@ import (
 type node struct {
 	segment   []nibble
 	value     Hasher
-	version   uint32
+	version   int64
 	valueHash []byte
 	hash      []byte
 	children  []*node
 }
 
-func newNode(segment []nibble, value Hasher, version uint32, hasValue bool) (result *node) {
+func newNode(segment []nibble, value Hasher, version int64, hasValue bool) (result *node) {
 	result = &node{
 		segment:  segment,
 		value:    value,
@@ -106,7 +106,7 @@ func (self *node) finger(allocated *Print, segment []nibble) (result *Print) {
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) get(segment []nibble) (value Hasher, version uint32, existed bool) {
+func (self *node) get(segment []nibble) (value Hasher, version int64, existed bool) {
 	if self == nil {
 		return
 	}
@@ -188,7 +188,7 @@ func (self *node) del(prefix, segment []nibble) (result *node, old Hasher, exist
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) insert(prefix []nibble, autoVersion bool, n *node) (result *node, old Hasher, version uint32, existed bool) {
+func (self *node) insert(prefix []nibble, autoVersion bool, n *node) (result *node, old Hasher, version int64, existed bool) {
 	if self == nil {
 		n.rehash(append(prefix, n.segment...))
 		result = n

@@ -12,20 +12,20 @@ type HashTree interface {
 	Hash() []byte
 
 	Finger(key []nibble) *Print
-	GetVersion(key []nibble) (value Hasher, version uint32, existed bool)
-	PutVersion(key []nibble, value Hasher, expected, version uint32)
-	DelVersion(key []nibble, expected uint32)
+	GetVersion(key []nibble) (value Hasher, version int64, existed bool)
+	PutVersion(key []nibble, value Hasher, expected, version int64)
+	DelVersion(key []nibble, expected int64)
 
-	SubFinger(key, subKey []nibble, expected uint32) (result *Print)
-	SubGetVersion(key, subKey []nibble, expected uint32) (value Hasher, version uint32, existed bool)
-	SubPutVersion(key, subKey []nibble, value Hasher, expected, subExpected, subVersion uint32)
-	SubDelVersion(key, subKey []nibble, expected, subExpected uint32)
+	SubFinger(key, subKey []nibble, expected int64) (result *Print)
+	SubGetVersion(key, subKey []nibble, expected int64) (value Hasher, version int64, existed bool)
+	SubPutVersion(key, subKey []nibble, value Hasher, expected, subExpected, subVersion int64)
+	SubDelVersion(key, subKey []nibble, expected, subExpected int64)
 }
 
 type subTreeWrapper struct {
 	parentTree HashTree
 	key        []nibble
-	version    uint32
+	version    int64
 }
 
 func (self *subTreeWrapper) Hash() (hash []byte) {
@@ -37,25 +37,25 @@ func (self *subTreeWrapper) Hash() (hash []byte) {
 func (self *subTreeWrapper) Finger(subKey []nibble) *Print {
 	return self.parentTree.SubFinger(self.key, subKey, self.version)
 }
-func (self *subTreeWrapper) GetVersion(subKey []nibble) (value Hasher, version uint32, existed bool) {
+func (self *subTreeWrapper) GetVersion(subKey []nibble) (value Hasher, version int64, existed bool) {
 	return self.parentTree.SubGetVersion(self.key, subKey, self.version)
 }
-func (self *subTreeWrapper) PutVersion(subKey []nibble, value Hasher, expected, version uint32) {
+func (self *subTreeWrapper) PutVersion(subKey []nibble, value Hasher, expected, version int64) {
 	self.parentTree.SubPutVersion(self.key, subKey, value, self.version, expected, version)
 }
-func (self *subTreeWrapper) DelVersion(subKey []nibble, expected uint32) {
+func (self *subTreeWrapper) DelVersion(subKey []nibble, expected int64) {
 	self.parentTree.SubDelVersion(self.key, subKey, self.version, expected)
 }
-func (self *subTreeWrapper) SubFinger(key, subKey []nibble, expected uint32) (result *Print) {
+func (self *subTreeWrapper) SubFinger(key, subKey []nibble, expected int64) (result *Print) {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubGetVersion(key, subKey []nibble, expected uint32) (value Hasher, version uint32, existed bool) {
+func (self *subTreeWrapper) SubGetVersion(key, subKey []nibble, expected int64) (value Hasher, version int64, existed bool) {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubPutVersion(key, subKey []nibble, value Hasher, expected, subExpected, subVersion uint32) {
+func (self *subTreeWrapper) SubPutVersion(key, subKey []nibble, value Hasher, expected, subExpected, subVersion int64) {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubDelVersion(key, subKey []nibble, expected, subExpected uint32) {
+func (self *subTreeWrapper) SubDelVersion(key, subKey []nibble, expected, subExpected int64) {
 	panic(subTreeError)
 }
 

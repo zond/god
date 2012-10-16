@@ -79,7 +79,7 @@ func (self *SubPrint) equals(other *SubPrint) bool {
 type Print struct {
 	Key       []nibble
 	ValueHash []byte
-	Version   uint32
+	Version   int64
 	SubTree   bool
 	SubPrints []*SubPrint
 }
@@ -107,7 +107,7 @@ func (self *Print) set(n *node) {
 		}
 	}
 }
-func (self *Print) version() uint32 {
+func (self *Print) version() int64 {
 	if self == nil {
 		return 0
 	}
