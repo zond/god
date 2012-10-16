@@ -124,6 +124,9 @@ func (self *Timer) Conform(peer Peer) {
 	defer self.lock.Unlock()
 	self.offset += (peerTime - myTime)
 }
+func (self *Timer) Skew(delta int64) {
+	self.offset += delta
+}
 func (self *Timer) Sample() {
 	self.lock.RLock()
 	peerId, peer, oldLatencies := self.randomPeer()

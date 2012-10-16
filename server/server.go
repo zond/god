@@ -1,32 +1,25 @@
 package main
 
 import (
-	"../discord"
+	"../dhash"
 	"fmt"
 	"time"
 )
 
 func main() {
-	s := discord.NewNode("127.0.0.1:9191")
-	s2 := discord.NewNode("127.0.0.1:9192")
-	s3 := discord.NewNode("127.0.0.1:9193")
+	s := dhash.NewDHash("127.0.0.1:9191")
+	s2 := dhash.NewDHash("127.0.0.1:9192")
+	s3 := dhash.NewDHash("127.0.0.1:9193")
 	s.MustStart()
 	s2.MustStart()
 	s3.MustStart()
-	fmt.Println(s.Describe())
-	fmt.Println(s2.Describe())
-	fmt.Println(s3.Describe())
-	time.Sleep(time.Second * 2)
 	s2.MustJoin("127.0.0.1:9191")
 	s3.MustJoin("127.0.0.1:9191")
-	fmt.Println(s.Describe())
-	fmt.Println(s2.Describe())
-	fmt.Println(s3.Describe())
-	time.Sleep(time.Second * 3)
-	fmt.Println(s.Describe())
-	fmt.Println(s2.Describe())
-	fmt.Println(s3.Describe())
-	s.Stop()
-	s2.Stop()
-	s3.Stop()
+	for {
+		fmt.Println("***", time.Now())
+		fmt.Println(s.Time())
+		fmt.Println(s2.Time())
+		fmt.Println(s3.Time())
+		time.Sleep(time.Second)
+	}
 }
