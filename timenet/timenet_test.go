@@ -17,9 +17,9 @@ type testPeer struct {
 }
 
 func (self testPeer) ActualTime() (result int64) {
-	time.Sleep((10 + time.Duration(rand.Int()%1)) * time.Millisecond)
+	time.Sleep((10 + time.Duration(rand.Int()%1000)) * time.Microsecond)
 	result = self.Timer.ActualTime()
-	time.Sleep((10 + time.Duration(rand.Int()%1)) * time.Millisecond)
+	time.Sleep((10 + time.Duration(rand.Int()%1000)) * time.Microsecond)
 	return
 }
 
@@ -73,28 +73,28 @@ func TestSample(t *testing.T) {
 	var current1, current2, current3, current4 int64
 	var last1, last2, last3, last4 int64
 	for {
-		fmt.Println("deviance:", producer.deviance())
+		fmt.Println("Offset standard deviance:", producer.deviance())
 		current1 = peer1.Timer.ContinuousTime()
-		fmt.Println(time.Unix(0, current1))
+		fmt.Printf("%v\terr:%v\tstability:%v\n", time.Unix(0, current1), time.Duration(peer1.Error()), time.Duration(peer1.Stability()))
 		if last1 != 0 && current1 < last1 {
 			t.Fatalf("%v gave %v which is less than %v", peer1, current1, last1)
 		}
 		current2 = peer2.Timer.ContinuousTime()
-		fmt.Println(time.Unix(0, current2))
+		fmt.Printf("%v\terr:%v\tstability:%v\n", time.Unix(0, current2), time.Duration(peer2.Error()), time.Duration(peer2.Stability()))
 		if last2 != 0 && current2 < last2 {
 			t.Fatalf("%v gave %v which is less than %v", peer2, current2, last2)
 		}
 		current3 = peer3.Timer.ContinuousTime()
-		fmt.Println(time.Unix(0, current3))
+		fmt.Printf("%v\terr:%v\tstability:%v\n", time.Unix(0, current3), time.Duration(peer3.Error()), time.Duration(peer3.Stability()))
 		if last3 != 0 && current3 < last3 {
 			t.Fatalf("%v gave %v which is less than %v", peer3, current3, last3)
 		}
 		current4 = peer4.Timer.ContinuousTime()
-		fmt.Println(time.Unix(0, current4))
+		fmt.Printf("%v\terr:%v\tstability:%v\n", time.Unix(0, current4), time.Duration(peer4.Error()), time.Duration(peer4.Stability()))
 		if last4 != 0 && current4 < last4 {
 			t.Fatalf("%v gave %v which is less than %v", peer4, current4, last4)
 		}
-		fmt.Println("sampling...")
+		fmt.Println("Sampling...")
 		peer1.Sample()
 		peer2.Sample()
 		peer3.Sample()

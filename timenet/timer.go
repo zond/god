@@ -53,6 +53,32 @@ func (self *Timer) ContinuousTime() int64 {
 	self.offset += permanentEffect
 	return time.Now().UnixNano() + self.offset + temporaryEffect
 }
+func (self *Timer) Error() (err int64) {
+	if len(self.peerErrors) > 1 {
+		var thisErr int64
+		for _, e := range self.peerErrors {
+			thisErr = e >> 10
+			err += thisErr * thisErr
+		}
+		err = int64(math.Sqrt(float64(err/int64(len(self.peerErrors))))) << 10
+	} else {
+		err = -1
+	}
+	return
+}
+func (self *Timer) Stability() (result int64) {
+	if len(self.peerLatencies) > 1 {
+		var deviation int64
+		for _, latencies := range self.peerLatencies {
+			_, deviation = latencies.stats()
+			result += deviation * deviation
+		}
+		result = int64(math.Sqrt(float64(result / int64(len(self.peerLatencies)))))
+	} else {
+		result = -1
+	}
+	return
+}
 func (self *Timer) adjust(id string, adjustment int64) {
 	self.peerErrors[id] = adjustment
 	self.dilations.add(adjustment)
@@ -62,7 +88,7 @@ func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies times) {
 	chosenIndex := rand.Int() % len(currentPeers)
 	for thisId, theseLatencies := range self.peerLatencies {
 		if currentPeer, ok := currentPeers[thisId]; ok {
-			if chosenIndex < 1 {
+			if chosenIndex == 0 {
 				peer = currentPeer
 				id = thisId
 				peerLatencies = theseLatencies
@@ -75,7 +101,7 @@ func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies times) {
 		chosenIndex--
 	}
 	for thisId, thisPeer := range currentPeers {
-		if chosenIndex < 1 {
+		if chosenIndex == 0 {
 			peer = thisPeer
 			id = thisId
 		}
