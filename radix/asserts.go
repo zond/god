@@ -12,7 +12,7 @@ func assertExistance(t *testing.T, tree *Tree, k, v string) {
 
 func assertNewPut(t *testing.T, tree *Tree, k, v string) {
 	assertNonExistance(t, tree, k)
-	if value, existed := tree.Put([]byte(k), StringHasher(v)); existed || value != nil {
+	if value, existed := tree.Put([]byte(k), StringHasher(v), 0); existed || value != nil {
 		t.Errorf("%v should not contain %v, got %v, %v", tree.Describe(), rip([]byte(k)), value, existed)
 	}
 	assertExistance(t, tree, k, v)
@@ -20,7 +20,7 @@ func assertNewPut(t *testing.T, tree *Tree, k, v string) {
 
 func assertOldPut(t *testing.T, tree *Tree, k, v, old string) {
 	assertExistance(t, tree, k, old)
-	if value, existed := tree.Put([]byte(k), StringHasher(v)); !existed || value != StringHasher(old) {
+	if value, existed := tree.Put([]byte(k), StringHasher(v), 0); !existed || value != StringHasher(old) {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), rip([]byte(k)), v, value, existed)
 	}
 	assertExistance(t, tree, k, v)

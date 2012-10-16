@@ -58,15 +58,15 @@ func (self *Tree) Describe() string {
 	return self.describeIndented(2)
 }
 
-func (self *Tree) put(key []nibble, value Hasher) (old Hasher, existed bool) {
-	self.root, old, _, existed = self.root.insert(nil, true, newNode(key, value, 0, true))
+func (self *Tree) put(key []nibble, value Hasher, version int64) (old Hasher, existed bool) {
+	self.root, old, _, existed = self.root.insert(nil, newNode(key, value, version, true))
 	if !existed {
 		self.size++
 	}
 	return
 }
-func (self *Tree) Put(key []byte, value Hasher) (old Hasher, existed bool) {
-	return self.put(rip(key), value)
+func (self *Tree) Put(key []byte, value Hasher, version int64) (old Hasher, existed bool) {
+	return self.put(rip(key), value, version)
 }
 func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
 	value, _, existed = self.root.get(rip(key))
@@ -92,13 +92,13 @@ func (self *Tree) getSubTree(key []nibble) (subTree *Tree, version int64) {
 	return
 }
 
-func (self *Tree) SubPut(key, subKey []byte, value Hasher) (old Hasher, existed bool) {
+func (self *Tree) SubPut(key, subKey []byte, value Hasher, version int64) (old Hasher, existed bool) {
 	ripped := rip(key)
 	subTree, subTreeVersion := self.getSubTree(ripped)
 	if subTree == nil {
-		subTree = newTreeWith(rip(subKey), value, 0)
+		subTree = newTreeWith(rip(subKey), value, version)
 	} else {
-		old, existed = subTree.Put(subKey, value)
+		old, existed = subTree.Put(subKey, value, version)
 	}
 	self.PutVersion(ripped, subTree, subTreeVersion, subTreeVersion)
 	return
@@ -111,12 +111,12 @@ func (self *Tree) SubGet(key, subKey []byte) (value Hasher, existed bool) {
 }
 func (self *Tree) SubDel(key, subKey []byte) (old Hasher, existed bool) {
 	ripped := rip(key)
-	if subTree, _ := self.getSubTree(ripped); subTree != nil {
+	if subTree, subTreeVersion := self.getSubTree(ripped); subTree != nil {
 		old, existed = subTree.Del(key)
 		if subTree.Size() == 0 {
 			self.del(ripped)
 		} else {
-			self.put(ripped, subTree)
+			self.put(ripped, subTree, subTreeVersion)
 		}
 	}
 	return
@@ -131,7 +131,7 @@ func (self *Tree) GetVersion(key []nibble) (value Hasher, version int64, existed
 }
 func (self *Tree) PutVersion(key []nibble, value Hasher, expected, version int64) {
 	if _, current, existed := self.root.get(key); !existed || current == expected {
-		self.root, _, _, existed = self.root.insert(nil, false, newNode(key, value, version, true))
+		self.root, _, _, existed = self.root.insert(nil, newNode(key, value, version, true))
 		if !existed {
 			self.size++
 		}

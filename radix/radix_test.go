@@ -29,15 +29,15 @@ func TestSyncVersions(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte{byte(i)}
 		v = StringHasher(fmt.Sprint(i))
-		tree1.Put(k, v)
+		tree1.Put(k, v, 0)
 		if i == 2 {
-			tree3.PutVersion(rip(k), StringHasher("other version"), 0, 2)
+			tree3.Put(k, StringHasher("other version"), 2)
 		} else {
-			tree3.Put(k, v)
+			tree3.Put(k, v, 0)
 		}
 	}
 	tree2 := NewTree()
-	tree2.PutVersion(rip([]byte{2}), StringHasher("other version"), 0, 2)
+	tree2.Put([]byte{2}, StringHasher("other version"), 2)
 	s := NewSync(tree1, tree2)
 	s.Run()
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
@@ -52,7 +52,7 @@ func TestSyncVersions(t *testing.T) {
 	if !reflect.DeepEqual(tree3, tree2) {
 		t.Errorf("%v and %v are unequal", tree3, tree2)
 	}
-	tree1.PutVersion(rip([]byte{2}), StringHasher("yet another version"), 0, 3)
+	tree1.Put([]byte{2}, StringHasher("yet another version"), 3)
 	s.Run()
 	if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should not be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
@@ -81,9 +81,9 @@ func TestSyncLimits(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte{byte(i)}
 		v = StringHasher(fmt.Sprint(i))
-		tree1.Put(k, v)
+		tree1.Put(k, v, 0)
 		if i >= from && i < to {
-			tree3.Put(k, v)
+			tree3.Put(k, v, 0)
 		}
 	}
 	tree2 := NewTree()
@@ -120,13 +120,13 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
 		v = StringHasher(fmt.Sprint(i))
 		if i%2 == 0 {
-			tree1.Put(k, v)
-			tree3.Put(k, v)
+			tree1.Put(k, v, 0)
+			tree3.Put(k, v, 0)
 		} else {
 			for j := 0; j < 10; j++ {
 				sk = []byte(fmt.Sprint(j))
-				tree1.SubPut(k, sk, v)
-				tree3.SubPut(k, sk, v)
+				tree1.SubPut(k, sk, v, 0)
+				tree3.SubPut(k, sk, v, 0)
 			}
 		}
 	}
@@ -157,22 +157,22 @@ func TestSyncSubTreeVersions(t *testing.T) {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
 		v = StringHasher(fmt.Sprint(i))
 		if i%2 == 0 {
-			tree3.Put(k, v)
-			tree1.Put(k, v)
+			tree3.Put(k, v, 0)
+			tree1.Put(k, v, 0)
 		} else {
 			for j := 0; j < 10; j++ {
 				sk = []byte(fmt.Sprint(j))
-				tree1.SubPut(k, sk, v)
+				tree1.SubPut(k, sk, v, 0)
 				if i == 1 && j == 3 {
-					tree3.SubPutVersion(rip(k), rip(sk), StringHasher("another value"), 0, 0, 2)
+					tree3.SubPut(k, sk, StringHasher("another value"), 2)
 				} else {
-					tree3.SubPut(k, sk, v)
+					tree3.SubPut(k, sk, v, 0)
 				}
 			}
 		}
 	}
 	tree2 := NewTree()
-	tree2.SubPutVersion(rip([]byte(murmur.HashString(fmt.Sprint(1)))), rip([]byte(fmt.Sprint(3))), StringHasher("another value"), 0, 0, 2)
+	tree2.SubPut([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), StringHasher("another value"), 2)
 	s := NewSync(tree1, tree2)
 	s.Run()
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
@@ -187,7 +187,7 @@ func TestSyncSubTreeVersions(t *testing.T) {
 	if !reflect.DeepEqual(tree3, tree2) {
 		t.Errorf("\n%v and \n%v are unequal", tree3.Describe(), tree2.Describe())
 	}
-	tree1.SubPutVersion(rip([]byte(murmur.HashString(fmt.Sprint(1)))), rip([]byte(fmt.Sprint(3))), StringHasher("another value again"), 0, 0, 3)
+	tree1.SubPut([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), StringHasher("another value again"), 3)
 	s.Run()
 	if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
 		t.Errorf("should not be equal")
@@ -211,11 +211,11 @@ func TestSyncSubTree(t *testing.T) {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
 		v = StringHasher(fmt.Sprint(i))
 		if i%2 == 0 {
-			tree1.Put(k, v)
+			tree1.Put(k, v, 0)
 		} else {
 			for j := 0; j < 10; j++ {
 				sk = []byte(fmt.Sprint(j))
-				tree1.SubPut(k, sk, v)
+				tree1.SubPut(k, sk, v, 0)
 			}
 		}
 	}
@@ -239,8 +239,8 @@ func TestSyncDestructive(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
-		tree1.Put(k, v)
-		tree3.Put(k, v)
+		tree1.Put(k, v, 0)
+		tree3.Put(k, v, 0)
 	}
 	tree2 := NewTree()
 	s := NewSync(tree3, tree2).Destroy()
@@ -267,7 +267,7 @@ func TestSyncComplete(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
-		tree1.Put(k, v)
+		tree1.Put(k, v, 0)
 	}
 	tree2 := NewTree()
 	s := NewSync(tree1, tree2)
@@ -288,7 +288,7 @@ func TestSyncRandomLimits(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
-		tree1.Put(k, v)
+		tree1.Put(k, v, 0)
 	}
 	var keys [][]byte
 	tree1.Each(func(key []byte, value Hasher) {
@@ -306,7 +306,7 @@ func TestSyncRandomLimits(t *testing.T) {
 			tree2 = NewTree()
 			tree1.Each(func(key []byte, value Hasher) {
 				if bytes.Compare(key, fromKey) > -1 && bytes.Compare(key, toKey) < 0 {
-					tree2.Put(key, value)
+					tree2.Put(key, value, 0)
 				}
 			})
 			tree3 = NewTree()
@@ -333,9 +333,9 @@ func TestSyncPartial(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
-		tree1.Put(k, v)
+		tree1.Put(k, v, 0)
 		if i%mod != 0 {
-			tree2.Put(k, v)
+			tree2.Put(k, v, 0)
 		}
 	}
 	s := NewSync(tree1, tree2)
@@ -360,7 +360,7 @@ func TestTreeHash(t *testing.T) {
 		v = StringHasher(fmt.Sprint(rand.Int63()))
 		keys = append(keys, k)
 		vals = append(vals, v)
-		tree1.Put(k, v)
+		tree1.Put(k, v, 0)
 	}
 	keybackup := keys
 	tree2 := NewTree()
@@ -368,7 +368,7 @@ func TestTreeHash(t *testing.T) {
 		index := rand.Int() % len(keys)
 		k = keys[index]
 		v = vals[index]
-		tree2.Put(k, v)
+		tree2.Put(k, v, 0)
 		keys = append(keys[:index], keys[index+1:]...)
 		vals = append(vals[:index], vals[index+1:]...)
 	}
@@ -427,7 +427,7 @@ func TestTreeNilKey(t *testing.T) {
 	if value, existed := tree.Get(nil); value != nil || existed {
 		t.Errorf("should not exist")
 	}
-	if value, existed := tree.Put(nil, nil); value != nil || existed {
+	if value, existed := tree.Put(nil, nil, 0); value != nil || existed {
 		t.Errorf("should not exist")
 	}
 	if value, existed := tree.Get(nil); value != nil || !existed {
@@ -476,10 +476,10 @@ func TestTreeBasicOps(t *testing.T) {
 	if !reflect.DeepEqual(tree.ToMap(), comp) {
 		t.Errorf("should be equal!")
 	}
-	if old, existed := tree.Put(nil, StringHasher("nil")); old != nil || existed {
+	if old, existed := tree.Put(nil, StringHasher("nil"), 0); old != nil || existed {
 		t.Error("should not exist yet")
 	}
-	if old, existed := tree.Put([]byte("nil"), nil); old != nil || existed {
+	if old, existed := tree.Put([]byte("nil"), nil, 0); old != nil || existed {
 		t.Error("should not exist yet")
 	}
 	if value, existed := tree.Get(nil); !existed || value != StringHasher("nil") {
@@ -512,8 +512,8 @@ func benchTreeSync(b *testing.B, size, delta int) {
 	for i := 0; i < size; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
 		v = StringHasher(fmt.Sprint(i))
-		tree1.Put(k, v)
-		tree2.Put(k, v)
+		tree1.Put(k, v, 0)
+		tree2.Put(k, v, 0)
 	}
 	var s *Sync
 	for i := 0; i < b.N/delta; i++ {
@@ -563,7 +563,7 @@ func benchTree(b *testing.B, n int) {
 		benchmarkTestValues = append(benchmarkTestValues, StringHasher(fmt.Sprint(len(benchmarkTestValues))))
 	}
 	for benchmarkTestTree.Size() < n {
-		benchmarkTestTree.Put(benchmarkTestKeys[benchmarkTestTree.Size()], benchmarkTestValues[benchmarkTestTree.Size()])
+		benchmarkTestTree.Put(benchmarkTestKeys[benchmarkTestTree.Size()], benchmarkTestValues[benchmarkTestTree.Size()], 0)
 	}
 	var keys [][]byte
 	var vals []Hasher
@@ -577,7 +577,7 @@ func benchTree(b *testing.B, n int) {
 	for i := 0; i < b.N; i++ {
 		k = benchmarkTestKeys[i%len(benchmarkTestKeys)]
 		v = benchmarkTestValues[i%len(benchmarkTestValues)]
-		benchmarkTestTree.Put(k, v)
+		benchmarkTestTree.Put(k, v, 0)
 		j, existed := benchmarkTestTree.Get(k)
 		if j != v {
 			b.Fatalf("%v should contain %v, but got %v, %v", benchmarkTestTree.Describe(), v, j, existed)

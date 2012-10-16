@@ -188,7 +188,7 @@ func (self *node) del(prefix, segment []nibble) (result *node, old Hasher, exist
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) insert(prefix []nibble, autoVersion bool, n *node) (result *node, old Hasher, version int64, existed bool) {
+func (self *node) insert(prefix []nibble, n *node) (result *node, old Hasher, version int64, existed bool) {
 	if self == nil {
 		n.rehash(append(prefix, n.segment...))
 		result = n
@@ -202,11 +202,7 @@ func (self *node) insert(prefix []nibble, autoVersion bool, n *node) (result *no
 		if beyond_n && beyond_self {
 			result, old, version, existed = self, self.value, self.version, self.valueHash != nil
 			self.value, self.valueHash = n.value, hash(n.value)
-			if autoVersion {
-				self.version++
-			} else {
-				self.version = n.version
-			}
+			self.version = n.version
 			self.rehash(append(prefix, self.segment...))
 			return
 		} else if beyond_n {
@@ -222,7 +218,7 @@ func (self *node) insert(prefix []nibble, autoVersion bool, n *node) (result *no
 			// k is pre-calculated here because n.segment may change when n is inserted
 			k := n.segment[0]
 			prefix = append(prefix, self.segment...)
-			self.children[k], old, version, existed = self.children[k].insert(prefix, autoVersion, n)
+			self.children[k], old, version, existed = self.children[k].insert(prefix, n)
 			self.rehash(prefix)
 			result = self
 			return
