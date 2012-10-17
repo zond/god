@@ -45,14 +45,21 @@ func (self *Timer) ActualTime() int64 {
 	defer self.lock.RUnlock()
 	return time.Now().UnixNano() + self.adjustments()
 }
-func (self *Timer) ContinuousTime() int64 {
+func (self *Timer) ContinuousTime() (result int64) {
 	self.lock.RLock()
-	defer self.lock.RUnlock()
 	temporaryEffect, permanentEffect := self.dilations.effect()
-	self.offset += permanentEffect
-	return time.Now().UnixNano() + self.offset + temporaryEffect
+	result = time.Now().UnixNano() + self.offset + permanentEffect + temporaryEffect
+	self.lock.RUnlock()
+	if permanentEffect != 0 {
+		self.lock.Lock()
+		defer self.lock.Unlock()
+		self.offset += permanentEffect
+	}
+	return
 }
 func (self *Timer) Error() (err int64) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	if len(self.peerErrors) > 1 {
 		var thisErr int64
 		for _, e := range self.peerErrors {
@@ -66,6 +73,8 @@ func (self *Timer) Error() (err int64) {
 	return
 }
 func (self *Timer) Stability() (result int64) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	if len(self.peerLatencies) > 1 {
 		var deviation int64
 		for _, latencies := range self.peerLatencies {
@@ -125,6 +134,8 @@ func (self *Timer) Conform(peer Peer) {
 	self.offset += (peerTime - myTime)
 }
 func (self *Timer) Skew(delta int64) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	self.offset += delta
 }
 func (self *Timer) Sample() {
