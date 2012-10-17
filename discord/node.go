@@ -41,6 +41,8 @@ func NewNode(addr string) (result *Node) {
 }
 func (self *Node) Export(name string, api interface{}) error {
 	if self.hasState(created) {
+		self.lock.Lock()
+		defer self.lock.Unlock()
 		self.exports[name] = api
 		return nil
 	}
@@ -53,6 +55,10 @@ func (self *Node) SetPosition(position []byte) *Node {
 	self.predecessor = nil
 	return self
 }
+func (self *Node) GetRing(ring *Ring) {
+	*ring = Ring{self.GetNodes()}
+	return
+}
 func (self *Node) GetNodes() (result []Remote) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -60,10 +66,18 @@ func (self *Node) GetNodes() (result []Remote) {
 	copy(result, self.ring.Nodes)
 	return
 }
+func (self *Node) CountNodes() (result int) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	result = len(self.ring.Nodes)
+	return
+}
 func (self *Node) GetPosition() (result []byte) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.position[:]
+	result = make([]byte, len(self.position))
+	copy(result, self.position)
+	return
 }
 func (self *Node) String() string {
 	return fmt.Sprintf("<%v@%v predecessor=%v>", hexEncode(self.GetPosition()), self.getAddr(), self.getPredecessor())
@@ -94,11 +108,6 @@ func (self *Node) getPredecessor() *Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.predecessor
-}
-func (self *Node) getRing(ring *Ring) {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	*ring = *self.ring
 }
 func (self *Node) getListener() *net.TCPListener {
 	self.lock.RLock()
@@ -184,7 +193,7 @@ func (self *Node) pingPeriodically() {
 		time.Sleep(time.Second)
 	}
 }
-func (self *Node) ping() {
+func (self *Node) Ping() {
 }
 func (self *Node) pingPredecessor() {
 	if predecessor := self.getPredecessor(); predecessor != nil {
@@ -211,9 +220,8 @@ func (self *Node) notifySuccessor() {
 	self.lock.RUnlock()
 	newRing := &Ring{}
 	if err := successor.Call("Node.Notify", self.remote(), newRing); err != nil {
-		self.lock.Lock()
-		defer self.lock.Unlock()
-		self.ring.remove(*successor)
+		self.RemoveNode(*successor)
+		self.notifySuccessor()
 	} else {
 		self.lock.Lock()
 		defer self.lock.Unlock()
@@ -237,24 +245,30 @@ func (self *Node) Join(addr string) (err error) {
 		}
 		self.SetPosition(newRing.getSlot())
 	}
-
-	if err = board.call(addr, "Node.Notify", self.remote(), &self.ring); err != nil {
+	newRing := &Ring{}
+	if err = board.call(addr, "Node.Notify", self.remote(), &newRing); err != nil {
 		return
 	}
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.ring = newRing
 	return
+}
+func (self *Node) RemoveNode(remote Remote) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.ring.remove(remote)
 }
 func (self *Node) GetSuccessor(key []byte) Remote {
 	self.lock.RLock()
-	defer self.lock.RUnlock()
 	predecessor, match, successor := self.ring.remotes(key)
+	self.lock.RUnlock()
 	if match != nil {
 		predecessor = match
 	}
-	if predecessor.Addr != self.addr {
+	if predecessor.Addr != self.getAddr() {
 		if err := predecessor.Call("Node.GetSuccessor", key, successor); err != nil {
-			self.lock.Lock()
-			self.ring.remove(*predecessor)
-			self.lock.Unlock()
+			self.RemoveNode(*successor)
 			return self.GetSuccessor(key)
 		}
 	}
