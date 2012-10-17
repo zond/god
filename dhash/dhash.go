@@ -3,7 +3,6 @@ package dhash
 import (
 	"../discord"
 	"../timenet"
-	"math/rand"
 	"time"
 )
 
@@ -52,6 +51,7 @@ func (self *DHash) MustStart() *DHash {
 	return self
 }
 func (self *DHash) MustJoin(addr string) {
+	self.timer.Conform(remotePeer{Addr: addr})
 	self.node.MustJoin(addr)
 }
 func (self *DHash) Time() time.Time {
