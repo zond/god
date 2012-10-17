@@ -28,9 +28,24 @@ func (self *dhashPeerProducer) Peers() (result map[string]timenet.Peer) {
 
 type timerServer timenet.Timer
 
-func (self *timerServer) ActualTime(x int, result *int64) (err error) {
+func (self *timerServer) ActualTime(x int, result *int64) error {
 	*result = (*timenet.Timer)(self).ActualTime()
-	return
+	return nil
+}
+
+type Item struct {
+	Key       []byte
+	Value     radix.Hasher
+	Exists    bool
+	Timestamp int64
+}
+
+type dhashServer DHash
+
+func (self *dhashServer) SlavePut(data Item, res *Item) error {
+	*res = data
+	res.Value, res.Exists = (*DHash)(self).tree.Put(data.Key, data.Value, data.Timestamp)
+	return nil
 }
 
 type DHash struct {
