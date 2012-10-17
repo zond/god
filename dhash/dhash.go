@@ -2,6 +2,7 @@ package dhash
 
 import (
 	"../discord"
+	"../radix"
 	"../timenet"
 	"time"
 )
@@ -35,11 +36,13 @@ func (self *timerServer) ActualTime(x int, result *int64) (err error) {
 type DHash struct {
 	node  *discord.Node
 	timer *timenet.Timer
+	tree  *radix.Tree
 }
 
 func NewDHash(addr string) (result *DHash) {
 	result = &DHash{
 		node: discord.NewNode(addr),
+		tree: radix.NewTree(),
 	}
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
 	result.node.Export("Timer", (*timerServer)(result.timer))
@@ -56,4 +59,8 @@ func (self *DHash) MustJoin(addr string) {
 }
 func (self *DHash) Time() time.Time {
 	return time.Unix(0, self.timer.ContinuousTime())
+}
+func (self *DHash) Put(key []byte, value radix.Hasher) (old radix.Hasher, existed bool) {
+	timestamp := self.timer.ContinuousTime()
+	return self.tree.Put(key, value, timestamp)
 }

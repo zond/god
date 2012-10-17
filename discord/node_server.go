@@ -3,7 +3,8 @@ package discord
 type nodeServer Node
 
 func (self *nodeServer) Notify(caller Remote, nodes *Ring) error {
-	return (*Node)(self).notify(caller, nodes)
+	*nodes = (*Node)(self).notify(caller)
+	return nil
 }
 func (self *nodeServer) Ring(x int, nodes *Ring) error {
 	(*Node)(self).getRing(nodes)
@@ -14,5 +15,6 @@ func (self *nodeServer) Ping(x int, y *int) error {
 	return nil
 }
 func (self *nodeServer) GetSuccessor(key []byte, successor *Remote) error {
-	return (*Node)(self).getSuccessor(key, successor)
+	*successor = (*Node)(self).GetSuccessor(key)
+	return nil
 }
