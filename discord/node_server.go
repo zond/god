@@ -7,11 +7,11 @@ func (self *nodeServer) Notify(caller Remote, nodes *Ring) error {
 	return nil
 }
 func (self *nodeServer) Ring(x int, nodes *Ring) error {
-	(*Node)(self).getRing(nodes)
+	(*Node)(self).GetRing(nodes)
 	return nil
 }
 func (self *nodeServer) Ping(x int, y *int) error {
-	(*Node)(self).ping()
+	(*Node)(self).Ping()
 	return nil
 }
 func (self *nodeServer) GetSuccessor(key []byte, successor *Remote) error {
