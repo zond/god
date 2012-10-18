@@ -1,12 +1,8 @@
 package common
 
-import (
-	"../radix"
-)
-
 type Item struct {
 	Key       []byte
-	Value     radix.Hasher
+	Value     []byte
 	Exists    bool
 	Timestamp int64
 	TTL       int
