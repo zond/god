@@ -13,10 +13,10 @@ const (
 	redundancy = 3
 )
 
-type remotePeer discord.Remote
+type remotePeer common.Remote
 
 func (self remotePeer) ActualTime() (result int64) {
-	if err := (discord.Remote)(self).Call("Timer.ActualTime", 0, &result); err != nil {
+	if err := (common.Remote)(self).Call("Timer.ActualTime", 0, &result); err != nil {
 		result = time.Now().UnixNano()
 	}
 	return

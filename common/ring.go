@@ -1,11 +1,9 @@
-package discord
+package common
 
 import (
-	"../common"
 	"../murmur"
 	"bytes"
 	"fmt"
-	"io"
 	"math/big"
 	"sort"
 )
@@ -23,25 +21,27 @@ func (self Remote) less(other Remote) bool {
 	return val < 0
 }
 func (self Remote) String() string {
-	return fmt.Sprintf("[%v@%v]", hexEncode(self.Pos), self.Addr)
+	return fmt.Sprintf("[%v@%v]", HexEncode(self.Pos), self.Addr)
 }
 func (self Remote) Call(service string, args, reply interface{}) error {
-	return common.Switch.Call(self.Addr, service, args, reply)
+	return Switch.Call(self.Addr, service, args, reply)
 }
 
 type Ring struct {
 	Nodes []Remote
 }
 
-func (self *Ring) describe(buffer io.Writer) {
+func (self *Ring) Describe() string {
+	buffer := new(bytes.Buffer)
 	for index, node := range self.Nodes {
 		fmt.Fprintf(buffer, "%v: %v\n", index, node)
 	}
+	return string(buffer.Bytes())
 }
-func (self *Ring) size() int {
+func (self *Ring) Size() int {
 	return len(self.Nodes)
 }
-func (self *Ring) add(remote Remote) {
+func (self *Ring) Add(remote Remote) {
 	for index, current := range self.Nodes {
 		if current.Addr == remote.Addr {
 			if bytes.Compare(current.Pos, remote.Pos) == 0 {
@@ -59,7 +59,7 @@ func (self *Ring) add(remote Remote) {
 		self.Nodes = append(self.Nodes, remote)
 	}
 }
-func (self *Ring) remotes(pos []byte) (before, at, after *Remote) {
+func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 	beforeIndex, atIndex, afterIndex := self.indices(pos)
 	before = &self.Nodes[beforeIndex]
 	if atIndex != -1 {
@@ -116,7 +116,7 @@ func (self *Ring) indices(pos []byte) (before, at, after int) {
 	}
 	return
 }
-func (self *Ring) getSlot() []byte {
+func (self *Ring) GetSlot() []byte {
 	biggestSpace := new(big.Int)
 	biggestSpaceIndex := 0
 	for i := 0; i < len(self.Nodes); i++ {
@@ -137,14 +137,14 @@ func (self *Ring) getSlot() []byte {
 	}
 	return new(big.Int).Add(new(big.Int).SetBytes(self.Nodes[biggestSpaceIndex].Pos), new(big.Int).Div(biggestSpace, big.NewInt(2))).Bytes()
 }
-func (self *Ring) remove(remote Remote) {
+func (self *Ring) Remove(remote Remote) {
 	for index, current := range self.Nodes {
 		if current.Addr == remote.Addr {
 			self.Nodes = append(self.Nodes[:index], self.Nodes[index+1:]...)
 		}
 	}
 }
-func (self *Ring) clean(predecessor, successor []byte) {
+func (self *Ring) Clean(predecessor, successor []byte) {
 	_, _, from := self.indices(predecessor)
 	to, at, _ := self.indices(successor)
 	if at != -1 {
