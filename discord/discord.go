@@ -1,14 +1,8 @@
 package discord
 
 import (
-	"math/rand"
 	"net"
-	"time"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 func findAddress() (addr string, err error) {
 	var udpAddr *net.UDPAddr
