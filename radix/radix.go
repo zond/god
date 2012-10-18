@@ -64,6 +64,12 @@ func (self StringHasher) Hash() []byte {
 	return murmur.HashString(string(self))
 }
 
+type ByteHasher []byte
+
+func (self ByteHasher) Hash() []byte {
+	return murmur.HashBytes([]byte(self))
+}
+
 type SubPrint struct {
 	Key []nibble
 	Sum []byte
