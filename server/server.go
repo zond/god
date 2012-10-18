@@ -1,25 +1,32 @@
 package main
 
 import (
+	"../common"
 	"../dhash"
+	"../discord"
+	"flag"
 	"fmt"
 	"time"
 )
 
+var ip = flag.String("ip", "127.0.0.1", "IP address to listen to")
+var port = flag.Int("port", 9191, "Port to listen to")
+var joinIp = flag.String("joinIp", "", "IP address to join")
+var joinPort = flag.Int("joinPort", 9191, "Port to join")
+
 func main() {
-	s := dhash.NewDHash("127.0.0.1:9191")
-	s2 := dhash.NewDHash("127.0.0.1:9192")
-	s3 := dhash.NewDHash("127.0.0.1:9193")
+	flag.Parse()
+	s := dhash.NewDHash(fmt.Sprintf("%v:%v", *ip, *port))
+	s.AddTopologyListener(func(node *discord.Node, oldRing, newRing *common.Ring) {
+		fmt.Println(node)
+		fmt.Println(newRing.Describe())
+	})
 	s.MustStart()
-	s2.MustStart()
-	s3.MustStart()
-	s2.MustJoin("127.0.0.1:9191")
-	s3.MustJoin("127.0.0.1:9191")
+	if *joinIp != "" {
+		s.MustJoin(fmt.Sprintf("%v:%v", *joinIp, *joinPort))
+	}
+
 	for {
-		fmt.Println("***", time.Now())
-		fmt.Println(s.Time())
-		fmt.Println(s2.Time())
-		fmt.Println(s3.Time())
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 100)
 	}
 }

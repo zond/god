@@ -84,6 +84,16 @@ func (self *DHash) Time() time.Time {
 	defer self.lock.RUnlock()
 	return time.Unix(0, self.timer.ContinuousTime())
 }
+func (self *DHash) Describe() string {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.node.Describe()
+}
+func (self *DHash) AddTopologyListener(listener discord.TopologyListener) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	self.node.AddTopologyListener(listener)
+}
 func (self *DHash) Put(data common.Item, res *common.Item) error {
 	self.lock.RLock()
 	if nodeCount := self.node.CountNodes(); nodeCount < redundancy {

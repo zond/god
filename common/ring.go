@@ -13,6 +13,21 @@ type Remote struct {
 	Addr string
 }
 
+func (self *Remote) EqualP(other *Remote) bool {
+	if self == nil {
+		if other == nil {
+			return true
+		}
+		return false
+	}
+	if other == nil {
+		return false
+	}
+	return (*self).Equal(*other)
+}
+func (self Remote) Equal(other Remote) bool {
+	return self.Addr == other.Addr && bytes.Compare(self.Pos, other.Pos) == 0
+}
 func (self Remote) less(other Remote) bool {
 	val := bytes.Compare(self.Pos, other.Pos)
 	if val == 0 {
@@ -40,6 +55,20 @@ func (self *Ring) Describe() string {
 }
 func (self *Ring) Size() int {
 	return len(self.Nodes)
+}
+func (self *Ring) Equal(other *Ring) bool {
+	if self == other {
+		return true
+	}
+	if len(self.Nodes) != len(other.Nodes) {
+		return false
+	}
+	for index, myNode := range self.Nodes {
+		if !myNode.Equal(other.Nodes[index]) {
+			return false
+		}
+	}
+	return true
 }
 func (self *Ring) Add(remote Remote) {
 	for index, current := range self.Nodes {

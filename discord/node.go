@@ -19,15 +19,17 @@ const (
 	stopped
 )
 
+type TopologyListener func(node *Node, oldRing, newRing *common.Ring)
+
 type Node struct {
-	ring        *common.Ring
-	predecessor *common.Remote
-	position    []byte
-	addr        string
-	listener    *net.TCPListener
-	lock        *sync.RWMutex
-	state       nodeState
-	exports     map[string]interface{}
+	ring              *common.Ring
+	topologyListeners []TopologyListener
+	position          []byte
+	addr              string
+	listener          *net.TCPListener
+	lock              *sync.RWMutex
+	state             nodeState
+	exports           map[string]interface{}
 }
 
 func NewNode(addr string) (result *Node) {
@@ -49,11 +51,15 @@ func (self *Node) Export(name string, api interface{}) error {
 	}
 	return fmt.Errorf("%v can only export when in state 'created'")
 }
+func (self *Node) AddTopologyListener(listener TopologyListener) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.topologyListeners = append(self.topologyListeners, listener)
+}
 func (self *Node) SetPosition(position []byte) *Node {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.position = position
-	self.predecessor = nil
 	return self
 }
 func (self *Node) GetRing(ring *common.Ring) {
@@ -81,12 +87,12 @@ func (self *Node) GetPosition() (result []byte) {
 	return
 }
 func (self *Node) String() string {
-	return fmt.Sprintf("<%v@%v predecessor=%v>", common.HexEncode(self.GetPosition()), self.getAddr(), self.getPredecessor())
+	return fmt.Sprintf("<%v@%v>", common.HexEncode(self.GetPosition()), self.getAddr())
 }
 func (self *Node) Describe() string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	buffer := bytes.NewBufferString(fmt.Sprintf("%v@%v predecessor=%v\n", common.HexEncode(self.position), self.addr, self.predecessor))
+	buffer := bytes.NewBufferString(fmt.Sprintf("%v@%v\n", common.HexEncode(self.position), self.addr))
 	fmt.Fprint(buffer, self.ring.Describe())
 	return string(buffer.Bytes())
 }
@@ -95,6 +101,18 @@ func (self *Node) hasState(s nodeState) bool {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.state == s
+}
+func (self *Node) setRing(newRing *common.Ring) {
+	self.lock.RLock()
+	if !newRing.Equal(self.ring) {
+		for _, listener := range self.topologyListeners {
+			listener(self, self.ring, newRing)
+		}
+	}
+	self.lock.RUnlock()
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.ring = newRing
 }
 func (self *Node) changeState(old, neu nodeState) bool {
 	self.lock.Lock()
@@ -105,10 +123,10 @@ func (self *Node) changeState(old, neu nodeState) bool {
 	self.state = neu
 	return true
 }
-func (self *Node) getPredecessor() *common.Remote {
+func (self *Node) getRemotes(pos []byte) (predecessor, match, successor *common.Remote) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.predecessor
+	return self.ring.Remotes(pos)
 }
 func (self *Node) getListener() *net.TCPListener {
 	self.lock.RLock()
@@ -173,10 +191,9 @@ func (self *Node) Start() (err error) {
 			return
 		}
 	}
-	selfRemote := self.remote()
-	self.lock.Lock()
-	self.ring.Add(selfRemote)
-	self.lock.Unlock()
+	newRing := &common.Ring{}
+	newRing.Add(self.remote())
+	self.setRing(newRing)
 	go server.Accept(self.getListener())
 	go self.notifyPeriodically()
 	go self.pingPeriodically()
@@ -197,40 +214,30 @@ func (self *Node) pingPeriodically() {
 func (self *Node) Ping() {
 }
 func (self *Node) pingPredecessor() {
-	if predecessor := self.getPredecessor(); predecessor != nil {
-		var x int
-		if err := predecessor.Call("Node.Ping", 0, &x); err != nil {
-			self.lock.Lock()
-			defer self.lock.Unlock()
-			predecessor, _, _ = self.ring.Remotes(self.GetPosition())
-			self.predecessor = predecessor
-		}
+	predecessor, _, _ := self.getRemotes(self.GetPosition())
+	var x int
+	if err := predecessor.Call("Node.Ping", 0, &x); err != nil {
+		self.RemoveNode(*predecessor)
+		self.pingPredecessor()
 	}
 }
 func (self *Node) notify(caller common.Remote) (result common.Ring) {
-	self.lock.Lock()
-	self.ring.Add(caller)
-	self.predecessor, _, _ = self.ring.Remotes(self.position)
-	self.lock.Unlock()
-	result.Nodes = self.GetNodes()
+	self.GetRing(&result)
+	(&result).Add(caller)
+	self.setRing(&result)
 	return
 }
 func (self *Node) notifySuccessor() {
-	self.lock.RLock()
-	_, _, successor := self.ring.Remotes(self.GetPosition())
-	self.lock.RUnlock()
+	_, _, successor := self.getRemotes(self.GetPosition())
 	newRing := &common.Ring{}
 	if err := successor.Call("Node.Notify", self.remote(), newRing); err != nil {
 		self.RemoveNode(*successor)
 		self.notifySuccessor()
 	} else {
-		self.lock.Lock()
-		defer self.lock.Unlock()
-		self.ring = newRing
-		if self.predecessor != nil {
-			self.ring.Add(*self.predecessor)
-			self.ring.Clean(self.predecessor.Pos, self.position)
-		}
+		predecessor, _, _ := self.getRemotes(self.GetPosition())
+		newRing.Add(*predecessor)
+		newRing.Clean(predecessor.Pos, self.position)
+		self.setRing(newRing)
 	}
 }
 func (self *Node) MustJoin(addr string) {
@@ -250,20 +257,17 @@ func (self *Node) Join(addr string) (err error) {
 	if err = common.Switch.Call(addr, "Node.Notify", self.remote(), &newRing); err != nil {
 		return
 	}
-	self.lock.Lock()
-	defer self.lock.Unlock()
-	self.ring = newRing
+	self.setRing(newRing)
 	return
 }
 func (self *Node) RemoveNode(remote common.Remote) {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-	self.ring.Remove(remote)
+	newRing := &common.Ring{}
+	self.GetRing(newRing)
+	newRing.Remove(remote)
+	self.setRing(newRing)
 }
 func (self *Node) GetSuccessor(key []byte) common.Remote {
-	self.lock.RLock()
-	predecessor, match, successor := self.ring.Remotes(key)
-	self.lock.RUnlock()
+	predecessor, match, successor := self.getRemotes(key)
 	if match != nil {
 		predecessor = match
 	}
