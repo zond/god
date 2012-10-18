@@ -2,6 +2,7 @@ package client
 
 import (
 	"../common"
+	"fmt"
 )
 
 type Conn struct {
@@ -20,7 +21,7 @@ func MustConn(addr string) (result *Conn) {
 	}
 	return
 }
-func (self *Conn) Put(key, value []byte) (old []byte, exists bool, err error) {
+func (self *Conn) Put(key, value []byte) (err error) {
 	item := common.Item{
 		Key:   key,
 		Value: value,
@@ -29,11 +30,17 @@ func (self *Conn) Put(key, value []byte) (old []byte, exists bool, err error) {
 	if match != nil {
 		predecessor = match
 	}
-	if err = predecessor.Call("DHash.Put", item, &item); err != nil {
+	var x int
+	err = predecessor.Call("DHash.Put", item, &x)
+	return
+}
+func (self *Conn) DescribeTree(key []byte) (result string, err error) {
+	_, match, _ := self.ring.Remotes(key)
+	if match == nil {
+		err = fmt.Errorf("No node with position %v found", common.HexEncode(key))
 		return
 	}
-	old = item.Value
-	exists = item.Exists
+	err = match.Call("DHash.DescribeTree", 0, &result)
 	return
 }
 func (self *Conn) Describe() string {

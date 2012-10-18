@@ -34,9 +34,13 @@ func (self *timerServer) ActualTime(x int, result *int64) error {
 
 type dhashServer DHash
 
-func (self *dhashServer) SlavePut(data common.Item, res *common.Item) error {
-	return (*DHash)(self).put(data, res)
+func (self *dhashServer) SlavePut(data common.Item, x *int) error {
+	return (*DHash)(self).put(data)
 }
-func (self *dhashServer) Put(data common.Item, res *common.Item) error {
-	return (*DHash)(self).Put(data, res)
+func (self *dhashServer) Put(data common.Item, x *int) error {
+	return (*DHash)(self).Put(data)
+}
+func (self *dhashServer) DescribeTree(x int, result *string) error {
+	*result = (*DHash)(self).DescribeTree()
+	return nil
 }

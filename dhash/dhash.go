@@ -125,12 +125,15 @@ func (self *DHash) AddTopologyListener(listener discord.TopologyListener) {
 	defer self.lock.RUnlock()
 	self.node.AddTopologyListener(listener)
 }
-func (self *DHash) Put(data common.Item, res *common.Item) error {
+func (self *DHash) Put(data common.Item) error {
 	self.lock.RLock()
 	successor := self.node.GetSuccessor(data.Key)
+	self.lock.RUnlock()
+	var x int
 	if successor.Addr != self.node.GetAddr() {
-		return successor.Call("DHash.Put", data, res)
+		return successor.Call("DHash.Put", data, &x)
 	}
+	self.lock.RLock()
 	if nodeCount := self.node.CountNodes(); nodeCount < redundancy {
 		data.TTL = nodeCount
 	} else {
@@ -138,28 +141,35 @@ func (self *DHash) Put(data common.Item, res *common.Item) error {
 	}
 	data.Timestamp = self.timer.ContinuousTime()
 	self.lock.RUnlock()
-	return self.put(data, res)
+	return self.put(data)
 }
 func (self *DHash) forwardPut(data common.Item) {
 	data.TTL--
 	self.lock.RLock()
 	successor := self.node.GetSuccessor(self.node.GetPosition())
 	self.lock.RUnlock()
-	err := successor.Call("DHash.SlavePut", data, &data)
+	var x int
+	err := successor.Call("DHash.SlavePut", data, &x)
 	for err != nil {
 		self.lock.RLock()
 		self.node.RemoveNode(successor)
 		successor = self.node.GetSuccessor(self.node.GetPosition())
 		self.lock.RUnlock()
-		err = successor.Call("DHash.SlavePut", data, &data)
+		err = successor.Call("DHash.SlavePut", data, &x)
 	}
 }
-func (self *DHash) put(data common.Item, res *common.Item) error {
+func (self *DHash) DescribeTree() string {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	fmt.Println("gonna return", self.tree.Describe())
+	return self.tree.Describe()
+}
+func (self *DHash) put(data common.Item) error {
 	if data.TTL > 1 {
 		go self.forwardPut(data)
 	}
-	if old, exists := self.tree.Put(data.Key, radix.ByteHasher(data.Value), data.Timestamp); exists {
-		res.Value, res.Exists = old.(radix.ByteHasher)
-	}
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.tree.Put(data.Key, radix.ByteHasher(data.Value), data.Timestamp)
 	return nil
 }
