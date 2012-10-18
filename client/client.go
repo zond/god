@@ -5,4 +5,5 @@ import (
 )
 
 type Conn struct {
+	nodes *common.Ring
 }
