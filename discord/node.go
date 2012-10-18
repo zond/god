@@ -86,8 +86,13 @@ func (self *Node) GetPosition() (result []byte) {
 	copy(result, self.position)
 	return
 }
+func (self *Node) GetAddr() string {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.addr
+}
 func (self *Node) String() string {
-	return fmt.Sprintf("<%v@%v>", common.HexEncode(self.GetPosition()), self.getAddr())
+	return fmt.Sprintf("<%v@%v>", common.HexEncode(self.GetPosition()), self.GetAddr())
 }
 func (self *Node) Describe() string {
 	self.lock.RLock()
@@ -143,13 +148,8 @@ func (self *Node) setAddr(addr string) {
 	defer self.lock.Unlock()
 	self.addr = addr
 }
-func (self *Node) getAddr() string {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	return self.addr
-}
 func (self *Node) remote() common.Remote {
-	return common.Remote{self.GetPosition(), self.getAddr()}
+	return common.Remote{self.GetPosition(), self.GetAddr()}
 }
 
 func (self *Node) Stop() {
@@ -166,7 +166,7 @@ func (self *Node) Start() (err error) {
 	if !self.changeState(created, started) {
 		return fmt.Errorf("%v can only be started when in state 'created'")
 	}
-	if self.getAddr() == "" {
+	if self.GetAddr() == "" {
 		var foundAddr string
 		if foundAddr, err = findAddress(); err != nil {
 			return
@@ -174,7 +174,7 @@ func (self *Node) Start() (err error) {
 		self.setAddr(foundAddr)
 	}
 	var addr *net.TCPAddr
-	if addr, err = net.ResolveTCPAddr("tcp", self.getAddr()); err != nil {
+	if addr, err = net.ResolveTCPAddr("tcp", self.GetAddr()); err != nil {
 		return
 	}
 	var listener *net.TCPListener
@@ -271,7 +271,7 @@ func (self *Node) GetSuccessor(key []byte) common.Remote {
 	if match != nil {
 		predecessor = match
 	}
-	if predecessor.Addr != self.getAddr() {
+	if predecessor.Addr != self.GetAddr() {
 		if err := predecessor.Call("Node.GetSuccessor", key, successor); err != nil {
 			self.RemoveNode(*successor)
 			return self.GetSuccessor(key)
