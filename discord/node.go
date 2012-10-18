@@ -19,6 +19,11 @@ const (
 	stopped
 )
 
+const (
+	notifyInterval = time.Second
+	pingInterval   = time.Second
+)
+
 type TopologyListener func(node *Node, oldRing, newRing *common.Ring)
 
 type Node struct {
@@ -164,7 +169,7 @@ func (self *Node) MustStart() {
 }
 func (self *Node) Start() (err error) {
 	if !self.changeState(created, started) {
-		return fmt.Errorf("%v can only be started when in state 'created'")
+		return fmt.Errorf("%v can only be started when in state 'created'", self)
 	}
 	if self.GetAddr() == "" {
 		var foundAddr string
@@ -202,13 +207,13 @@ func (self *Node) Start() (err error) {
 func (self *Node) notifyPeriodically() {
 	for self.hasState(started) {
 		self.notifySuccessor()
-		time.Sleep(time.Second)
+		time.Sleep(notifyInterval)
 	}
 }
 func (self *Node) pingPeriodically() {
 	for self.hasState(started) {
 		self.pingPredecessor()
-		time.Sleep(time.Second)
+		time.Sleep(pingInterval)
 	}
 }
 func (self *Node) Ping() {
