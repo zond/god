@@ -96,7 +96,7 @@ func (self *DHash) AddTopologyListener(listener discord.TopologyListener) {
 }
 func (self *DHash) Put(data common.Item, res *common.Item) error {
 	self.lock.RLock()
-	successor := self.node.GetSuccessor(self.node.GetPosition())
+	successor := self.node.GetSuccessor(data.Key)
 	if successor.Addr != self.node.GetAddr() {
 		return successor.Call("DHash.Put", data, res)
 	}
