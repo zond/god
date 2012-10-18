@@ -5,15 +5,27 @@ import (
 	"../discord"
 	"../radix"
 	"../timenet"
+	"fmt"
 	"sync"
 	"time"
 )
 
 const (
-	redundancy = 3
+	redundancy    = 3
+	syncInterval  = time.Second * 10
+	cleanInterval = time.Second * 10
+)
+
+type nodeState int
+
+const (
+	created = iota
+	started
+	stopped
 )
 
 type DHash struct {
+	state nodeState
 	lock  *sync.RWMutex
 	node  *discord.Node
 	timer *timenet.Timer
@@ -22,20 +34,74 @@ type DHash struct {
 
 func NewDHash(addr string) (result *DHash) {
 	result = &DHash{
-		lock: &sync.RWMutex{},
-		node: discord.NewNode(addr),
-		tree: radix.NewTree(),
+		lock:  &sync.RWMutex{},
+		node:  discord.NewNode(addr),
+		state: created,
+		tree:  radix.NewTree(),
 	}
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
 	result.node.Export("Timer", (*timerServer)(result.timer))
 	result.node.Export("DHash", (*dhashServer)(result))
 	return
 }
-func (self *DHash) MustStart() *DHash {
+func (self *DHash) hasState(s nodeState) bool {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	self.node.MustStart()
+	return self.state == s
+}
+func (self *DHash) changeState(old, neu nodeState) bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	if self.state != old {
+		return false
+	}
+	self.state = neu
+	return true
+}
+func (self *DHash) Stop() {
+	if self.changeState(started, stopped) {
+		self.lock.Lock()
+		defer self.lock.Unlock()
+		self.node.Stop()
+		self.timer.Stop()
+	}
+}
+func (self *DHash) Start() (err error) {
+	if !self.changeState(created, started) {
+		return fmt.Errorf("%v can only be started when in state 'created'", self)
+	}
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if err = self.node.Start(); err != nil {
+		return
+	}
 	self.timer.Start()
+	go self.syncPeriodically()
+	go self.cleanPeriodically()
+	return
+}
+func (self *DHash) sync() {
+	fmt.Println("implement sync!")
+}
+func (self *DHash) syncPeriodically() {
+	for self.hasState(started) {
+		self.sync()
+		time.Sleep(syncInterval)
+	}
+}
+func (self *DHash) cleanPeriodically() {
+	for self.hasState(started) {
+		self.clean()
+		time.Sleep(cleanInterval)
+	}
+}
+func (self *DHash) clean() {
+	fmt.Println("implement clean!")
+}
+func (self *DHash) MustStart() *DHash {
+	if err := self.Start(); err != nil {
+		panic(err)
+	}
 	return self
 }
 func (self *DHash) MustJoin(addr string) {
