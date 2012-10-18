@@ -11,6 +11,14 @@ const (
 	loglen = 10
 )
 
+type nodeState int
+
+const (
+	created = iota
+	started
+	stopped
+)
+
 type Peer interface {
 	ActualTime() (time int64)
 }
@@ -21,6 +29,7 @@ type PeerProducer interface {
 
 type Timer struct {
 	lock          *sync.RWMutex
+	state         nodeState
 	offset        int64
 	dilations     *dilations
 	peerProducer  PeerProducer
@@ -32,6 +41,7 @@ func NewTimer(producer PeerProducer) *Timer {
 	return &Timer{
 		lock:          &sync.RWMutex{},
 		peerProducer:  producer,
+		state:         created,
 		dilations:     &dilations{},
 		peerErrors:    make(map[string]int64),
 		peerLatencies: make(map[string]times),
@@ -159,6 +169,20 @@ func (self *Timer) Sample() {
 		self.adjust(peerId, peerTime-myTime)
 	}
 }
+func (self *Timer) hasState(s nodeState) bool {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.state == s
+}
+func (self *Timer) changeState(old, neu nodeState) bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	if self.state != old {
+		return false
+	}
+	self.state = neu
+	return true
+}
 func (self *Timer) sleep() {
 	err := self.Error()
 	stability := self.Stability()
@@ -173,10 +197,13 @@ func (self *Timer) sleep() {
 	}
 }
 func (self *Timer) Run() {
-	for {
+	for self.hasState(started) {
 		self.Sample()
 		self.sleep()
 	}
+}
+func (self *Timer) Stop() {
+	self.changeState(started, stopped)
 }
 func (self *Timer) Start() {
 	go self.Run()
