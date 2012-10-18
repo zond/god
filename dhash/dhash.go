@@ -96,6 +96,10 @@ func (self *DHash) AddTopologyListener(listener discord.TopologyListener) {
 }
 func (self *DHash) Put(data common.Item, res *common.Item) error {
 	self.lock.RLock()
+	successor := self.node.GetSuccessor(self.node.GetPosition())
+	if successor.Addr != self.node.GetAddr() {
+		return successor.Call("DHash.Put", data, res)
+	}
 	if nodeCount := self.node.CountNodes(); nodeCount < redundancy {
 		data.TTL = nodeCount
 	} else {
@@ -106,6 +110,7 @@ func (self *DHash) Put(data common.Item, res *common.Item) error {
 	return self.put(data, res)
 }
 func (self *DHash) forwardPut(data common.Item) {
+	data.TTL--
 	self.lock.RLock()
 	successor := self.node.GetSuccessor(self.node.GetPosition())
 	self.lock.RUnlock()
@@ -119,9 +124,11 @@ func (self *DHash) forwardPut(data common.Item) {
 	}
 }
 func (self *DHash) put(data common.Item, res *common.Item) error {
-	if data.TTL > 0 {
+	if data.TTL > 1 {
 		go self.forwardPut(data)
 	}
-	res.Value, res.Exists = self.tree.Put(data.Key, data.Value, data.Timestamp)
+	if old, exists := self.tree.Put(data.Key, radix.ByteHasher(data.Value), data.Timestamp); exists {
+		res.Value, res.Exists = old.(radix.ByteHasher)
+	}
 	return nil
 }
