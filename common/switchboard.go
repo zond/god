@@ -5,11 +5,7 @@ import (
 	"sync"
 )
 
-var Switch *Switchboard
-
-func init() {
-	Switch = newSwitchboard()
-}
+var Switch = newSwitchboard()
 
 type Switchboard struct {
 	lock    *sync.RWMutex
