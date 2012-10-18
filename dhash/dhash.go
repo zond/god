@@ -1,6 +1,7 @@
 package dhash
 
 import (
+	"../common"
 	"../discord"
 	"../radix"
 	"../timenet"
@@ -38,20 +39,12 @@ func (self *timerServer) ActualTime(x int, result *int64) error {
 	return nil
 }
 
-type Item struct {
-	Key       []byte
-	Value     radix.Hasher
-	Exists    bool
-	Timestamp int64
-	TTL       int
-}
-
 type dhashServer DHash
 
-func (self *dhashServer) SlavePut(data Item, res *Item) error {
+func (self *dhashServer) SlavePut(data common.Item, res *common.Item) error {
 	return (*DHash)(self).put(data, res)
 }
-func (self *dhashServer) Put(data Item, res *Item) error {
+func (self *dhashServer) Put(data common.Item, res *common.Item) error {
 	return (*DHash)(self).Put(data, res)
 }
 
@@ -91,7 +84,7 @@ func (self *DHash) Time() time.Time {
 	defer self.lock.RUnlock()
 	return time.Unix(0, self.timer.ContinuousTime())
 }
-func (self *DHash) Put(data Item, res *Item) error {
+func (self *DHash) Put(data common.Item, res *common.Item) error {
 	self.lock.RLock()
 	if nodeCount := self.node.CountNodes(); nodeCount < redundancy {
 		data.TTL = nodeCount
@@ -102,7 +95,7 @@ func (self *DHash) Put(data Item, res *Item) error {
 	self.lock.RUnlock()
 	return self.put(data, res)
 }
-func (self *DHash) forwardPut(data Item) {
+func (self *DHash) forwardPut(data common.Item) {
 	self.lock.RLock()
 	successor := self.node.GetSuccessor(self.node.GetPosition())
 	self.lock.RUnlock()
@@ -115,7 +108,7 @@ func (self *DHash) forwardPut(data Item) {
 		err = successor.Call("DHash.SlavePut", data, &data)
 	}
 }
-func (self *DHash) put(data Item, res *Item) error {
+func (self *DHash) put(data common.Item, res *common.Item) error {
 	if data.TTL > 0 {
 		go self.forwardPut(data)
 	}

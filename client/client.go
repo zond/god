@@ -1,0 +1,5 @@
+package client
+
+import (
+	"../common"
+)

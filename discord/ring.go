@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"../common"
 	"../murmur"
 	"bytes"
 	"fmt"
@@ -25,7 +26,7 @@ func (self Remote) String() string {
 	return fmt.Sprintf("[%v@%v]", hexEncode(self.Pos), self.Addr)
 }
 func (self Remote) Call(service string, args, reply interface{}) error {
-	return board.call(self.Addr, service, args, reply)
+	return common.Switch.Call(self.Addr, service, args, reply)
 }
 
 type Ring struct {

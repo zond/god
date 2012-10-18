@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"../common"
 	"../murmur"
 	"bytes"
 	"fmt"
@@ -240,13 +241,13 @@ func (self *Node) MustJoin(addr string) {
 func (self *Node) Join(addr string) (err error) {
 	if bytes.Compare(self.GetPosition(), make([]byte, murmur.Size)) == 0 {
 		newRing := &Ring{}
-		if err = board.call(addr, "Node.Ring", 0, newRing); err != nil {
+		if err = common.Switch.Call(addr, "Node.Ring", 0, newRing); err != nil {
 			return
 		}
 		self.SetPosition(newRing.getSlot())
 	}
 	newRing := &Ring{}
-	if err = board.call(addr, "Node.Notify", self.remote(), &newRing); err != nil {
+	if err = common.Switch.Call(addr, "Node.Notify", self.remote(), &newRing); err != nil {
 		return
 	}
 	self.lock.Lock()

@@ -1,21 +1,25 @@
-package discord
+package common
 
 import (
 	"net/rpc"
 	"sync"
 )
 
-var board = newSwitchboard()
+var Switch *Switchboard
 
-type switchboard struct {
+func init() {
+	Switch = newSwitchboard()
+}
+
+type Switchboard struct {
 	lock    *sync.RWMutex
 	clients map[string]*rpc.Client
 }
 
-func newSwitchboard() *switchboard {
-	return &switchboard{new(sync.RWMutex), make(map[string]*rpc.Client)}
+func newSwitchboard() *Switchboard {
+	return &Switchboard{new(sync.RWMutex), make(map[string]*rpc.Client)}
 }
-func (self *switchboard) client(addr string) (client *rpc.Client, err error) {
+func (self *Switchboard) client(addr string) (client *rpc.Client, err error) {
 	self.lock.RLock()
 	client, ok := self.clients[addr]
 	self.lock.RUnlock()
@@ -29,7 +33,7 @@ func (self *switchboard) client(addr string) (client *rpc.Client, err error) {
 	}
 	return
 }
-func (self *switchboard) acall(addr, service string, args, reply interface{}) (call *rpc.Call) {
+func (self *Switchboard) Go(addr, service string, args, reply interface{}) (call *rpc.Call) {
 	if client, err := self.client(addr); err != nil {
 		call = &rpc.Call{
 			ServiceMethod: service,
@@ -44,7 +48,7 @@ func (self *switchboard) acall(addr, service string, args, reply interface{}) (c
 	}
 	return
 }
-func (self *switchboard) call(addr, service string, args, reply interface{}) (err error) {
+func (self *Switchboard) Call(addr, service string, args, reply interface{}) (err error) {
 	var client *rpc.Client
 	if client, err = self.client(addr); err != nil {
 		return
