@@ -38,19 +38,14 @@ func describeTree(conn *client.Conn, args []string) {
 }
 
 func get(conn *client.Conn, args []string) {
-	value, existed, err := conn.Get([]byte(args[1]))
-	if err != nil {
-		fmt.Println(err)
-	} else if existed {
+	value, existed := conn.Get([]byte(args[1]))
+	if existed {
 		fmt.Println(string(value))
 	}
 }
 
 func put(conn *client.Conn, args []string) {
-	err := conn.Put([]byte(args[1]), []byte(args[2]))
-	if err != nil {
-		fmt.Println(err)
-	}
+	conn.Put([]byte(args[1]), []byte(args[2]))
 }
 
 func main() {
