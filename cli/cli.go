@@ -18,6 +18,7 @@ var actions = map[*regexp.Regexp]action{
 	regexp.MustCompile("^put (\\S+) (\\S+)$"):   put,
 	regexp.MustCompile("^$"):                    show,
 	regexp.MustCompile("^describeTree (\\S+)$"): describeTree,
+	regexp.MustCompile("^get (\\S+)$"):          get,
 }
 
 func show(conn *client.Conn, args []string) {
@@ -33,6 +34,15 @@ func describeTree(conn *client.Conn, args []string) {
 		} else {
 			fmt.Println(result)
 		}
+	}
+}
+
+func get(conn *client.Conn, args []string) {
+	value, existed, err := conn.Get([]byte(args[1]))
+	if err != nil {
+		fmt.Println(err)
+	} else if existed {
+		fmt.Println(string(value))
 	}
 }
 
