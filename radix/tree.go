@@ -68,8 +68,8 @@ func (self *Tree) put(key []nibble, value Hasher, version int64) (old Hasher, ex
 func (self *Tree) Put(key []byte, value Hasher, version int64) (old Hasher, existed bool) {
 	return self.put(rip(key), value, version)
 }
-func (self *Tree) Get(key []byte) (value Hasher, existed bool) {
-	value, _, existed = self.root.get(rip(key))
+func (self *Tree) Get(key []byte) (value Hasher, version int64, existed bool) {
+	value, version, existed = self.root.get(rip(key))
 	return
 }
 func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
@@ -103,9 +103,9 @@ func (self *Tree) SubPut(key, subKey []byte, value Hasher, version int64) (old H
 	self.PutVersion(ripped, subTree, subTreeVersion, subTreeVersion)
 	return
 }
-func (self *Tree) SubGet(key, subKey []byte) (value Hasher, existed bool) {
+func (self *Tree) SubGet(key, subKey []byte) (value Hasher, version int64, existed bool) {
 	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
-		value, existed = subTree.Get(subKey)
+		value, version, existed = subTree.Get(subKey)
 	}
 	return
 }
