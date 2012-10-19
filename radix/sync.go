@@ -11,22 +11,22 @@ const (
 type HashTree interface {
 	Hash() []byte
 
-	Finger(key []nibble) *Print
-	GetVersion(key []nibble) (value Hasher, version int64, existed bool)
-	PutVersion(key []nibble, value Hasher, expected, version int64)
-	DelVersion(key []nibble, expected int64)
+	Finger(key []Nibble) *Print
+	GetVersion(key []Nibble) (value Hasher, version int64, existed bool)
+	PutVersion(key []Nibble, value Hasher, expected, version int64)
+	DelVersion(key []Nibble, expected int64)
 
-	SubFinger(key, subKey []nibble, expected int64) (result *Print)
-	SubGetVersion(key, subKey []nibble, expected int64) (value Hasher, version int64, existed bool)
-	SubPutVersion(key, subKey []nibble, value Hasher, expected, subExpected, subVersion int64)
-	SubDelVersion(key, subKey []nibble, expected, subExpected int64)
+	SubFinger(key, subKey []Nibble, expected int64) (result *Print)
+	SubGetVersion(key, subKey []Nibble, expected int64) (value Hasher, version int64, existed bool)
+	SubPutVersion(key, subKey []Nibble, value Hasher, expected, subExpected, subVersion int64)
+	SubDelVersion(key, subKey []Nibble, expected, subExpected int64)
 }
 
 type Sync struct {
 	source      HashTree
 	destination HashTree
-	from        []nibble
-	to          []nibble
+	from        []Nibble
+	to          []Nibble
 	destructive bool
 }
 
@@ -63,7 +63,7 @@ func (self *Sync) Run() bool {
 	self.synchronize(self.source.Finger(nil), self.destination.Finger(nil))
 	return true
 }
-func (self *Sync) withinLimits(key []nibble) bool {
+func (self *Sync) withinLimits(key []Nibble) bool {
 	if self.from == nil || bytes.Compare(toBytes(key), toBytes(self.from)) > -1 {
 		if self.withinRightLimit(key) {
 			return true
@@ -71,7 +71,7 @@ func (self *Sync) withinLimits(key []nibble) bool {
 	}
 	return false
 }
-func (self *Sync) withinRightLimit(key []nibble) bool {
+func (self *Sync) withinRightLimit(key []Nibble) bool {
 	if self.to == nil || bytes.Compare(toBytes(key), toBytes(self.to)) < 0 {
 		return true
 	}

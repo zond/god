@@ -15,9 +15,9 @@ type Hasher interface {
 }
 
 type TreeIterator func(key []byte, value Hasher)
-type nibble byte
+type Nibble byte
 
-func toBytes(n []nibble) []byte {
+func toBytes(n []Nibble) []byte {
 	return *((*[]byte)(unsafe.Pointer(&n)))
 }
 
@@ -32,11 +32,11 @@ func hash(h Hasher) []byte {
 	return h.Hash()
 }
 
-func rip(b []byte) (result []nibble) {
-	result = make([]nibble, parts*len(b))
+func rip(b []byte) (result []Nibble) {
+	result = make([]Nibble, parts*len(b))
 	for i, char := range b {
 		for j := 0; j < parts; j++ {
-			result[(i*parts)+j] = nibble((char << byte((8/parts)*j)) >> byte(8-(8/parts)))
+			result[(i*parts)+j] = Nibble((char << byte((8/parts)*j)) >> byte(8-(8/parts)))
 		}
 	}
 	return
@@ -48,7 +48,7 @@ func stringEncode(b []byte) string {
 	}
 	return string(buffer.Bytes())
 }
-func stitch(b []nibble) (result []byte) {
+func stitch(b []Nibble) (result []byte) {
 	result = make([]byte, len(b)/parts)
 	for i, _ := range result {
 		for j := 0; j < parts; j++ {
@@ -71,7 +71,7 @@ func (self ByteHasher) Hash() []byte {
 }
 
 type SubPrint struct {
-	Key []nibble
+	Key []Nibble
 	Sum []byte
 }
 
@@ -83,7 +83,7 @@ func (self *SubPrint) equals(other *SubPrint) bool {
 }
 
 type Print struct {
-	Key       []nibble
+	Key       []Nibble
 	ValueHash []byte
 	Version   int64
 	SubTree   bool
@@ -107,7 +107,7 @@ func (self *Print) set(n *node) {
 	for index, child := range n.children {
 		if child != nil {
 			self.SubPrints[index] = &SubPrint{
-				Key: append(append([]nibble{}, self.Key...), child.segment...),
+				Key: append(append([]Nibble{}, self.Key...), child.segment...),
 				Sum: child.hash,
 			}
 		}

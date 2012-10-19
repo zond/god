@@ -8,7 +8,7 @@ import (
 )
 
 type node struct {
-	segment   []nibble
+	segment   []Nibble
 	value     Hasher
 	version   int64
 	valueHash []byte
@@ -16,7 +16,7 @@ type node struct {
 	children  []*node
 }
 
-func newNode(segment []nibble, value Hasher, version int64, hasValue bool) (result *node) {
+func newNode(segment []Nibble, value Hasher, version int64, hasValue bool) (result *node) {
 	result = &node{
 		segment:  segment,
 		value:    value,
@@ -29,12 +29,12 @@ func newNode(segment []nibble, value Hasher, version int64, hasValue bool) (resu
 	}
 	return
 }
-func (self *node) setSegment(part []nibble) {
-	new_segment := make([]nibble, len(part))
+func (self *node) setSegment(part []Nibble) {
+	new_segment := make([]Nibble, len(part))
 	copy(new_segment, part)
 	self.segment = new_segment
 }
-func (self *node) rehash(key []nibble) {
+func (self *node) rehash(key []Nibble) {
 	h := murmur.NewBytes(toBytes(key))
 	h.Write(self.valueHash)
 	self.eachChild(func(node *node) {
@@ -71,7 +71,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 		node.describe(indent+len(encodedSegment), buffer)
 	})
 }
-func (self *node) each(prefix []nibble, f TreeIterator) {
+func (self *node) each(prefix []Nibble, f TreeIterator) {
 	if self != nil {
 		prefix = append(prefix, self.segment...)
 		if self.valueHash != nil {
@@ -82,7 +82,7 @@ func (self *node) each(prefix []nibble, f TreeIterator) {
 		}
 	}
 }
-func (self *node) finger(allocated *Print, segment []nibble) (result *Print) {
+func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
 	if self == nil {
 		return
 	}
@@ -106,7 +106,7 @@ func (self *node) finger(allocated *Print, segment []nibble) (result *Print) {
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) get(segment []nibble) (value Hasher, version int64, existed bool) {
+func (self *node) get(segment []Nibble) (value Hasher, version int64, existed bool) {
 	if self == nil {
 		return
 	}
@@ -129,7 +129,7 @@ func (self *node) get(segment []nibble) (value Hasher, version int64, existed bo
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) del(prefix, segment []nibble) (result *node, old Hasher, existed bool) {
+func (self *node) del(prefix, segment []Nibble) (result *node, old Hasher, existed bool) {
 	if self == nil {
 		return
 	}
@@ -188,7 +188,7 @@ func (self *node) del(prefix, segment []nibble) (result *node, old Hasher, exist
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) insert(prefix []nibble, n *node) (result *node, old Hasher, version int64, existed bool) {
+func (self *node) insert(prefix []Nibble, n *node) (result *node, old Hasher, version int64, existed bool) {
 	if self == nil {
 		n.rehash(append(prefix, n.segment...))
 		result = n
