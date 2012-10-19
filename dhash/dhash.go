@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	redundancy    = 3
 	syncInterval  = time.Second * 10
 	cleanInterval = time.Second * 10
 )
@@ -125,6 +124,25 @@ func (self *DHash) AddTopologyListener(listener discord.TopologyListener) {
 	defer self.lock.RUnlock()
 	self.node.AddTopologyListener(listener)
 }
+func (self *DHash) DescribeTree() string {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	fmt.Println("gonna return", self.tree.Describe())
+	return self.tree.Describe()
+}
+func (self *DHash) Get(data common.Item, result *common.Item) error {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	*result = data
+	if value, timestamp, exists := self.tree.Get(data.Key); exists {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			result.Exists = true
+			result.Value = []byte(byteHasher)
+			result.Timestamp = timestamp
+		}
+	}
+	return nil
+}
 func (self *DHash) Put(data common.Item) error {
 	self.lock.RLock()
 	successor := self.node.GetSuccessor(data.Key)
@@ -134,10 +152,10 @@ func (self *DHash) Put(data common.Item) error {
 		return successor.Call("DHash.Put", data, &x)
 	}
 	self.lock.RLock()
-	if nodeCount := self.node.CountNodes(); nodeCount < redundancy {
+	if nodeCount := self.node.CountNodes(); nodeCount < common.Redundancy {
 		data.TTL = nodeCount
 	} else {
-		data.TTL = redundancy
+		data.TTL = common.Redundancy
 	}
 	data.Timestamp = self.timer.ContinuousTime()
 	self.lock.RUnlock()
@@ -157,12 +175,6 @@ func (self *DHash) forwardPut(data common.Item) {
 		self.lock.RUnlock()
 		err = successor.Call("DHash.SlavePut", data, &x)
 	}
-}
-func (self *DHash) DescribeTree() string {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	fmt.Println("gonna return", self.tree.Describe())
-	return self.tree.Describe()
 }
 func (self *DHash) put(data common.Item) error {
 	if data.TTL > 1 {
