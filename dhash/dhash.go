@@ -79,8 +79,31 @@ func (self *DHash) Start() (err error) {
 	go self.cleanPeriodically()
 	return
 }
+func (self *DHash) getSuccessor(pos []byte) common.Remote {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.node.GetSuccessor(pos)
+}
+func (self *DHash) getAddr() string {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.node.GetAddr()
+}
+func (self *DHash) removeNode(r common.Remote) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.node.RemoveNode(r)
+}
+func (self *DHash) getPosition() []byte {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.node.GetPosition()
+}
 func (self *DHash) sync() {
-	fmt.Println("implement sync!")
+	nextSuccessor := self.getSuccessor(self.getPosition())
+	for i := 0; i < common.Redundancy; i++ {
+		nextSuccessor = self.getSuccessor(nextSuccessor.Pos)
+	}
 }
 func (self *DHash) syncPeriodically() {
 	for self.hasState(started) {
@@ -127,7 +150,6 @@ func (self *DHash) AddTopologyListener(listener discord.TopologyListener) {
 func (self *DHash) DescribeTree() string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	fmt.Println("gonna return", self.tree.Describe())
 	return self.tree.Describe()
 }
 func (self *DHash) Get(data common.Item, result *common.Item) error {
@@ -144,11 +166,9 @@ func (self *DHash) Get(data common.Item, result *common.Item) error {
 	return nil
 }
 func (self *DHash) Put(data common.Item) error {
-	self.lock.RLock()
-	successor := self.node.GetSuccessor(data.Key)
-	self.lock.RUnlock()
+	successor := self.getSuccessor(data.Key)
 	var x int
-	if successor.Addr != self.node.GetAddr() {
+	if successor.Addr != self.getAddr() {
 		return successor.Call("DHash.Put", data, &x)
 	}
 	self.lock.RLock()
@@ -163,16 +183,12 @@ func (self *DHash) Put(data common.Item) error {
 }
 func (self *DHash) forwardPut(data common.Item) {
 	data.TTL--
-	self.lock.RLock()
-	successor := self.node.GetSuccessor(self.node.GetPosition())
-	self.lock.RUnlock()
+	successor := self.getSuccessor(self.getPosition())
 	var x int
 	err := successor.Call("DHash.SlavePut", data, &x)
 	for err != nil {
-		self.lock.RLock()
-		self.node.RemoveNode(successor)
+		self.removeNode(successor)
 		successor = self.node.GetSuccessor(self.node.GetPosition())
-		self.lock.RUnlock()
 		err = successor.Call("DHash.SlavePut", data, &x)
 	}
 }
