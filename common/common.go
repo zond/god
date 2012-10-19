@@ -6,6 +6,10 @@ import (
 	"fmt"
 )
 
+const (
+	Redundancy = 3
+)
+
 func HexEncode(b []byte) (result string) {
 	encoded := hex.EncodeToString(b)
 	buffer := new(bytes.Buffer)
