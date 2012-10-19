@@ -206,5 +206,7 @@ func (self *Timer) Stop() {
 	self.changeState(started, stopped)
 }
 func (self *Timer) Start() {
-	go self.Run()
+	if self.changeState(created, started) {
+		go self.Run()
+	}
 }
