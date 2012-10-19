@@ -219,10 +219,10 @@ func (self *Node) pingPeriodically() {
 func (self *Node) Ping() {
 }
 func (self *Node) pingPredecessor() {
-	predecessor, _, _ := self.getRemotes(self.GetPosition())
+	predecessor := self.GetPredecessor()
 	var x int
 	if err := predecessor.Call("Node.Ping", 0, &x); err != nil {
-		self.RemoveNode(*predecessor)
+		self.RemoveNode(predecessor)
 		self.pingPredecessor()
 	}
 }
@@ -239,8 +239,8 @@ func (self *Node) notifySuccessor() {
 		self.RemoveNode(*successor)
 		self.notifySuccessor()
 	} else {
-		predecessor, _, _ := self.getRemotes(self.GetPosition())
-		newRing.Add(*predecessor)
+		predecessor := self.GetPredecessor()
+		newRing.Add(predecessor)
 		newRing.Clean(predecessor.Pos, self.position)
 		self.setRing(newRing)
 	}
@@ -270,6 +270,10 @@ func (self *Node) RemoveNode(remote common.Remote) {
 	self.GetRing(newRing)
 	newRing.Remove(remote)
 	self.setRing(newRing)
+}
+func (self *Node) GetPredecessor() common.Remote {
+	pred, _, _ := self.getRemotes(self.GetPosition())
+	return *pred
 }
 func (self *Node) GetSuccessor(key []byte) common.Remote {
 	predecessor, match, successor := self.getRemotes(key)
