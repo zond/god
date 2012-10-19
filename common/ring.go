@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"net/rpc"
 	"sort"
 )
 
@@ -40,6 +41,9 @@ func (self Remote) String() string {
 }
 func (self Remote) Call(service string, args, reply interface{}) error {
 	return Switch.Call(self.Addr, service, args, reply)
+}
+func (self Remote) Go(service string, args, reply interface{}) *rpc.Call {
+	return Switch.Go(self.Addr, service, args, reply)
 }
 
 type Ring struct {
