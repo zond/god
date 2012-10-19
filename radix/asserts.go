@@ -5,7 +5,7 @@ import (
 )
 
 func assertExistance(t *testing.T, tree *Tree, k, v string) {
-	if value, existed := tree.Get([]byte(k)); !existed || value != StringHasher(v) {
+	if value, _, existed := tree.Get([]byte(k)); !existed || value != StringHasher(v) {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), rip([]byte(k)), v, value, existed)
 	}
 }
@@ -43,7 +43,7 @@ func assertDelFailure(t *testing.T, tree *Tree, k string) {
 }
 
 func assertNonExistance(t *testing.T, tree *Tree, k string) {
-	if value, existed := tree.Get([]byte(k)); existed || value != nil {
+	if value, _, existed := tree.Get([]byte(k)); existed || value != nil {
 		t.Errorf("%v should not contain %v, got %v, %v", tree, k, value, existed)
 	}
 }

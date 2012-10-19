@@ -424,19 +424,19 @@ func TestTreeHash(t *testing.T) {
 func TestTreeNilKey(t *testing.T) {
 	tree := NewTree()
 	h := tree.Hash()
-	if value, existed := tree.Get(nil); value != nil || existed {
+	if value, _, existed := tree.Get(nil); value != nil || existed {
 		t.Errorf("should not exist")
 	}
 	if value, existed := tree.Put(nil, nil, 0); value != nil || existed {
 		t.Errorf("should not exist")
 	}
-	if value, existed := tree.Get(nil); value != nil || !existed {
+	if value, _, existed := tree.Get(nil); value != nil || !existed {
 		t.Errorf("should exist")
 	}
 	if value, existed := tree.Del(nil); value != nil || !existed {
 		t.Errorf("should exist")
 	}
-	if value, existed := tree.Get(nil); value != nil || existed {
+	if value, _, existed := tree.Get(nil); value != nil || existed {
 		t.Errorf("should not exist")
 	}
 	if bytes.Compare(h, tree.Hash()) != 0 {
@@ -482,10 +482,10 @@ func TestTreeBasicOps(t *testing.T) {
 	if old, existed := tree.Put([]byte("nil"), nil, 0); old != nil || existed {
 		t.Error("should not exist yet")
 	}
-	if value, existed := tree.Get(nil); !existed || value != StringHasher("nil") {
+	if value, _, existed := tree.Get(nil); !existed || value != StringHasher("nil") {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree, nil, "nil", value, existed)
 	}
-	if value, existed := tree.Get([]byte("nil")); !existed || value != nil {
+	if value, _, existed := tree.Get([]byte("nil")); !existed || value != nil {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree, "nil", nil, value, existed)
 	}
 	assertDelFailure(t, tree, "gua")
@@ -578,7 +578,7 @@ func benchTree(b *testing.B, n int) {
 		k = benchmarkTestKeys[i%len(benchmarkTestKeys)]
 		v = benchmarkTestValues[i%len(benchmarkTestValues)]
 		benchmarkTestTree.Put(k, v, 0)
-		j, existed := benchmarkTestTree.Get(k)
+		j, _, existed := benchmarkTestTree.Get(k)
 		if j != v {
 			b.Fatalf("%v should contain %v, but got %v, %v", benchmarkTestTree.Describe(), v, j, existed)
 		}
