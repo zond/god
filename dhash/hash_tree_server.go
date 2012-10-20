@@ -25,9 +25,9 @@ func (self *hashTreeServer) Finger(key []radix.Nibble, result *radix.Print) erro
 	*result = *((*radix.Tree)(self).Finger(key))
 	return nil
 }
-func (self *hashTreeServer) GetVersion(data HashTreeItem, result *HashTreeItem) error {
-	*result = data
-	if value, version, exists := (*radix.Tree)(self).GetVersion(data.Key); exists {
+func (self *hashTreeServer) GetVersion(key []radix.Nibble, result *HashTreeItem) error {
+	*result = HashTreeItem{Key: key}
+	if value, version, exists := (*radix.Tree)(self).GetVersion(key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Value, result.Version, result.Exists = []byte(byteHasher), version, exists
 		}
