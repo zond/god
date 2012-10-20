@@ -96,7 +96,7 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 			}
 		}
 		for index, subPrint := range sourcePrint.SubPrints {
-			if subPrint != nil && self.withinRightLimit(subPrint.Key) {
+			if subPrint.Key != nil && self.withinRightLimit(subPrint.Key) {
 				if destinationPrint == nil || !subPrint.equals(destinationPrint.SubPrints[index]) {
 					self.synchronize(
 						self.source.Finger(subPrint.Key),

@@ -75,11 +75,8 @@ type SubPrint struct {
 	Sum []byte
 }
 
-func (self *SubPrint) equals(other *SubPrint) bool {
-	if self == nil {
-		return other == nil
-	}
-	return other != nil && bytes.Compare(other.Sum, self.Sum) == 0
+func (self SubPrint) equals(other SubPrint) bool {
+	return bytes.Compare(other.Sum, self.Sum) == 0
 }
 
 type Print struct {
@@ -87,7 +84,7 @@ type Print struct {
 	ValueHash []byte
 	Version   int64
 	SubTree   bool
-	SubPrints []*SubPrint
+	SubPrints []SubPrint
 }
 
 func (self *Print) coveredBy(other *Print) bool {
@@ -103,10 +100,10 @@ func (self *Print) set(n *node) {
 	self.ValueHash = n.valueHash
 	self.Version = n.version
 	_, self.SubTree = n.value.(*Tree)
-	self.SubPrints = make([]*SubPrint, len(n.children))
+	self.SubPrints = make([]SubPrint, len(n.children))
 	for index, child := range n.children {
 		if child != nil {
-			self.SubPrints[index] = &SubPrint{
+			self.SubPrints[index] = SubPrint{
 				Key: append(append([]Nibble{}, self.Key...), child.segment...),
 				Sum: child.hash,
 			}
