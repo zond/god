@@ -8,10 +8,9 @@ import (
 	"net"
 	"net/rpc"
 	"sync"
+	"sync/atomic"
 	"time"
 )
-
-type nodeState int
 
 const (
 	created = iota
@@ -33,7 +32,7 @@ type Node struct {
 	addr              string
 	listener          *net.TCPListener
 	lock              *sync.RWMutex
-	state             nodeState
+	state             int32
 	exports           map[string]interface{}
 }
 
@@ -107,10 +106,8 @@ func (self *Node) Describe() string {
 	return string(buffer.Bytes())
 }
 
-func (self *Node) hasState(s nodeState) bool {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	return self.state == s
+func (self *Node) hasState(s int32) bool {
+	return atomic.LoadInt32(&self.state) == s
 }
 func (self *Node) setRing(newRing *common.Ring) {
 	self.lock.RLock()
@@ -124,14 +121,8 @@ func (self *Node) setRing(newRing *common.Ring) {
 	defer self.lock.Unlock()
 	self.ring = newRing
 }
-func (self *Node) changeState(old, neu nodeState) bool {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-	if self.state != old {
-		return false
-	}
-	self.state = neu
-	return true
+func (self *Node) changeState(old, neu int32) bool {
+	return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
 func (self *Node) getRemotes(pos []byte) (predecessor, match, successor *common.Remote) {
 	self.lock.RLock()

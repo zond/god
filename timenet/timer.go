@@ -4,14 +4,13 @@ import (
 	"math"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 const (
 	loglen = 10
 )
-
-type nodeState int
 
 const (
 	created = iota
@@ -29,7 +28,7 @@ type PeerProducer interface {
 
 type Timer struct {
 	lock          *sync.RWMutex
-	state         nodeState
+	state         int32
 	offset        int64
 	dilations     *dilations
 	peerProducer  PeerProducer
@@ -169,19 +168,11 @@ func (self *Timer) Sample() {
 		self.adjust(peerId, peerTime-myTime)
 	}
 }
-func (self *Timer) hasState(s nodeState) bool {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	return self.state == s
+func (self *Timer) hasState(s int32) bool {
+	return atomic.LoadInt32(&self.state) == s
 }
-func (self *Timer) changeState(old, neu nodeState) bool {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-	if self.state != old {
-		return false
-	}
-	self.state = neu
-	return true
+func (self *Timer) changeState(old, neu int32) bool {
+	return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
 func (self *Timer) sleep() {
 	err := self.Error()
