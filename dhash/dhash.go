@@ -37,6 +37,7 @@ func NewDHash(addr string) (result *DHash) {
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
 	result.node.Export("Timer", (*timerServer)(result.timer))
 	result.node.Export("DHash", (*dhashServer)(result))
+	result.node.Export("HashTree", (*hashTreeServer)(result.tree))
 	return
 }
 func (self *DHash) hasState(s int32) bool {
@@ -63,26 +64,12 @@ func (self *DHash) Start() (err error) {
 	go self.cleanPeriodically()
 	return
 }
-func (self *DHash) getSuccessor(pos []byte) common.Remote {
-	return self.node.GetSuccessor(pos)
-}
-func (self *DHash) getPredecessor() common.Remote {
-	return self.node.GetPredecessor()
-}
-func (self *DHash) getAddr() string {
-	return self.node.GetAddr()
-}
-func (self *DHash) removeNode(r common.Remote) {
-	self.node.RemoveNode(r)
-}
-func (self *DHash) getPosition() []byte {
-	return self.node.GetPosition()
-}
 func (self *DHash) sync() {
-	nextSuccessor := self.getSuccessor(self.getPosition())
+	nextSuccessor := self.node.GetSuccessor(self.node.GetPosition())
 	for i := 0; i < common.Redundancy; i++ {
-		//		radix.NewSync((*lockTree)(self.tree), (remoteTree)(nextSuccessor)).From(
-		nextSuccessor = self.getSuccessor(nextSuccessor.Pos)
+		//radix.NewSync(&lockTree{self.tree}, (remoteTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run()
+		//radix.NewSync((remoteTree)(nextSuccessor), &lockTree{self.tree}).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run()
+		nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
 	}
 }
 func (self *DHash) syncPeriodically() {
@@ -107,7 +94,7 @@ func (self *DHash) MustStart() *DHash {
 	return self
 }
 func (self *DHash) MustJoin(addr string) {
-	self.timer.Conform(remotePeer{Addr: addr})
+	self.timer.Conform(remotePeer(common.Remote{Addr: addr}))
 	self.node.MustJoin(addr)
 }
 func (self *DHash) Time() time.Time {
@@ -134,9 +121,9 @@ func (self *DHash) Get(data common.Item, result *common.Item) error {
 	return nil
 }
 func (self *DHash) Put(data common.Item) error {
-	successor := self.getSuccessor(data.Key)
+	successor := self.node.GetSuccessor(data.Key)
 	var x int
-	if successor.Addr != self.getAddr() {
+	if successor.Addr != self.node.GetAddr() {
 		return successor.Call("DHash.Put", data, &x)
 	}
 	if nodeCount := self.node.CountNodes(); nodeCount < common.Redundancy {
@@ -149,11 +136,11 @@ func (self *DHash) Put(data common.Item) error {
 }
 func (self *DHash) forwardPut(data common.Item) {
 	data.TTL--
-	successor := self.getSuccessor(self.getPosition())
+	successor := self.node.GetSuccessor(self.node.GetPosition())
 	var x int
 	err := successor.Call("DHash.SlavePut", data, &x)
 	for err != nil {
-		self.removeNode(successor)
+		self.node.RemoveNode(successor)
 		successor = self.node.GetSuccessor(self.node.GetPosition())
 		err = successor.Call("DHash.SlavePut", data, &x)
 	}
