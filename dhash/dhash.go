@@ -69,7 +69,6 @@ func (self *DHash) sync() {
 	for i := 0; i < common.Redundancy; i++ {
 		radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run()
 		radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run()
-		fmt.Println("synchronized with", nextSuccessor)
 		nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
 	}
 }
