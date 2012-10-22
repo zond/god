@@ -34,12 +34,12 @@ func (self *hashTreeServer) GetVersion(key []radix.Nibble, result *HashTreeItem)
 	}
 	return nil
 }
-func (self *hashTreeServer) PutVersion(data HashTreeItem, x *int) error {
-	(*radix.Tree)(self).PutVersion(data.Key, radix.ByteHasher(data.Value), data.Expected, data.Version)
+func (self *hashTreeServer) PutVersion(data HashTreeItem, changed *bool) error {
+	*changed = (*radix.Tree)(self).PutVersion(data.Key, radix.ByteHasher(data.Value), data.Expected, data.Version)
 	return nil
 }
-func (self *hashTreeServer) DelVersion(data HashTreeItem, x *int) error {
-	(*radix.Tree)(self).DelVersion(data.Key, data.Expected)
+func (self *hashTreeServer) DelVersion(data HashTreeItem, changed *bool) error {
+	*changed = (*radix.Tree)(self).DelVersion(data.Key, data.Expected)
 	return nil
 }
 func (self *hashTreeServer) SubFinger(data HashTreeItem, result *radix.Print) error {
@@ -55,11 +55,11 @@ func (self *hashTreeServer) SubGetVersion(data HashTreeItem, result *HashTreeIte
 	}
 	return nil
 }
-func (self *hashTreeServer) SubPutVersion(data HashTreeItem, x *int) error {
-	(*radix.Tree)(self).SubPutVersion(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Expected, data.SubExpected, data.SubVersion)
+func (self *hashTreeServer) SubPutVersion(data HashTreeItem, changed *bool) error {
+	*changed = (*radix.Tree)(self).SubPutVersion(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Expected, data.SubExpected, data.SubVersion)
 	return nil
 }
-func (self *hashTreeServer) SubDelVersion(data HashTreeItem, x *int) error {
-	(*radix.Tree)(self).SubDelVersion(data.Key, data.SubKey, data.Expected, data.SubExpected)
+func (self *hashTreeServer) SubDelVersion(data HashTreeItem, changed *bool) error {
+	*changed = (*radix.Tree)(self).SubDelVersion(data.Key, data.SubKey, data.Expected, data.SubExpected)
 	return nil
 }

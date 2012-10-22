@@ -3,6 +3,7 @@ package dhash
 import (
 	"../common"
 	"../discord"
+	"../murmur"
 	"../radix"
 	"../timenet"
 	"fmt"
@@ -65,11 +66,16 @@ func (self *DHash) Start() (err error) {
 	return
 }
 func (self *DHash) sync() {
+	fetched := 0
+	distributed := 0
 	nextSuccessor := self.node.GetSuccessor(self.node.GetPosition())
-	for i := 0; i < common.Redundancy; i++ {
-		radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run()
-		radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run()
+	for i := 0; i < self.node.Redundancy(); i++ {
+		distributed += radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
+		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
 		nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
+	}
+	if fetched != 0 || distributed != 0 {
+		fmt.Println(self, "fetched", fetched, "keys and distributed", distributed, "keys")
 	}
 }
 func (self *DHash) syncPeriodically() {
@@ -84,8 +90,58 @@ func (self *DHash) cleanPeriodically() {
 		time.Sleep(cleanInterval)
 	}
 }
+func (self *DHash) circularNext(key []byte) (nextKey []byte) {
+	var existed bool
+	if nextKey, _, _, existed = self.tree.Next(key); existed {
+		return
+	}
+	nextKey = make([]byte, murmur.Size)
+	if _, _, existed = self.tree.Get(nextKey); existed {
+		return
+	}
+	nextKey, _, _, existed = self.tree.Next(nextKey)
+	return
+}
+func (self *DHash) owner(key []byte) (owner common.Remote, shouldKeep bool) {
+	owner = self.node.GetSuccessor(key)
+	if owner.Addr == self.node.GetAddr() {
+		shouldKeep = true
+		return
+	}
+	successor := owner
+	key = owner.Pos
+	for i := 1; i < self.node.Redundancy(); i++ {
+		if successor = self.node.GetSuccessor(key); successor.Addr == self.node.GetAddr() {
+			shouldKeep = true
+			return
+		}
+		key = successor.Pos
+	}
+	return
+}
 func (self *DHash) clean() {
-	fmt.Println("implement clean!")
+	deleted := 0
+	put := 0
+	nextKey := self.circularNext(self.node.GetPosition())
+	if realSuccessor, shouldKeep := self.owner(nextKey); !shouldKeep {
+		fmt.Println(self, "found", nextKey, "belonging to", realSuccessor)
+		nextSuccessor := realSuccessor
+		var sync *radix.Sync
+		redundancyNow := self.node.Redundancy()
+		for i := 0; i < redundancyNow; i++ {
+			sync = radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(nextKey).To(realSuccessor.Pos)
+			if i == redundancyNow-1 {
+				sync.Destroy()
+			}
+			sync.Run()
+			deleted += sync.DelCount()
+			put += sync.PutCount()
+			nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
+		}
+	}
+	if deleted != 0 || put != 0 {
+		fmt.Println(self, "relocated", put, "keys while cleaning out", deleted, "keys")
+	}
 }
 func (self *DHash) MustStart() *DHash {
 	if err := self.Start(); err != nil {
@@ -126,11 +182,7 @@ func (self *DHash) Put(data common.Item) error {
 	if successor.Addr != self.node.GetAddr() {
 		return successor.Call("DHash.Put", data, &x)
 	}
-	if nodeCount := self.node.CountNodes(); nodeCount < common.Redundancy {
-		data.TTL = nodeCount
-	} else {
-		data.TTL = common.Redundancy
-	}
+	data.TTL = self.node.Redundancy()
 	data.Timestamp = self.timer.ContinuousTime()
 	return self.put(data)
 }

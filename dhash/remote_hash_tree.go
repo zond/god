@@ -22,23 +22,23 @@ func (self remoteHashTree) GetVersion(key []radix.Nibble) (value radix.Hasher, v
 	value, version, existed = radix.ByteHasher(result.Value), result.Version, result.Exists
 	return
 }
-func (self remoteHashTree) PutVersion(key []radix.Nibble, value radix.Hasher, expected, version int64) {
+func (self remoteHashTree) PutVersion(key []radix.Nibble, value radix.Hasher, expected, version int64) (changed bool) {
 	data := HashTreeItem{
 		Key:      key,
 		Value:    []byte(value.(radix.ByteHasher)),
 		Expected: expected,
 		Version:  version,
 	}
-	var x int
-	common.Remote(self).Call("HashTree.PutVersion", data, &x)
+	common.Remote(self).Call("HashTree.PutVersion", data, &changed)
+	return
 }
-func (self remoteHashTree) DelVersion(key []radix.Nibble, expected int64) {
+func (self remoteHashTree) DelVersion(key []radix.Nibble, expected int64) (changed bool) {
 	data := HashTreeItem{
 		Key:      key,
 		Expected: expected,
 	}
-	var x int
-	common.Remote(self).Call("HashTree.DelVersion", data, &x)
+	common.Remote(self).Call("HashTree.DelVersion", data, &changed)
+	return
 }
 func (self remoteHashTree) SubFinger(key, subKey []radix.Nibble, expected int64) (result *radix.Print) {
 	data := HashTreeItem{
@@ -60,7 +60,7 @@ func (self remoteHashTree) SubGetVersion(key, subKey []radix.Nibble, expected in
 	value, version, existed = radix.ByteHasher(data.Value), data.SubVersion, data.Exists
 	return
 }
-func (self remoteHashTree) SubPutVersion(key, subKey []radix.Nibble, value radix.Hasher, expected, subExpected, subVersion int64) {
+func (self remoteHashTree) SubPutVersion(key, subKey []radix.Nibble, value radix.Hasher, expected, subExpected, subVersion int64) (changed bool) {
 	data := HashTreeItem{
 		Key:         key,
 		SubKey:      subKey,
@@ -69,16 +69,16 @@ func (self remoteHashTree) SubPutVersion(key, subKey []radix.Nibble, value radix
 		SubExpected: subExpected,
 		SubVersion:  subVersion,
 	}
-	var x int
-	common.Remote(self).Call("HashTree.SubPutVersion", data, &x)
+	common.Remote(self).Call("HashTree.SubPutVersion", data, &changed)
+	return
 }
-func (self remoteHashTree) SubDelVersion(key, subKey []radix.Nibble, expected, subExpected int64) {
+func (self remoteHashTree) SubDelVersion(key, subKey []radix.Nibble, expected, subExpected int64) (changed bool) {
 	data := HashTreeItem{
 		Key:         key,
 		SubKey:      subKey,
 		Expected:    expected,
 		SubExpected: subExpected,
 	}
-	var x int
-	common.Remote(self).Call("HashTree.SubDelVersion", data, &x)
+	common.Remote(self).Call("HashTree.SubDelVersion", data, &changed)
+	return
 }
