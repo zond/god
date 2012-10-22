@@ -92,6 +92,12 @@ func (self *Ring) Add(remote Remote) {
 		self.Nodes = append(self.Nodes, remote)
 	}
 }
+func (self *Ring) Redundancy() int {
+	if len(self.Nodes) < Redundancy {
+		return len(self.Nodes)
+	}
+	return Redundancy
+}
 func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 	beforeIndex, atIndex, afterIndex := self.indices(pos)
 	before = &self.Nodes[beforeIndex]
@@ -107,6 +113,9 @@ indices searches the ring for a position, and returns the last index before the 
 the index where the positon can be found (or -1) and the first index after the position.
 */
 func (self *Ring) indices(pos []byte) (before, at, after int) {
+	if len(self.Nodes) == 0 {
+		return -1, -1, -1
+	}
 	// Find the first position in self.Nodes where the position 
 	// is greather than or equal to the searched for position.
 	i := sort.Search(len(self.Nodes), func(i int) bool {
