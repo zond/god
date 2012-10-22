@@ -129,7 +129,7 @@ func (self *node) get(segment []Nibble) (value Hasher, version int64, existed bo
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) nextChild(prefix, segment []Nibble) (nextNibble []Nibble, nextValue Hasher, existed bool) {
+func (self *node) nextChild(prefix, segment []Nibble) (nextNibble []Nibble, nextValue Hasher, nextVersion int64, existed bool) {
 	recursePrefix := make([]Nibble, len(prefix)+len(self.segment))
 	copy(recursePrefix, prefix)
 	copy(recursePrefix[len(prefix):], self.segment)
@@ -142,13 +142,13 @@ func (self *node) nextChild(prefix, segment []Nibble) (nextNibble []Nibble, next
 	var child *node
 	for i := firstChild; i < len(self.children); i++ {
 		child = self.children[i]
-		if nextNibble, nextValue, existed = child.next(recursePrefix, restSegment); existed {
+		if nextNibble, nextValue, nextVersion, existed = child.next(recursePrefix, restSegment); existed {
 			return
 		}
 	}
 	return
 }
-func (self *node) next(prefix, segment []Nibble) (nextNibble []Nibble, nextValue Hasher, existed bool) {
+func (self *node) next(prefix, segment []Nibble) (nextNibble []Nibble, nextValue Hasher, nextVersion int64, existed bool) {
 	if self == nil {
 		return
 	}
@@ -161,9 +161,7 @@ func (self *node) next(prefix, segment []Nibble) (nextNibble []Nibble, nextValue
 			return self.nextChild(prefix, nil)
 		} else if beyond_segment {
 			if self.valueHash != nil {
-				nextNibble = append(prefix, self.segment...)
-				nextValue = self.value
-				existed = true
+				nextNibble, nextValue, nextVersion, existed = append(prefix, self.segment...), self.value, self.version, true
 				return
 			} else {
 				return self.nextChild(prefix, nil)
@@ -175,9 +173,7 @@ func (self *node) next(prefix, segment []Nibble) (nextNibble []Nibble, nextValue
 				return
 			} else {
 				if self.valueHash != nil {
-					nextNibble = append(prefix, self.segment...)
-					nextValue = self.value
-					existed = true
+					nextNibble, nextValue, nextVersion, existed = append(prefix, self.segment...), self.value, self.version, true
 					return
 				} else {
 					return self.nextChild(prefix, nil)
