@@ -49,16 +49,17 @@ func (self *Conn) Get(key []byte) (value []byte, existed bool) {
 	data := common.Item{
 		Key: key,
 	}
-	futures := make([]*rpc.Call, common.Redundancy)
-	results := make([]*common.Item, common.Redundancy)
+	currentRedundancy := self.ring.Redundancy()
+	futures := make([]*rpc.Call, currentRedundancy)
+	results := make([]*common.Item, currentRedundancy)
 	nextKey := key
 	var nextSuccessor *common.Remote
-	for i := 0; i < common.Redundancy; i++ {
+	for i := 0; i < currentRedundancy; i++ {
 		_, _, nextSuccessor = self.ring.Remotes(nextKey)
 		result := &common.Item{}
 		results[i] = result
 		futures[i] = nextSuccessor.Go("DHash.Get", data, result)
-		_, _, nextSuccessor = self.ring.Remotes(nextSuccessor.Pos)
+		nextKey = nextSuccessor.Pos
 	}
 	var result *common.Item
 	for index, future := range futures {
