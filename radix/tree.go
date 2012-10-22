@@ -172,20 +172,22 @@ func (self *Tree) GetVersion(key []Nibble) (value Hasher, version int64, existed
 	value, version, existed = self.root.get(key)
 	return
 }
-func (self *Tree) putVersion(key []Nibble, value Hasher, expected, version int64) {
+func (self *Tree) putVersion(key []Nibble, value Hasher, expected, version int64) bool {
 	if _, current, existed := self.root.get(key); !existed || current == expected {
 		self.root, _, _, existed = self.root.insert(nil, newNode(key, value, version, true))
 		if !existed {
 			self.size++
 		}
+		return true
 	}
+	return false
 }
-func (self *Tree) PutVersion(key []Nibble, value Hasher, expected, version int64) {
+func (self *Tree) PutVersion(key []Nibble, value Hasher, expected, version int64) bool {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	self.putVersion(key, value, expected, version)
+	return self.putVersion(key, value, expected, version)
 }
-func (self *Tree) DelVersion(key []Nibble, expected int64) {
+func (self *Tree) DelVersion(key []Nibble, expected int64) bool {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	if _, current, existed := self.root.get(key); existed && current == expected {
@@ -194,7 +196,9 @@ func (self *Tree) DelVersion(key []Nibble, expected int64) {
 		if existed {
 			self.size--
 		}
+		return true
 	}
+	return false
 }
 
 func (self *Tree) SubFinger(key, subKey []Nibble, expected int64) (result *Print) {
@@ -213,7 +217,7 @@ func (self *Tree) SubGetVersion(key, subKey []Nibble, expected int64) (value Has
 	}
 	return
 }
-func (self *Tree) SubPutVersion(key, subKey []Nibble, value Hasher, expected, subExpected, subVersion int64) {
+func (self *Tree) SubPutVersion(key, subKey []Nibble, value Hasher, expected, subExpected, subVersion int64) bool {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	if subTree, subTreeVersion := self.getSubTree(key); subTree == nil || subTreeVersion == expected {
@@ -223,10 +227,11 @@ func (self *Tree) SubPutVersion(key, subKey []Nibble, value Hasher, expected, su
 			subTree.PutVersion(subKey, value, subExpected, subVersion)
 		}
 		self.putVersion(key, subTree, expected, expected)
+		return true
 	}
-	return
+	return false
 }
-func (self *Tree) SubDelVersion(key, subKey []Nibble, expected, subExpected int64) {
+func (self *Tree) SubDelVersion(key, subKey []Nibble, expected, subExpected int64) bool {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	if subTree, subTreeVersion := self.getSubTree(key); subTree != nil && subTreeVersion == expected {
@@ -236,5 +241,7 @@ func (self *Tree) SubDelVersion(key, subKey []Nibble, expected, subExpected int6
 		} else {
 			self.putVersion(key, subTree, expected, expected)
 		}
+		return true
 	}
+	return false
 }
