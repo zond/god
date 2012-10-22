@@ -6,7 +6,7 @@ A Go database
 # TODO
 
 * Sync/clean
-** Manual testing
+ * Manual testing
 ** Automated tests
 * Sub trees
 ** Functionality
