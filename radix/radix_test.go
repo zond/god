@@ -444,6 +444,21 @@ func TestTreeNilKey(t *testing.T) {
 	}
 }
 
+func TestTreeNext(t *testing.T) {
+	tree := NewTree()
+	for i := 100; i < 200; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	for i := 100; i < 199; i++ {
+		if key, value, existed := tree.Next([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i+1) || value != StringHasher(fmt.Sprint(i+1)) || !existed {
+			t.Errorf("%v, %v, %v should be %v, %v, %v", string(key), value, existed, fmt.Sprint(i+1), StringHasher(fmt.Sprint(i+1)), true)
+		}
+	}
+	if key, value, existed := tree.Next([]byte("199")); existed {
+		t.Errorf("%v, %v, %v should not exist!", key, value, existed)
+	}
+}
+
 func TestTreeBasicOps(t *testing.T) {
 	tree := NewTree()
 	assertNewPut(t, tree, "apple", "stonefruit")
