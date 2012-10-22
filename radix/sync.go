@@ -13,13 +13,13 @@ type HashTree interface {
 
 	Finger(key []Nibble) *Print
 	GetVersion(key []Nibble) (value Hasher, version int64, existed bool)
-	PutVersion(key []Nibble, value Hasher, expected, version int64)
-	DelVersion(key []Nibble, expected int64)
+	PutVersion(key []Nibble, value Hasher, expected, version int64) bool
+	DelVersion(key []Nibble, expected int64) bool
 
 	SubFinger(key, subKey []Nibble, expected int64) (result *Print)
 	SubGetVersion(key, subKey []Nibble, expected int64) (value Hasher, version int64, existed bool)
-	SubPutVersion(key, subKey []Nibble, value Hasher, expected, subExpected, subVersion int64)
-	SubDelVersion(key, subKey []Nibble, expected, subExpected int64)
+	SubPutVersion(key, subKey []Nibble, value Hasher, expected, subExpected, subVersion int64) bool
+	SubDelVersion(key, subKey []Nibble, expected, subExpected int64) bool
 }
 
 type Sync struct {
@@ -28,6 +28,8 @@ type Sync struct {
 	from        []Nibble
 	to          []Nibble
 	destructive bool
+	putCount    int
+	delCount    int
 }
 
 func NewSync(source, destination HashTree) *Sync {
@@ -56,12 +58,17 @@ func (self *Sync) Destroy() *Sync {
 	self.destructive = true
 	return self
 }
-func (self *Sync) Run() bool {
-	if bytes.Compare(self.source.Hash(), self.destination.Hash()) == 0 {
-		return false
+func (self *Sync) PutCount() int {
+	return self.putCount
+}
+func (self *Sync) DelCount() int {
+	return self.delCount
+}
+func (self *Sync) Run() *Sync {
+	if bytes.Compare(self.source.Hash(), self.destination.Hash()) != 0 {
+		self.synchronize(self.source.Finger(nil), self.destination.Finger(nil))
 	}
-	self.synchronize(self.source.Finger(nil), self.destination.Finger(nil))
-	return true
+	return self
 }
 func (self *Sync) withinLimits(key []Nibble) bool {
 	if self.from == nil || bytes.Compare(toBytes(key), toBytes(self.from)) > -1 {
@@ -81,18 +88,36 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint != nil {
 		if sourcePrint.ValueHash != nil && self.withinLimits(sourcePrint.Key) {
 			// If there is a node at source	and it is within our limits	
+			var subPut int
 			if !sourcePrint.coveredBy(destinationPrint) {
 				// If the key at destination is missing or wrong				
 				if sourcePrint.SubTree {
-					NewSync(&subTreeWrapper{self.source, sourcePrint.Key, sourcePrint.version()}, &subTreeWrapper{self.destination, sourcePrint.Key, destinationPrint.version()}).Run()
+					subPut += NewSync(&subTreeWrapper{
+						self.source,
+						sourcePrint.Key,
+						sourcePrint.version(),
+					}, &subTreeWrapper{
+						self.destination,
+						sourcePrint.Key,
+						destinationPrint.version(),
+					}).Run().PutCount()
+					self.putCount += subPut
 				} else {
 					if value, version, existed := self.source.GetVersion(sourcePrint.Key); existed && version == sourcePrint.version() {
-						self.destination.PutVersion(sourcePrint.Key, value, destinationPrint.version(), sourcePrint.version())
+						if self.destination.PutVersion(sourcePrint.Key, value, destinationPrint.version(), sourcePrint.version()) {
+							self.putCount++
+						}
 					}
 				}
 			}
 			if self.destructive && sourcePrint.ValueHash != nil {
-				self.source.DelVersion(sourcePrint.Key, sourcePrint.version())
+				if self.source.DelVersion(sourcePrint.Key, sourcePrint.version()) {
+					if sourcePrint.SubTree {
+						self.delCount += subPut
+					} else {
+						self.delCount++
+					}
+				}
 			}
 		}
 		for index, subPrint := range sourcePrint.SubPrints {
