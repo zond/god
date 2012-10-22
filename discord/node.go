@@ -77,6 +77,11 @@ func (self *Node) GetNodes() (result []common.Remote) {
 	copy(result, self.ring.Nodes)
 	return
 }
+func (self *Node) Redundancy() int {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.ring.Redundancy()
+}
 func (self *Node) CountNodes() (result int) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
