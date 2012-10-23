@@ -85,4 +85,10 @@ func TestRingClean(t *testing.T) {
 	if !reflect.DeepEqual(r.Nodes, cmp) {
 		t.Error(r.Nodes, "should ==", cmp)
 	}
+	r, cmp = buildRing()
+	r.Clean([]byte{3}, []byte{3})
+	cmp = cmp[3:4]
+	if !reflect.DeepEqual(r.Nodes, cmp) {
+		t.Error(r.Nodes, "should ==", cmp)
+	}
 }
