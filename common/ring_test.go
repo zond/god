@@ -30,9 +30,9 @@ func TestRingIndices(t *testing.T) {
 	assertIndices(t, r, 7, 6, 7, 0)
 }
 
-func buildRing() (*Ring, []Remote) {
+func buildRing() (*Ring, Remotes) {
 	r := NewRing()
-	var cmp []Remote
+	var cmp Remotes
 	r.Add(Remote{[]byte{0}, "a"})
 	cmp = append(cmp, Remote{[]byte{0}, "a"})
 	r.Add(Remote{[]byte{1}, "b"})
