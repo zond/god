@@ -18,6 +18,13 @@ func (self Remotes) Equal(other []Remote) bool {
 	}
 	return true
 }
+func (self Remotes) Describe() string {
+	buffer := new(bytes.Buffer)
+	for index, node := range self {
+		fmt.Fprintf(buffer, "%v: %v\n", index, node)
+	}
+	return string(buffer.Bytes())
+}
 
 type Remote struct {
 	Pos  []byte

@@ -44,11 +44,7 @@ func (self *Ring) Validate() {
 func (self *Ring) Describe() string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	buffer := new(bytes.Buffer)
-	for index, node := range self.nodes {
-		fmt.Fprintf(buffer, "%v: %v\n", index, node)
-	}
-	return string(buffer.Bytes())
+	return self.nodes.Describe()
 }
 func (self *Ring) SetNodes(nodes Remotes) {
 	self.lock.Lock()
