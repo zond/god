@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func assertIndices(t *testing.T, r *ring, pos, before, at, after byte) {
+func assertIndices(t *testing.T, r *Ring, pos, before, at, after byte) {
 	a, b, c := r.Remotes([]byte{pos})
 	if (a == nil && before != 255) || (a != nil && a.Pos[0] != before) {
 		t.Errorf("%v.indices([]byte{%v}) should be %v,%v,%v but was %v,%v,%v", r, pos, before, at, after, a, b, c)
@@ -30,7 +30,7 @@ func TestRingIndices(t *testing.T) {
 	assertIndices(t, r, 7, 6, 7, 0)
 }
 
-func buildRing() (*ring, []Remote) {
+func buildRing() (*Ring, []Remote) {
 	r := NewRing()
 	var cmp []Remote
 	r.Add(Remote{[]byte{0}, "a"})

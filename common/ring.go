@@ -10,33 +10,33 @@ import (
 )
 
 
-type ring struct {
+type Ring struct {
 	nodes []Remote
 	lock *sync.RWMutex
 }
-func NewRing() *ring {
-	return &ring{
+func NewRing() *Ring {
+	return &Ring{
 		lock: new(sync.RWMutex),
 	}
 }
-func NewRingNodes(nodes []Remote) *ring {
-	return &ring{
+func NewRingNodes(nodes []Remote) *Ring {
+	return &Ring{
 		lock: new(sync.RWMutex),
 		nodes: nodes,
 	}
 }
 
-func (self *ring) Validate() {
+func (self *Ring) Validate() {
 	clone := self.Clone()
 	seen := make(map[string]bool)
 	for _, node := range clone.nodes {
 		if _, ok := seen[node.Addr]; ok {
-			panic(fmt.Errorf("duplicate node in ring! %v", clone.Describe()))
+			panic(fmt.Errorf("duplicate node in Ring! %v", clone.Describe()))
 		}
 		seen[node.Addr] = true
 	}
 }
-func (self *ring) Describe() string {
+func (self *Ring) Describe() string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	buffer := new(bytes.Buffer)
@@ -45,19 +45,19 @@ func (self *ring) Describe() string {
 	}
 	return string(buffer.Bytes())
 }
-func (self *ring) Clone() *ring {
+func (self *Ring) Clone() *Ring {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	nodes := make([]Remote, len(self.nodes))
 	copy(nodes, self.nodes)
 	return NewRingNodes(nodes)
 }
-func (self *ring) Size() int {
+func (self *Ring) Size() int {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return len(self.nodes)
 }
-func (self *ring) Equal(other *ring) bool {
+func (self *Ring) Equal(other *Ring) bool {
 	if self == other {
 		return true
 	}
@@ -74,7 +74,7 @@ func (self *ring) Equal(other *ring) bool {
 	}
 	return true
 }
-func (self *ring) Add(remote Remote) {
+func (self *Ring) Add(remote Remote) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	for index, current := range self.nodes {
@@ -94,7 +94,7 @@ func (self *ring) Add(remote Remote) {
 		self.nodes = append(self.nodes, remote)
 	}
 }
-func (self *ring) Redundancy() int {
+func (self *Ring) Redundancy() int {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if len(self.nodes) < Redundancy {
@@ -102,7 +102,7 @@ func (self *ring) Redundancy() int {
 	}
 	return Redundancy
 }
-func (self *ring) Remotes(pos []byte) (before, at, after *Remote) {
+func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	beforeIndex, atIndex, afterIndex := self.indices(pos)
@@ -119,10 +119,10 @@ func (self *ring) Remotes(pos []byte) (before, at, after *Remote) {
 }
 
 /*
-indices searches the ring for a position, and returns the last index before the position,
+indices searches the Ring for a position, and returns the last index before the position,
 the index where the positon can be found (or -1) and the first index after the position.
 */
-func (self *ring) indices(pos []byte) (before, at, after int) {
+func (self *Ring) indices(pos []byte) (before, at, after int) {
 	if len(self.nodes) == 0 {
 		return -1, -1, -1
 	}
@@ -168,7 +168,7 @@ func (self *ring) indices(pos []byte) (before, at, after int) {
 	}
 	return
 }
-func (self *ring) GetSlot() []byte {
+func (self *Ring) GetSlot() []byte {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	biggestSpace := new(big.Int)
@@ -191,19 +191,19 @@ func (self *ring) GetSlot() []byte {
 	}
 	return new(big.Int).Add(new(big.Int).SetBytes(self.nodes[biggestSpaceIndex].Pos), new(big.Int).Div(biggestSpace, big.NewInt(2))).Bytes()
 }
-func (self *ring) Remove(remote Remote) {
+func (self *Ring) Remove(remote Remote) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	for index, current := range self.nodes {
 		if current.Addr == remote.Addr {
 			if len(self.nodes) == 1 {
-				panic("Why would you want to remove the last Node in the ring? Inconceivable!")
+				panic("Why would you want to remove the last Node in the Ring? Inconceivable!")
 			}
 			self.nodes = append(self.nodes[:index], self.nodes[index+1:]...)
 		}
 	}
 }
-func (self *ring) Clean(predecessor, successor []byte) {
+func (self *Ring) Clean(predecessor, successor []byte) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	_, _, from := self.indices(predecessor)
