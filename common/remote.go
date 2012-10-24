@@ -6,27 +6,28 @@ import (
 	"net/rpc"
 )
 
+type Remotes []Remote
+func (self Remotes) Equal(other []Remote) bool {
+	if len(self) != len(other) {
+		return false
+	}
+	for i, r := range self {
+		if !r.Equal(other[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 type Remote struct {
 	Pos  []byte
 	Addr string
 }
 
-func (self *Remote) EqualP(other *Remote) bool {
-	if self == nil {
-		if other == nil {
-			return true
-		}
-		return false
-	}
-	if other == nil {
-		return false
-	}
-	return (*self).Equal(*other)
-}
 func (self Remote) Equal(other Remote) bool {
 	return self.Addr == other.Addr && bytes.Compare(self.Pos, other.Pos) == 0
 }
-func (self Remote) less(other Remote) bool {
+func (self Remote) Less(other Remote) bool {
 	val := bytes.Compare(self.Pos, other.Pos)
 	if val == 0 {
 		val = bytes.Compare([]byte(self.Addr), []byte(other.Addr))
