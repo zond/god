@@ -11,7 +11,7 @@ import (
 
 
 type Ring struct {
-	nodes []Remote
+	nodes Remotes
 	lock *sync.RWMutex
 }
 func NewRing() *Ring {
@@ -19,7 +19,7 @@ func NewRing() *Ring {
 		lock: new(sync.RWMutex),
 	}
 }
-func NewRingNodes(nodes []Remote) *Ring {
+func NewRingNodes(nodes Remotes) *Ring {
 	return &Ring{
 		lock: new(sync.RWMutex),
 		nodes: nodes,
@@ -29,10 +29,15 @@ func NewRingNodes(nodes []Remote) *Ring {
 func (self *Ring) Validate() {
 	clone := self.Clone()
 	seen := make(map[string]bool)
+	var last *Remote
 	for _, node := range clone.nodes {
 		if _, ok := seen[node.Addr]; ok {
-			panic(fmt.Errorf("duplicate node in Ring! %v", clone.Describe()))
+			panic(fmt.Errorf("Duplicate node in Ring! %v", clone.Describe()))
 		}
+		if last != nil && node.Less(*last) {
+			panic(fmt.Errorf("Badly ordered Ring! %v", clone.Describe()))
+		}
+		last = &node
 		seen[node.Addr] = true
 	}
 }
@@ -45,12 +50,21 @@ func (self *Ring) Describe() string {
 	}
 	return string(buffer.Bytes())
 }
-func (self *Ring) Clone() *Ring {
+func (self *Ring) SetNodes(nodes Remotes) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.nodes = make(Remotes, len(nodes))
+	copy(self.nodes, nodes)
+}
+func (self *Ring) Nodes() (nodes Remotes) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	nodes := make([]Remote, len(self.nodes))
+	nodes = make(Remotes, len(self.nodes))
 	copy(nodes, self.nodes)
-	return NewRingNodes(nodes)
+	return
+}
+func (self *Ring) Clone() *Ring {
+	return NewRingNodes(self.Nodes())
 }
 func (self *Ring) Size() int {
 	self.lock.RLock()
@@ -58,21 +72,7 @@ func (self *Ring) Size() int {
 	return len(self.nodes)
 }
 func (self *Ring) Equal(other *Ring) bool {
-	if self == other {
-		return true
-	}
-	clone := other.Clone()
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	if len(self.nodes) != len(clone.nodes) {
-		return false
-	}
-	for index, myNode := range self.nodes {
-		if !myNode.Equal(clone.nodes[index]) {
-			return false
-		}
-	}
-	return true
+	return self.Nodes().Equal(other.Nodes())
 }
 func (self *Ring) Add(remote Remote) {
 	self.lock.Lock()
@@ -86,10 +86,10 @@ func (self *Ring) Add(remote Remote) {
 		}
 	}
 	i := sort.Search(len(self.nodes), func(i int) bool {
-		return remote.less(self.nodes[i])
+		return remote.Less(self.nodes[i])
 	})
 	if i < len(self.nodes) {
-		self.nodes = append(self.nodes[:i], append([]Remote{remote}, self.nodes[i:]...)...)
+		self.nodes = append(self.nodes[:i], append(Remotes{remote}, self.nodes[i:]...)...)
 	} else {
 		self.nodes = append(self.nodes, remote)
 	}
