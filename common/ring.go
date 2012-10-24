@@ -4,107 +4,117 @@ import (
 	"../murmur"
 	"bytes"
 	"fmt"
+	"sync"
 	"math/big"
-	"net/rpc"
 	"sort"
 )
 
-type Remote struct {
-	Pos  []byte
-	Addr string
+
+type ring struct {
+	nodes []Remote
+	lock *sync.RWMutex
+}
+func NewRing() *ring {
+	return &ring{
+		lock: new(sync.RWMutex),
+	}
+}
+func NewRingNodes(nodes []Remote) *ring {
+	return &ring{
+		lock: new(sync.RWMutex),
+		nodes: nodes,
+	}
 }
 
-func (self *Remote) EqualP(other *Remote) bool {
-	if self == nil {
-		if other == nil {
-			return true
+func (self *ring) Validate() {
+	clone := self.Clone()
+	seen := make(map[string]bool)
+	for _, node := range clone.nodes {
+		if _, ok := seen[node.Addr]; ok {
+			panic(fmt.Errorf("duplicate node in ring! %v", clone.Describe()))
 		}
-		return false
+		seen[node.Addr] = true
 	}
-	if other == nil {
-		return false
-	}
-	return (*self).Equal(*other)
 }
-func (self Remote) Equal(other Remote) bool {
-	return self.Addr == other.Addr && bytes.Compare(self.Pos, other.Pos) == 0
-}
-func (self Remote) less(other Remote) bool {
-	val := bytes.Compare(self.Pos, other.Pos)
-	if val == 0 {
-		val = bytes.Compare([]byte(self.Addr), []byte(other.Addr))
-	}
-	return val < 0
-}
-func (self Remote) String() string {
-	return fmt.Sprintf("[%v@%v]", HexEncode(self.Pos), self.Addr)
-}
-func (self Remote) Call(service string, args, reply interface{}) error {
-	return Switch.Call(self.Addr, service, args, reply)
-}
-func (self Remote) Go(service string, args, reply interface{}) *rpc.Call {
-	return Switch.Go(self.Addr, service, args, reply)
-}
-
-type Ring struct {
-	Nodes []Remote
-}
-
-func (self *Ring) Describe() string {
+func (self *ring) Describe() string {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	buffer := new(bytes.Buffer)
-	for index, node := range self.Nodes {
+	for index, node := range self.nodes {
 		fmt.Fprintf(buffer, "%v: %v\n", index, node)
 	}
 	return string(buffer.Bytes())
 }
-func (self *Ring) Size() int {
-	return len(self.Nodes)
+func (self *ring) Clone() *ring {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	nodes := make([]Remote, len(self.nodes))
+	copy(nodes, self.nodes)
+	return NewRingNodes(nodes)
 }
-func (self *Ring) Equal(other *Ring) bool {
+func (self *ring) Size() int {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return len(self.nodes)
+}
+func (self *ring) Equal(other *ring) bool {
 	if self == other {
 		return true
 	}
-	if len(self.Nodes) != len(other.Nodes) {
+	clone := other.Clone()
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if len(self.nodes) != len(clone.nodes) {
 		return false
 	}
-	for index, myNode := range self.Nodes {
-		if !myNode.Equal(other.Nodes[index]) {
+	for index, myNode := range self.nodes {
+		if !myNode.Equal(clone.nodes[index]) {
 			return false
 		}
 	}
 	return true
 }
-func (self *Ring) Add(remote Remote) {
-	for index, current := range self.Nodes {
+func (self *ring) Add(remote Remote) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	for index, current := range self.nodes {
 		if current.Addr == remote.Addr {
 			if bytes.Compare(current.Pos, remote.Pos) == 0 {
 				return
 			}
-			self.Nodes = append(self.Nodes[:index], self.Nodes[index+1:]...)
+			self.nodes = append(self.nodes[:index], self.nodes[index+1:]...)
 		}
 	}
-	i := sort.Search(len(self.Nodes), func(i int) bool {
-		return remote.less(self.Nodes[i])
+	i := sort.Search(len(self.nodes), func(i int) bool {
+		return remote.less(self.nodes[i])
 	})
-	if i < len(self.Nodes) {
-		self.Nodes = append(self.Nodes[:i], append([]Remote{remote}, self.Nodes[i:]...)...)
+	if i < len(self.nodes) {
+		self.nodes = append(self.nodes[:i], append([]Remote{remote}, self.nodes[i:]...)...)
 	} else {
-		self.Nodes = append(self.Nodes, remote)
+		self.nodes = append(self.nodes, remote)
 	}
 }
-func (self *Ring) Redundancy() int {
-	if len(self.Nodes) < Redundancy {
-		return len(self.Nodes)
+func (self *ring) Redundancy() int {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if len(self.nodes) < Redundancy {
+		return len(self.nodes)
 	}
 	return Redundancy
 }
-func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
+func (self *ring) Remotes(pos []byte) (before, at, after *Remote) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	beforeIndex, atIndex, afterIndex := self.indices(pos)
-	before = &self.Nodes[beforeIndex]
-	if atIndex != -1 {
-		at = &self.Nodes[atIndex]
+	if beforeIndex != -1 {
+		before = &self.nodes[beforeIndex]
 	}
-	after = &self.Nodes[afterIndex]
+	if atIndex != -1 {
+		at = &self.nodes[atIndex]
+	}
+	if afterIndex != -1 {
+		after = &self.nodes[afterIndex]
+	}
 	return
 }
 
@@ -112,26 +122,26 @@ func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 indices searches the ring for a position, and returns the last index before the position,
 the index where the positon can be found (or -1) and the first index after the position.
 */
-func (self *Ring) indices(pos []byte) (before, at, after int) {
-	if len(self.Nodes) == 0 {
+func (self *ring) indices(pos []byte) (before, at, after int) {
+	if len(self.nodes) == 0 {
 		return -1, -1, -1
 	}
-	// Find the first position in self.Nodes where the position 
+	// Find the first position in self.nodes where the position 
 	// is greather than or equal to the searched for position.
-	i := sort.Search(len(self.Nodes), func(i int) bool {
-		return bytes.Compare(pos, self.Nodes[i].Pos) < 1
+	i := sort.Search(len(self.nodes), func(i int) bool {
+		return bytes.Compare(pos, self.nodes[i].Pos) < 1
 	})
 	// If we didn't find any position like that
-	if i == len(self.Nodes) {
+	if i == len(self.nodes) {
 		after = 0
-		before = len(self.Nodes) - 1
+		before = len(self.nodes) - 1
 		at = -1
 		return
 	}
 	// If we did, then we know that the position before (or the last position) 
 	// is the one that is before the searched for position.
 	if i == 0 {
-		before = len(self.Nodes) - 1
+		before = len(self.nodes) - 1
 	} else {
 		before = i - 1
 	}
@@ -140,14 +150,14 @@ func (self *Ring) indices(pos []byte) (before, at, after int) {
 	// than the searched for position.
 	// If we did not find a position that is equal, then we know that the found
 	// position is greater than.
-	cmp := bytes.Compare(pos, self.Nodes[i].Pos)
+	cmp := bytes.Compare(pos, self.nodes[i].Pos)
 	if cmp == 0 {
 		at = i
-		j := sort.Search(len(self.Nodes)-i, func(k int) bool {
-			return bytes.Compare(pos, self.Nodes[k+i].Pos) < 0
+		j := sort.Search(len(self.nodes)-i, func(k int) bool {
+			return bytes.Compare(pos, self.nodes[k+i].Pos) < 0
 		})
 		j += i
-		if j < len(self.Nodes) {
+		if j < len(self.nodes) {
 			after = j
 		} else {
 			after = 0
@@ -158,18 +168,20 @@ func (self *Ring) indices(pos []byte) (before, at, after int) {
 	}
 	return
 }
-func (self *Ring) GetSlot() []byte {
+func (self *ring) GetSlot() []byte {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
 	biggestSpace := new(big.Int)
 	biggestSpaceIndex := 0
-	for i := 0; i < len(self.Nodes); i++ {
-		this := new(big.Int).SetBytes(self.Nodes[i].Pos)
+	for i := 0; i < len(self.nodes); i++ {
+		this := new(big.Int).SetBytes(self.nodes[i].Pos)
 		var next *big.Int
-		if i+1 < len(self.Nodes) {
-			next = new(big.Int).SetBytes(self.Nodes[i].Pos)
+		if i+1 < len(self.nodes) {
+			next = new(big.Int).SetBytes(self.nodes[i].Pos)
 		} else {
 			max := make([]byte, murmur.Size+1)
 			max[0] = 1
-			next = new(big.Int).Add(new(big.Int).SetBytes(max), new(big.Int).SetBytes(self.Nodes[0].Pos))
+			next = new(big.Int).Add(new(big.Int).SetBytes(max), new(big.Int).SetBytes(self.nodes[0].Pos))
 		}
 		thisSpace := new(big.Int).Sub(next, this)
 		if biggestSpace.Cmp(thisSpace) < 0 {
@@ -177,24 +189,31 @@ func (self *Ring) GetSlot() []byte {
 			biggestSpaceIndex = i
 		}
 	}
-	return new(big.Int).Add(new(big.Int).SetBytes(self.Nodes[biggestSpaceIndex].Pos), new(big.Int).Div(biggestSpace, big.NewInt(2))).Bytes()
+	return new(big.Int).Add(new(big.Int).SetBytes(self.nodes[biggestSpaceIndex].Pos), new(big.Int).Div(biggestSpace, big.NewInt(2))).Bytes()
 }
-func (self *Ring) Remove(remote Remote) {
-	for index, current := range self.Nodes {
+func (self *ring) Remove(remote Remote) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	for index, current := range self.nodes {
 		if current.Addr == remote.Addr {
-			self.Nodes = append(self.Nodes[:index], self.Nodes[index+1:]...)
+			if len(self.nodes) == 1 {
+				panic("Why would you want to remove the last Node in the ring? Inconceivable!")
+			}
+			self.nodes = append(self.nodes[:index], self.nodes[index+1:]...)
 		}
 	}
 }
-func (self *Ring) Clean(predecessor, successor []byte) {
+func (self *ring) Clean(predecessor, successor []byte) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	_, _, from := self.indices(predecessor)
 	to, at, _ := self.indices(successor)
 	if at != -1 {
 		to = at
 	}
 	if from > to {
-		self.Nodes = self.Nodes[to:from]
+		self.nodes = self.nodes[to:from]
 	} else {
-		self.Nodes = append(self.Nodes[:from], self.Nodes[to:]...)
+		self.nodes = append(self.nodes[:from], self.nodes[to:]...)
 	}
 }
