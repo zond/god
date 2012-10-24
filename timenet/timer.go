@@ -110,12 +110,12 @@ func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies times) {
 				id = thisId
 				peerLatencies = theseLatencies
 			}
+			chosenIndex--
 			delete(currentPeers, thisId)
 		} else {
 			delete(self.peerLatencies, thisId)
 			delete(self.peerErrors, thisId)
 		}
-		chosenIndex--
 	}
 	for thisId, thisPeer := range currentPeers {
 		if chosenIndex == 0 {
