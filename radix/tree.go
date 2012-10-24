@@ -161,7 +161,7 @@ func (self *Tree) SubDel(key, subKey []byte) (old Hasher, existed bool) {
 	return
 }
 
-func (self *Tree) Finger(key []Nibble) (result *Print) {
+func (self *Tree) Finger(key []Nibble) *Print {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.root.finger(&Print{nil, nil, 0, false, nil}, key)
@@ -207,7 +207,7 @@ func (self *Tree) SubFinger(key, subKey []Nibble, expected int64) (result *Print
 	if subTree, subTreeVersion := self.getSubTree(key); subTree != nil && subTreeVersion == expected {
 		result = subTree.Finger(subKey)
 	}
-	return
+	return 
 }
 func (self *Tree) SubGetVersion(key, subKey []Nibble, expected int64) (value Hasher, version int64, existed bool) {
 	self.lock.RLock()
