@@ -6,12 +6,12 @@ import (
 
 type nodeServer Node
 
-func (self *nodeServer) Notify(caller common.Remote, nodes *common.Ring) error {
-	*nodes = (*Node)(self).notify(caller)
+func (self *nodeServer) Notify(caller common.Remote, nodes *common.Remotes) error {
+	*nodes = (*Node)(self).Notify(caller)
 	return nil
 }
-func (self *nodeServer) Ring(x int, nodes *common.Ring) error {
-	(*Node)(self).GetRing(nodes)
+func (self *nodeServer) Ring(x int, nodes *common.Remotes) error {
+	*nodes = (*Node)(self).GetNodes()
 	return nil
 }
 func (self *nodeServer) Ping(x int, y *int) error {
