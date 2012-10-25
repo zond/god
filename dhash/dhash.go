@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	syncInterval  = time.Second * 10
-	cleanInterval = time.Second * 10
+	syncInterval  = time.Second * 1
+	cleanInterval = time.Second * 1
 )
 
 const (
@@ -61,7 +61,7 @@ func (self *DHash) Start() (err error) {
 		return
 	}
 	self.timer.Start()
-	go self.syncPeriodically()
+	//go self.syncPeriodically()
 	go self.cleanPeriodically()
 	return
 }
@@ -90,8 +90,7 @@ func (self *DHash) cleanPeriodically() {
 		time.Sleep(cleanInterval)
 	}
 }
-func (self *DHash) circularNext(key []byte) (nextKey []byte) {
-	var existed bool
+func (self *DHash) circularNext(key []byte) (nextKey []byte, existed bool) {
 	if nextKey, _, _, existed = self.tree.Next(key); existed {
 		return
 	}
@@ -122,25 +121,29 @@ func (self *DHash) owner(key []byte) (owner common.Remote, shouldKeep bool) {
 func (self *DHash) clean() {
 	deleted := 0
 	put := 0
-	nextKey := self.circularNext(self.node.GetPosition())
-	if realSuccessor, shouldKeep := self.owner(nextKey); !shouldKeep {
-		fmt.Println(self, "found", nextKey, "belonging to", realSuccessor)
-		nextSuccessor := realSuccessor
-		var sync *radix.Sync
-		redundancyNow := self.node.Redundancy()
-		for i := 0; i < redundancyNow; i++ {
-			sync = radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(nextKey).To(realSuccessor.Pos)
-			if i == redundancyNow-1 {
-				sync.Destroy()
+	if nextKey, existed := self.circularNext(self.node.GetPosition()); existed {
+		if realSuccessor, shouldKeep := self.owner(nextKey); !shouldKeep {
+			fmt.Println(self, "found", nextKey, "belonging to", realSuccessor)
+			nextSuccessor := realSuccessor
+			var sync *radix.Sync
+			redundancyNow := self.node.Redundancy()
+			for i := 0; i < redundancyNow; i++ {
+				sync = radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(nextKey).To(realSuccessor.Pos)
+				if i == redundancyNow-1 {
+					fmt.Println("doing destructive sync to", nextSuccessor)
+					sync.Destroy()
+				} else {
+					fmt.Println("doing non destructive sync to", nextSuccessor)
+				}
+				sync.Run()
+				deleted += sync.DelCount()
+				put += sync.PutCount()
+				nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
 			}
-			sync.Run()
-			deleted += sync.DelCount()
-			put += sync.PutCount()
-			nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
 		}
-	}
-	if deleted != 0 || put != 0 {
-		fmt.Println(self, "relocated", put, "keys while cleaning out", deleted, "keys")
+		if deleted != 0 || put != 0 {
+			fmt.Println(self, "relocated", put, "keys while cleaning out", deleted, "keys")
+		}
 	}
 }
 func (self *DHash) MustStart() *DHash {
@@ -158,9 +161,6 @@ func (self *DHash) Time() time.Time {
 }
 func (self *DHash) Describe() string {
 	return self.node.Describe()
-}
-func (self *DHash) AddTopologyListener(listener discord.TopologyListener) {
-	self.node.AddTopologyListener(listener)
 }
 func (self *DHash) DescribeTree() string {
 	return self.tree.Describe()
