@@ -234,14 +234,25 @@ func (self *Node) GetPredecessor() common.Remote {
 	return *pred
 }
 func (self *Node) GetSuccessor(key []byte) common.Remote {
+	// Guess according to our route cache
 	predecessor, match, successor := self.ring.Remotes(key)
 	if match != nil {
 		predecessor = match
 	}
-	if predecessor.Addr != self.GetAddr() {
-		if err := predecessor.Call("Node.GetSuccessor", key, successor); err != nil {
+	// If we consider ourselves successors, just return us
+	if successor.Addr != self.GetAddr() {
+		// Double check by asking the successor we found what predecessor it has
+		if err := successor.Call("Node.GetPredecessor", key, predecessor); err != nil {
 			self.RemoveNode(*predecessor)
 			return self.GetSuccessor(key)
+		}
+		// If the key we are looking for is between them, just return the successor
+		if !common.Between(key, predecessor.Pos, successor.Pos) {
+			// Otherwise, ask the predecessor we actually found about who is the successor of the key
+			if err := predecessor.Call("Node.GetSuccessor", key, successor); err != nil {
+				self.RemoveNode(*predecessor)
+				return self.GetSuccessor(key)
+			}
 		}
 	}
 	return *successor
