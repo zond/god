@@ -1,11 +1,9 @@
-
 package discord
 
-
 import (
+	"fmt"
 	"testing"
 	"time"
-	"fmt"
 )
 
 func assertWithin(t *testing.T, f func() (string, bool), d time.Duration) {
@@ -26,7 +24,7 @@ func TestStartup(t *testing.T) {
 	var nodes []*Node
 	n := 10
 	for i := 0; i < n; i++ {
-		nodes = append(nodes, NewNode(fmt.Sprintf("%v:%v", "127.0.0.1", firstPort + i)))
+		nodes = append(nodes, NewNode(fmt.Sprintf("%v:%v", "127.0.0.1", firstPort+i)))
 	}
 	for i := 0; i < n; i++ {
 		nodes[i].MustStart()
@@ -40,5 +38,5 @@ func TestStartup(t *testing.T) {
 			routes[nodes[i].Nodes().Describe()] = true
 		}
 		return fmt.Sprint(routes), len(routes) == 1
-	}, time.Second * 10)
+	}, time.Second*10)
 }
