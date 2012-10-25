@@ -130,10 +130,10 @@ func (self *Timer) timeAndLatency(peer Peer) (peerTime, latency, myTime int64) {
 	latency = -time.Now().UnixNano()
 	peerTime = peer.ActualTime()
 	latency += time.Now().UnixNano()
+	peerTime += latency / 2
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	myTime = self.ActualTime()
-	peerTime += latency / 2
 	return
 }
 func (self *Timer) Conform(peer Peer) {
