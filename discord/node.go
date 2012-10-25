@@ -23,17 +23,14 @@ const (
 	pingInterval   = time.Second
 )
 
-type TopologyListener func(node *Node, newRing *common.Ring)
-
 type Node struct {
-	ring              *common.Ring
-	topologyListeners []TopologyListener
-	position          []byte
-	addr              string
-	listener          *net.TCPListener
-	lock              *sync.RWMutex
-	state             int32
-	exports           map[string]interface{}
+	ring     *common.Ring
+	position []byte
+	addr     string
+	listener *net.TCPListener
+	lock     *sync.RWMutex
+	state    int32
+	exports  map[string]interface{}
 }
 
 func NewNode(addr string) (result *Node) {
@@ -54,11 +51,6 @@ func (self *Node) Export(name string, api interface{}) error {
 		return nil
 	}
 	return fmt.Errorf("%v can only export when in state 'created'")
-}
-func (self *Node) AddTopologyListener(listener TopologyListener) {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-	self.topologyListeners = append(self.topologyListeners, listener)
 }
 func (self *Node) SetPosition(position []byte) *Node {
 	self.lock.Lock()
@@ -100,15 +92,6 @@ func (self *Node) Describe() string {
 
 func (self *Node) hasState(s int32) bool {
 	return atomic.LoadInt32(&self.state) == s
-}
-func (self *Node) setRing(nodes common.Remotes) {
-	if myNodes := self.ring.Nodes(); !nodes.Equal(myNodes) {
-		self.ring.SetNodes(nodes)
-		newRing := common.NewRingNodes(nodes)
-		for _, listener := range self.topologyListeners {
-			listener(self, newRing)
-		}
-	}
 }
 func (self *Node) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
@@ -213,7 +196,7 @@ func (self *Node) notifySuccessor() {
 		self.RemoveNode(*successor)
 	} else {
 		predecessor := self.GetPredecessor()
-		self.setRing(newNodes)
+		self.ring.SetNodes(newNodes)
 		self.ring.Add(predecessor)
 		if predecessor.Addr != self.GetAddr() {
 			self.ring.Clean(predecessor.Pos, self.GetPosition())
@@ -237,7 +220,7 @@ func (self *Node) Join(addr string) (err error) {
 	if err = common.Switch.Call(addr, "Node.Notify", self.remote(), &newNodes); err != nil {
 		return
 	}
-	self.setRing(newNodes)
+	self.ring.SetNodes(newNodes)
 	return
 }
 func (self *Node) RemoveNode(remote common.Remote) {
