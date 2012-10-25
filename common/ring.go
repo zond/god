@@ -4,16 +4,16 @@ import (
 	"../murmur"
 	"bytes"
 	"fmt"
-	"sync"
 	"math/big"
 	"sort"
+	"sync"
 )
-
 
 type Ring struct {
 	nodes Remotes
-	lock *sync.RWMutex
+	lock  *sync.RWMutex
 }
+
 func NewRing() *Ring {
 	return &Ring{
 		lock: new(sync.RWMutex),
@@ -21,7 +21,7 @@ func NewRing() *Ring {
 }
 func NewRingNodes(nodes Remotes) *Ring {
 	return &Ring{
-		lock: new(sync.RWMutex),
+		lock:  new(sync.RWMutex),
 		nodes: nodes,
 	}
 }
