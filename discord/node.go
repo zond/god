@@ -240,7 +240,7 @@ func (self *Node) GetSuccessor(key []byte) common.Remote {
 	}
 	if predecessor.Addr != self.GetAddr() {
 		if err := predecessor.Call("Node.GetSuccessor", key, successor); err != nil {
-			self.RemoveNode(*successor)
+			self.RemoveNode(*predecessor)
 			return self.GetSuccessor(key)
 		}
 	}
