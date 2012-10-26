@@ -11,8 +11,10 @@ type Conn struct {
 }
 
 func NewConn(addr string) (result *Conn, err error) {
-	result = &Conn{&common.Ring{}}
-	err = common.Switch.Call(addr, "Node.Ring", 0, result.ring)
+	result = &Conn{common.NewRing()}
+	var newNodes common.Remotes
+	err = common.Switch.Call(addr, "Node.Nodes", 0, &newNodes)
+	result.ring.SetNodes(newNodes)
 	return
 }
 func MustConn(addr string) (result *Conn) {
@@ -26,7 +28,9 @@ func (self *Conn) Reconnect() {
 	_, _, successor := self.ring.Remotes(nil)
 	var err error
 	for {
-		if err = successor.Call("Node.Ring", 0, self.ring); err == nil {
+		var newNodes common.Remotes
+		if err = successor.Call("Node.Ring", 0, &newNodes); err == nil {
+			self.ring.SetNodes(newNodes)
 			return
 		}
 		self.ring.Remove(*successor)
