@@ -61,7 +61,7 @@ func (self *DHash) Start() (err error) {
 		return
 	}
 	self.timer.Start()
-	//go self.syncPeriodically()
+	go self.syncPeriodically()
 	go self.cleanPeriodically()
 	return
 }
