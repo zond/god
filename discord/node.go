@@ -247,7 +247,7 @@ func (self *Node) GetSuccessor(key []byte) common.Remote {
 			return self.GetSuccessor(key)
 		}
 		// If the key we are looking for is between them, just return the successor
-		if !common.Between(key, predecessor.Pos, successor.Pos) {
+		if !common.BetweenIE(key, predecessor.Pos, successor.Pos) {
 			// Otherwise, ask the predecessor we actually found about who is the successor of the key
 			if err := predecessor.Call("Node.GetSuccessor", key, successor); err != nil {
 				self.RemoveNode(*predecessor)
