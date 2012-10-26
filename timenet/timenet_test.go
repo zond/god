@@ -17,7 +17,7 @@ type testPeer struct {
 	*Timer
 }
 
-func (self testPeer) ActualTime() (result int64) {
+func (self testPeer) ActualTime() (result time.Time) {
 	time.Sleep((10 + time.Duration(rand.Int()%1000)) * time.Microsecond)
 	result = self.Timer.ActualTime()
 	time.Sleep((10 + time.Duration(rand.Int()%1000)) * time.Microsecond)
@@ -77,6 +77,6 @@ func TestSample(t *testing.T) {
 	peer4.Start()
 	common.AssertWithin(t, func() (string, bool) {
 		d := producer.deviance()
-		return fmt.Sprint(d), d < 1000000
+		return fmt.Sprint(d), d > 0 && d < 1000000
 	}, time.Second*10)
 }
