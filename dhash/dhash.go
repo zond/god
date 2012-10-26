@@ -101,20 +101,16 @@ func (self *DHash) circularNext(key []byte) (nextKey []byte, existed bool) {
 	nextKey, _, _, existed = self.tree.Next(nextKey)
 	return
 }
-func (self *DHash) owner(key []byte) (owner common.Remote, shouldKeep bool) {
-	owner = self.node.GetSuccessor(key)
-	if owner.Addr == self.node.GetAddr() {
-		shouldKeep = true
-		return
+func (self *DHash) owners(key []byte) (owners common.Remotes, isOwner bool) {
+	owners = append(owners, self.node.GetSuccessor(key))
+	if owners[0].Addr == self.node.GetAddr() {
+		isOwner = true
 	}
-	successor := owner
-	key = owner.Pos
 	for i := 1; i < self.node.Redundancy(); i++ {
-		if successor = self.node.GetSuccessor(key); successor.Addr == self.node.GetAddr() {
-			shouldKeep = true
-			return
+		owners = append(owners, self.node.GetSuccessor(owners[i-1].Pos))
+		if owners[i].Addr == self.node.GetAddr() {
+			isOwner = true
 		}
-		key = successor.Pos
 	}
 	return
 }
@@ -122,19 +118,16 @@ func (self *DHash) clean() {
 	deleted := 0
 	put := 0
 	if nextKey, existed := self.circularNext(self.node.GetPosition()); existed {
-		if realSuccessor, shouldKeep := self.owner(nextKey); !shouldKeep {
-			nextSuccessor := realSuccessor
+		if owners, isOwner := self.owners(nextKey); !isOwner {
 			var sync *radix.Sync
-			redundancyNow := self.node.Redundancy()
-			for i := 0; i < redundancyNow; i++ {
-				sync = radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(nextKey).To(realSuccessor.Pos)
-				if i == redundancyNow-1 {
+			for index, owner := range owners {
+				sync = radix.NewSync(self.tree, (remoteHashTree)(owner)).From(nextKey).To(owners[0].Pos)
+				if index == len(owners)-2 {
 					sync.Destroy()
 				}
 				sync.Run()
 				deleted += sync.DelCount()
 				put += sync.PutCount()
-				nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
 			}
 		}
 		if deleted != 0 || put != 0 {
