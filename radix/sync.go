@@ -85,7 +85,7 @@ func (self *Sync) withinRightLimit(key []Nibble) bool {
 	return false
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
-	if sourcePrint != nil {
+	if sourcePrint.Exists {
 		if sourcePrint.ValueHash != nil && self.withinLimits(sourcePrint.Key) {
 			// If there is a node at source	and it is within our limits	
 			var subPut int
@@ -121,8 +121,8 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 			}
 		}
 		for index, subPrint := range sourcePrint.SubPrints {
-			if subPrint.Key != nil && self.withinRightLimit(subPrint.Key) {
-				if self.destructive || (destinationPrint == nil || !subPrint.equals(destinationPrint.SubPrints[index])) {
+			if subPrint.Exists && self.withinRightLimit(subPrint.Key) {
+				if self.destructive || (!destinationPrint.Exists || !subPrint.equals(destinationPrint.SubPrints[index])) {
 					self.synchronize(
 						self.source.Finger(subPrint.Key),
 						self.destination.Finger(subPrint.Key),
