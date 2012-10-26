@@ -67,7 +67,8 @@ func (self *Ring) Size() int {
 func (self *Ring) Equal(other *Ring) bool {
 	return self.Nodes().Equal(other.Nodes())
 }
-func (self *Ring) Add(remote Remote) {
+func (self *Ring) Add(r Remote) {
+	remote := r.Clone()
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	for index, current := range self.nodes {
@@ -82,9 +83,9 @@ func (self *Ring) Add(remote Remote) {
 		return remote.Less(self.nodes[i])
 	})
 	if i < len(self.nodes) {
-		self.nodes = append(self.nodes[:i], append(Remotes{remote.Clone()}, self.nodes[i:]...)...)
+		self.nodes = append(self.nodes[:i], append(Remotes{remote}, self.nodes[i:]...)...)
 	} else {
-		self.nodes = append(self.nodes, remote.Clone())
+		self.nodes = append(self.nodes, remote)
 	}
 }
 func (self *Ring) Redundancy() int {
