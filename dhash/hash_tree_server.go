@@ -22,7 +22,9 @@ func (self *hashTreeServer) Hash(x int, result *[]byte) error {
 	return nil
 }
 func (self *hashTreeServer) Finger(key []radix.Nibble, result *radix.Print) error {
-	*result = *((*radix.Tree)(self).Finger(key))
+	if p := (*radix.Tree)(self).Finger(key); p != nil {
+		*result = *p
+	}
 	return nil
 }
 func (self *hashTreeServer) GetVersion(key []radix.Nibble, result *HashTreeItem) error {
