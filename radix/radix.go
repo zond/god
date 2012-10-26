@@ -71,8 +71,9 @@ func (self ByteHasher) Hash() []byte {
 }
 
 type SubPrint struct {
-	Key []Nibble
-	Sum []byte
+	Key    []Nibble
+	Sum    []byte
+	Exists bool
 }
 
 func (self SubPrint) equals(other SubPrint) bool {
@@ -80,6 +81,7 @@ func (self SubPrint) equals(other SubPrint) bool {
 }
 
 type Print struct {
+	Exists    bool
 	Key       []Nibble
 	ValueHash []byte
 	Version   int64
@@ -97,15 +99,17 @@ func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
 }
 func (self *Print) set(n *node) {
+	self.Exists = true
 	self.ValueHash = n.valueHash
 	self.Version = n.version
-	_, self.SubTree = n.value.(*Tree)
 	self.SubPrints = make([]SubPrint, len(n.children))
+	_, self.SubTree = n.value.(*Tree)
 	for index, child := range n.children {
 		if child != nil {
 			self.SubPrints[index] = SubPrint{
-				Key: append(append([]Nibble{}, self.Key...), child.segment...),
-				Sum: child.hash,
+				Exists: true,
+				Key:    append(append([]Nibble{}, self.Key...), child.segment...),
+				Sum:    child.hash,
 			}
 		}
 	}
