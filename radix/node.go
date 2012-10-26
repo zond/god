@@ -83,6 +83,7 @@ func (self *node) each(prefix []Nibble, f TreeIterator) {
 	}
 }
 func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
+	result = allocated
 	if self == nil {
 		return
 	}
@@ -93,7 +94,6 @@ func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
 		beyond_self = i >= len(self.segment)
 		beyond_segment = i >= len(segment)
 		if beyond_self && beyond_segment {
-			result = allocated
 			allocated.set(self)
 			return
 		} else if beyond_segment {
