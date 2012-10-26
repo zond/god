@@ -1,6 +1,7 @@
 package radix
 
 import (
+	"../common"
 	"bytes"
 )
 
@@ -70,19 +71,17 @@ func (self *Sync) Run() *Sync {
 	}
 	return self
 }
-func (self *Sync) withinLimits(key []Nibble) bool {
-	if self.from == nil || bytes.Compare(toBytes(key), toBytes(self.from)) > -1 {
-		if self.withinRightLimit(key) {
-			return true
-		}
-	}
-	return false
-}
-func (self *Sync) withinRightLimit(key []Nibble) bool {
-	if self.to == nil || bytes.Compare(toBytes(key), toBytes(self.to)) < 0 {
+func (self *Sync) potentiallyWithinLimits(key []Nibble) bool {
+	if self.from == nil || self.to == nil {
 		return true
 	}
-	return false
+	return common.BetweenII(toBytes(key), toBytes(self.from)[:len(key)], toBytes(self.to)[:len(key)])
+}
+func (self *Sync) withinLimits(key []Nibble) bool {
+	if self.from == nil || self.to == nil {
+		return true
+	}
+	return common.BetweenIE(toBytes(key), toBytes(self.from), toBytes(self.to))
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint.Exists {
@@ -121,7 +120,7 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 			}
 		}
 		for index, subPrint := range sourcePrint.SubPrints {
-			if subPrint.Exists && self.withinRightLimit(subPrint.Key) {
+			if subPrint.Exists && self.potentiallyWithinLimits(subPrint.Key) {
 				if self.destructive || (!destinationPrint.Exists || !subPrint.equals(destinationPrint.SubPrints[index])) {
 					self.synchronize(
 						self.source.Finger(subPrint.Key),

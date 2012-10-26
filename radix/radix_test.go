@@ -1,6 +1,7 @@
 package radix
 
 import (
+	"../common"
 	"../murmur"
 	"bytes"
 	"encoding/hex"
@@ -328,24 +329,22 @@ func TestSyncRandomLimits(t *testing.T) {
 	var s *Sync
 	for fromIndex, _ := range keys {
 		for toIndex, _ := range keys {
-			fromKey = keys[fromIndex]
-			toKey = keys[toIndex]
-			tree2 = NewTree()
-			tree1.Each(func(key []byte, value Hasher) {
-				if bytes.Compare(key, fromKey) > -1 && bytes.Compare(key, toKey) < 0 {
-					tree2.Put(key, value, 0)
+			if fromIndex != toIndex {
+				fromKey = keys[fromIndex]
+				toKey = keys[toIndex]
+				tree2 = NewTree()
+				tree1.Each(func(key []byte, value Hasher) {
+					if common.BetweenIE(key, fromKey, toKey) {
+						tree2.Put(key, value, 0)
+					}
+				})
+				tree3 = NewTree()
+				s = NewSync(tree1, tree3).From(fromKey).To(toKey)
+				s.Run()
+				if !reflect.DeepEqual(tree3, tree2) {
+					t.Errorf("when syncing from %v to %v, %v and %v have hashes\n%v\n%v\nand they should be equal!", common.HexEncode(fromKey), common.HexEncode(toKey), tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
 				}
-			})
-			tree3 = NewTree()
-			s = NewSync(tree1, tree3).From(fromKey).To(toKey)
-			s.Run()
-			if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
-				t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
 			}
-			if !reflect.DeepEqual(tree3, tree2) {
-				t.Errorf("%v and %v are unequal", tree3, tree2)
-			}
-
 		}
 	}
 }
