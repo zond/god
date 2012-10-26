@@ -180,6 +180,9 @@ func (self *Timer) sleep() {
 	if err == -1 || stability == -1 {
 		time.Sleep(time.Second)
 	} else {
+		if err == 0 {
+			err = 1
+		}
 		sleepyTime := ((time.Duration(stability) * time.Second) << 7) / time.Duration(err)
 		if sleepyTime < time.Second {
 			sleepyTime = time.Second
