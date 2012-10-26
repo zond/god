@@ -1,6 +1,7 @@
 package timenet
 
 import (
+	"../common"
 	"fmt"
 	"math"
 	"math/rand"
@@ -74,30 +75,8 @@ func TestSample(t *testing.T) {
 	peer2.Start()
 	peer3.Start()
 	peer4.Start()
-	var current1, current2, current3, current4 int64
-	var last1, last2, last3, last4 int64
-	for {
-		fmt.Println("Offset standard deviance:", producer.deviance())
-		current1 = peer1.Timer.ContinuousTime()
-		fmt.Printf("%v\terr:%v\tstability:%v\n", time.Unix(0, current1), time.Duration(peer1.Error()), time.Duration(peer1.Stability()))
-		if last1 != 0 && current1 < last1 {
-			t.Fatalf("%v gave %v which is less than %v", peer1, current1, last1)
-		}
-		current2 = peer2.Timer.ContinuousTime()
-		fmt.Printf("%v\terr:%v\tstability:%v\n", time.Unix(0, current2), time.Duration(peer2.Error()), time.Duration(peer2.Stability()))
-		if last2 != 0 && current2 < last2 {
-			t.Fatalf("%v gave %v which is less than %v", peer2, current2, last2)
-		}
-		current3 = peer3.Timer.ContinuousTime()
-		fmt.Printf("%v\terr:%v\tstability:%v\n", time.Unix(0, current3), time.Duration(peer3.Error()), time.Duration(peer3.Stability()))
-		if last3 != 0 && current3 < last3 {
-			t.Fatalf("%v gave %v which is less than %v", peer3, current3, last3)
-		}
-		current4 = peer4.Timer.ContinuousTime()
-		fmt.Printf("%v\terr:%v\tstability:%v\n", time.Unix(0, current4), time.Duration(peer4.Error()), time.Duration(peer4.Stability()))
-		if last4 != 0 && current4 < last4 {
-			t.Fatalf("%v gave %v which is less than %v", peer4, current4, last4)
-		}
-		time.Sleep(time.Second)
-	}
+	common.AssertWithin(t, func() (string, bool) {
+		d := producer.deviance()
+		return fmt.Sprint(d), d < 1000000
+	}, time.Second*10)
 }
