@@ -10,7 +10,7 @@ func (self *nodeServer) Notify(caller common.Remote, nodes *common.Remotes) erro
 	*nodes = (*Node)(self).Notify(caller)
 	return nil
 }
-func (self *nodeServer) Ring(x int, nodes *common.Remotes) error {
+func (self *nodeServer) Nodes(x int, nodes *common.Remotes) error {
 	*nodes = (*Node)(self).GetNodes()
 	return nil
 }
