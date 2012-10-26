@@ -19,7 +19,7 @@ const (
 )
 
 type Peer interface {
-	ActualTime() (time int64)
+	ActualTime() (time time.Time)
 }
 
 type PeerProducer interface {
@@ -49,10 +49,10 @@ func NewTimer(producer PeerProducer) *Timer {
 func (self *Timer) adjustments() int64 {
 	return self.offset + self.dilations.delta()
 }
-func (self *Timer) ActualTime() int64 {
+func (self *Timer) ActualTime() time.Time {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return time.Now().UnixNano() + self.adjustments()
+	return time.Unix(0, time.Now().UnixNano()+self.adjustments())
 }
 func (self *Timer) ContinuousTime() (result int64) {
 	self.lock.RLock()
@@ -66,31 +66,31 @@ func (self *Timer) ContinuousTime() (result int64) {
 	}
 	return
 }
-func (self *Timer) Error() (err int64) {
+func (self *Timer) Error() (err time.Duration) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if len(self.peerErrors) > 1 {
 		var thisErr int64
 		for _, e := range self.peerErrors {
 			thisErr = e >> 10
-			err += thisErr * thisErr
+			err += time.Duration(thisErr * thisErr)
 		}
-		err = int64(math.Sqrt(float64(err/int64(len(self.peerErrors))))) << 10
+		err = time.Duration(math.Sqrt(float64(err/time.Duration(len(self.peerErrors))))) << 10
 	} else {
 		err = -1
 	}
 	return
 }
-func (self *Timer) Stability() (result int64) {
+func (self *Timer) Stability() (result time.Duration) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if len(self.peerLatencies) > 1 {
 		var deviation int64
 		for _, latencies := range self.peerLatencies {
 			_, deviation = latencies.stats()
-			result += deviation * deviation
+			result += time.Duration(deviation * deviation)
 		}
-		result = int64(math.Sqrt(float64(result / int64(len(self.peerLatencies)))))
+		result = time.Duration(math.Sqrt(float64(result / time.Duration(len(self.peerLatencies)))))
 	} else {
 		result = -1
 	}
@@ -128,12 +128,12 @@ func (self *Timer) randomPeer() (id string, peer Peer, peerLatencies times) {
 }
 func (self *Timer) timeAndLatency(peer Peer) (peerTime, latency, myTime int64) {
 	latency = -time.Now().UnixNano()
-	peerTime = peer.ActualTime()
+	peerTime = peer.ActualTime().UnixNano()
 	latency += time.Now().UnixNano()
 	peerTime += latency / 2
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	myTime = self.ActualTime()
+	myTime = self.ActualTime().UnixNano()
 	return
 }
 func (self *Timer) Conform(peer Peer) {
@@ -142,10 +142,10 @@ func (self *Timer) Conform(peer Peer) {
 	defer self.lock.Unlock()
 	self.offset += (peerTime - myTime)
 }
-func (self *Timer) Skew(delta int64) {
+func (self *Timer) Skew(delta time.Duration) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	self.offset += delta
+	self.offset += int64(delta)
 }
 func (self *Timer) Sample() {
 	self.lock.RLock()
