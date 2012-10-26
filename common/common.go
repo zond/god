@@ -35,7 +35,20 @@ func HexEncode(b []byte) (result string) {
 	return string(buffer.Bytes())
 }
 
-func Between(needle, fromInc, toExc []byte) (result bool) {
+func BetweenII(needle, fromInc, toInc []byte) (result bool) {
+	switch bytes.Compare(fromInc, toInc) {
+	case 0:
+		result = true
+	case -1:
+		result = bytes.Compare(fromInc, needle) < 1 && bytes.Compare(needle, toInc) < 1
+	case 1:
+		result = bytes.Compare(fromInc, needle) < 1 || bytes.Compare(needle, toInc) < 1
+	default:
+		panic("Shouldn't happen")
+	}
+	return
+}
+func BetweenIE(needle, fromInc, toExc []byte) (result bool) {
 	switch bytes.Compare(fromInc, toExc) {
 	case 0:
 		result = true
