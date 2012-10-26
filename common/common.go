@@ -4,11 +4,26 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"testing"
+	"time"
 )
 
 const (
 	Redundancy = 3
 )
+
+func AssertWithin(t *testing.T, f func() (string, bool), d time.Duration) {
+	deadline := time.Now().Add(d)
+	var ok bool
+	var msg string
+	for time.Now().Before(deadline) {
+		if msg, ok = f(); ok {
+			return
+		}
+		time.Sleep(time.Second)
+	}
+	t.Errorf("wanted %v to be true within %v, but it never happened: %v", f, d, msg)
+}
 
 func HexEncode(b []byte) (result string) {
 	encoded := hex.EncodeToString(b)
