@@ -211,7 +211,7 @@ func (self *Node) MustJoin(addr string) {
 func (self *Node) Join(addr string) (err error) {
 	if bytes.Compare(self.GetPosition(), make([]byte, murmur.Size)) == 0 {
 		var newNodes common.Remotes
-		if err = common.Switch.Call(addr, "Node.Ring", 0, &newNodes); err != nil {
+		if err = common.Switch.Call(addr, "Node.Nodes", 0, &newNodes); err != nil {
 			return
 		}
 		self.SetPosition(common.NewRingNodes(newNodes).GetSlot())
