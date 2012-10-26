@@ -103,13 +103,16 @@ func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 	defer self.lock.RUnlock()
 	beforeIndex, atIndex, afterIndex := self.indices(pos)
 	if beforeIndex != -1 {
-		before = &self.nodes[beforeIndex]
+		before = &Remote{}
+		*before = self.nodes[beforeIndex]
 	}
 	if atIndex != -1 {
-		at = &self.nodes[atIndex]
+		at = &Remote{}
+		*at = self.nodes[atIndex]
 	}
 	if afterIndex != -1 {
-		after = &self.nodes[afterIndex]
+		after = &Remote{}
+		*after = self.nodes[afterIndex]
 	}
 	return
 }
