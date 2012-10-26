@@ -69,7 +69,7 @@ func (self *DHash) sync() {
 	fetched := 0
 	distributed := 0
 	nextSuccessor := self.node.GetSuccessor(self.node.GetPosition())
-	for i := 0; i < self.node.Redundancy(); i++ {
+	for i := 0; i < self.node.Redundancy()-1; i++ {
 		distributed += radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
 		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
 		nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
@@ -123,17 +123,13 @@ func (self *DHash) clean() {
 	put := 0
 	if nextKey, existed := self.circularNext(self.node.GetPosition()); existed {
 		if realSuccessor, shouldKeep := self.owner(nextKey); !shouldKeep {
-			fmt.Println(self, "found", nextKey, "belonging to", realSuccessor)
 			nextSuccessor := realSuccessor
 			var sync *radix.Sync
 			redundancyNow := self.node.Redundancy()
 			for i := 0; i < redundancyNow; i++ {
 				sync = radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(nextKey).To(realSuccessor.Pos)
 				if i == redundancyNow-1 {
-					fmt.Println("doing destructive sync to", nextSuccessor)
 					sync.Destroy()
-				} else {
-					fmt.Println("doing non destructive sync to", nextSuccessor)
 				}
 				sync.Run()
 				deleted += sync.DelCount()
