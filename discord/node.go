@@ -243,7 +243,6 @@ func (self *Node) GetSuccessor(key []byte) common.Remote {
 	if successor.Addr != self.GetAddr() {
 		// Double check by asking the successor we found what predecessor it has
 		if err := successor.Call("Node.GetPredecessor", 0, predecessor); err != nil {
-			fmt.Println("got", err, "when doing", successor, ".GetPredecessor, so removing it from", self.ring.Describe())
 			self.RemoveNode(*successor)
 			return self.GetSuccessor(key)
 		}
