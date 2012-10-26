@@ -49,15 +49,12 @@ func (self *Ring) Describe() string {
 func (self *Ring) SetNodes(nodes Remotes) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	self.nodes = make(Remotes, len(nodes))
-	copy(self.nodes, nodes)
+	self.nodes = nodes.Clone()
 }
-func (self *Ring) Nodes() (nodes Remotes) {
+func (self *Ring) Nodes() Remotes {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	nodes = make(Remotes, len(self.nodes))
-	copy(nodes, self.nodes)
-	return
+	return self.nodes.Clone()
 }
 func (self *Ring) Clone() *Ring {
 	return NewRingNodes(self.Nodes())
@@ -85,9 +82,9 @@ func (self *Ring) Add(remote Remote) {
 		return remote.Less(self.nodes[i])
 	})
 	if i < len(self.nodes) {
-		self.nodes = append(self.nodes[:i], append(Remotes{remote}, self.nodes[i:]...)...)
+		self.nodes = append(self.nodes[:i], append(Remotes{remote.Clone()}, self.nodes[i:]...)...)
 	} else {
-		self.nodes = append(self.nodes, remote)
+		self.nodes = append(self.nodes, remote.Clone())
 	}
 }
 func (self *Ring) Redundancy() int {
@@ -103,16 +100,16 @@ func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 	defer self.lock.RUnlock()
 	beforeIndex, atIndex, afterIndex := self.indices(pos)
 	if beforeIndex != -1 {
-		before = &Remote{}
-		*before = self.nodes[beforeIndex]
+		tmp := self.nodes[beforeIndex].Clone()
+		before = &tmp
 	}
 	if atIndex != -1 {
-		at = &Remote{}
-		*at = self.nodes[atIndex]
+		tmp := self.nodes[atIndex].Clone()
+		at = &tmp
 	}
 	if afterIndex != -1 {
-		after = &Remote{}
-		*after = self.nodes[afterIndex]
+		tmp := self.nodes[afterIndex].Clone()
+		after = &tmp
 	}
 	return
 }

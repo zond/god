@@ -7,6 +7,7 @@ import (
 )
 
 type Remotes []Remote
+
 func (self Remotes) Equal(other []Remote) bool {
 	if len(self) != len(other) {
 		return false
@@ -25,12 +26,26 @@ func (self Remotes) Describe() string {
 	}
 	return string(buffer.Bytes())
 }
+func (self Remotes) Clone() (result Remotes) {
+	result = make(Remotes, len(self))
+	for i, n := range self {
+		result[i] = n.Clone()
+	}
+	return
+}
 
 type Remote struct {
 	Pos  []byte
 	Addr string
 }
 
+func (self Remote) Clone() (result Remote) {
+	result = Remote{
+		Pos:  append([]byte{}, self.Pos...),
+		Addr: self.Addr,
+	}
+	return
+}
 func (self Remote) Equal(other Remote) bool {
 	return self.Addr == other.Addr && bytes.Compare(self.Pos, other.Pos) == 0
 }
