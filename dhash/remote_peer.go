@@ -7,9 +7,9 @@ import (
 
 type remotePeer common.Remote
 
-func (self remotePeer) ActualTime() (result int64) {
+func (self remotePeer) ActualTime() (result time.Time) {
 	if err := (common.Remote)(self).Call("Timer.ActualTime", 0, &result); err != nil {
-		result = time.Now().UnixNano()
+		result = time.Now()
 	}
 	return
 }
