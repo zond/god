@@ -259,6 +259,33 @@ func TestSyncDestructive(t *testing.T) {
 	}
 }
 
+func TestSyncDestructiveMatching(t *testing.T) {
+	tree1 := NewTree()
+	tree2 := NewTree()
+	tree3 := NewTree()
+	n := 1000
+	var k []byte
+	var v StringHasher
+	for i := 0; i < n; i++ {
+		k = murmur.HashString(fmt.Sprint(i))
+		v = StringHasher(fmt.Sprint(i))
+		tree1.Put(k, v, 0)
+		tree2.Put(k, v, 0)
+		tree3.Put(k, v, 0)
+	}
+	NewSync(tree1, tree2).Destroy().Run()
+	if !reflect.DeepEqual(tree2, tree3) {
+		t.Errorf("should be equal")
+	}
+	if tree1.Size() != 0 {
+		t.Errorf("should be empty!")
+	}
+	tree4 := NewTree()
+	if !reflect.DeepEqual(tree1, tree4) {
+		t.Errorf("should be equal!")
+	}
+}
+
 func TestSyncComplete(t *testing.T) {
 	tree1 := NewTree()
 	n := 1000

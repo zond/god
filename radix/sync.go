@@ -65,7 +65,7 @@ func (self *Sync) DelCount() int {
 	return self.delCount
 }
 func (self *Sync) Run() *Sync {
-	if bytes.Compare(self.source.Hash(), self.destination.Hash()) != 0 {
+	if self.destructive || bytes.Compare(self.source.Hash(), self.destination.Hash()) != 0 {
 		self.synchronize(self.source.Finger(nil), self.destination.Finger(nil))
 	}
 	return self
@@ -122,7 +122,7 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 		}
 		for index, subPrint := range sourcePrint.SubPrints {
 			if subPrint.Key != nil && self.withinRightLimit(subPrint.Key) {
-				if destinationPrint == nil || !subPrint.equals(destinationPrint.SubPrints[index]) {
+				if self.destructive || (destinationPrint == nil || !subPrint.equals(destinationPrint.SubPrints[index])) {
 					self.synchronize(
 						self.source.Finger(subPrint.Key),
 						self.destination.Finger(subPrint.Key),
