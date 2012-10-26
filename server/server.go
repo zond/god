@@ -21,7 +21,7 @@ func main() {
 	}
 
 	for {
-		time.Sleep(time.Second * 1)
 		fmt.Println(time.Now(), s.Describe())
+		time.Sleep(time.Second * 10)
 	}
 }
