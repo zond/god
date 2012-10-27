@@ -5,8 +5,6 @@ A Go database
 
 # TODO
 
-* Sync/clean
- * Automated tests
 * Main tree
  * Functionality
   * Next/Prev
