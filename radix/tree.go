@@ -95,6 +95,13 @@ func (self *Tree) Get(key []byte) (value Hasher, version int64, existed bool) {
 	value, version, existed = self.root.get(rip(key))
 	return
 }
+func (self *Tree) Prev(key []byte) (prevKey []byte, prevValue Hasher, prevVersion int64, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	prevNibble, prevValue, prevVersion, existed := self.root.prev(nil, rip(key))
+	prevKey = stitch(prevNibble)
+	return
+}
 func (self *Tree) Next(key []byte) (nextKey []byte, nextValue Hasher, nextVersion int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()

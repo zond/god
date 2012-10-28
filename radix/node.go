@@ -171,14 +171,70 @@ func (self *node) next(prefix, segment []Nibble) (nextNibble []Nibble, nextValue
 		} else if segment[i] != self.segment[i] {
 			if segment[i] > self.segment[i] {
 				return
-			} else {
-				if self.valueHash != nil {
-					nextNibble, nextValue, nextVersion, existed = append(prefix, self.segment...), self.value, self.version, true
-					return
-				} else {
-					return self.nextChild(prefix, nil)
-				}
 			}
+			if self.valueHash != nil {
+				nextNibble, nextValue, nextVersion, existed = append(prefix, self.segment...), self.value, self.version, true
+				return
+			}
+			return self.nextChild(prefix, nil)
+		}
+	}
+	panic("Shouldn't happen")
+}
+func (self *node) prevChild(prefix, segment []Nibble) (prevNibble []Nibble, prevValue Hasher, prevVersion int64, existed bool) {
+	recursePrefix := make([]Nibble, len(prefix)+len(self.segment))
+	copy(recursePrefix, prefix)
+	copy(recursePrefix[len(prefix):], self.segment)
+	lastChild := len(self.children) - 1
+	var restSegment []Nibble
+	if len(segment) > len(self.segment) {
+		restSegment = segment[len(self.segment):]
+		lastChild = int(restSegment[0])
+	}
+	var child *node
+	for i := lastChild; i >= 0; i-- {
+		child = self.children[i]
+		if prevNibble, prevValue, prevVersion, existed = child.prev(recursePrefix, restSegment); existed {
+			return
+		}
+	}
+	return
+}
+func (self *node) prev(prefix, segment []Nibble) (prevNibble []Nibble, prevValue Hasher, prevVersion int64, existed bool) {
+	if self == nil {
+		return
+	}
+	if segment == nil {
+		if self.valueHash != nil {
+			prevNibble, prevValue, prevVersion, existed = append(prefix, self.segment...), self.value, self.version, self.valueHash != nil
+			return
+		}
+		return self.prevChild(append(prefix, self.segment...), nil)
+	}
+	beyond_segment := false
+	beyond_self := false
+	for i := 0; ; i++ {
+		beyond_segment = i >= len(segment)
+		beyond_self = i >= len(self.segment)
+		if beyond_segment && beyond_self {
+			return
+		} else if beyond_segment {
+			return
+		} else if beyond_self {
+			if prevNibble, prevValue, prevVersion, existed = self.prevChild(prefix, segment); existed {
+				return
+			}
+			prevNibble, prevValue, prevVersion, existed = append(prefix, self.segment...), self.value, self.version, self.valueHash != nil
+			return
+		} else if segment[i] != self.segment[i] {
+			if segment[i] <= self.segment[i] {
+				return
+			}
+			if self.valueHash != nil {
+				prevNibble, prevValue, prevVersion, existed = append(prefix, self.segment...), self.value, self.version, self.valueHash != nil
+				return
+			}
+			return self.prevChild(prefix, nil)
 		}
 	}
 	panic("Shouldn't happen")
