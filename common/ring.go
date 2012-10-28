@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"sort"
 	"sync"
 )
@@ -26,6 +27,11 @@ func NewRingNodes(nodes Remotes) *Ring {
 	}
 }
 
+func (self *Ring) Random() Remote {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.nodes[rand.Int()%len(self.nodes)].Clone()
+}
 func (self *Ring) Hash() []byte {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
