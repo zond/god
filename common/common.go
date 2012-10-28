@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	Redundancy = 3
+	Redundancy   = 3
+	PingInterval = time.Second
 )
 
 func AssertWithin(t *testing.T, f func() (string, bool), d time.Duration) {
