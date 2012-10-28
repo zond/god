@@ -167,6 +167,9 @@ func (self *Node) pingPeriodically() {
 		time.Sleep(common.PingInterval)
 	}
 }
+func (self *Node) RingHash() []byte {
+	return self.ring.Hash()
+}
 func (self *Node) Ping() {
 }
 func (self *Node) pingPredecessor() {
