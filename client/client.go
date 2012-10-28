@@ -43,20 +43,22 @@ func (self *Conn) hasState(s int32) bool {
 func (self *Conn) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
+func (self *Conn) removeNode(node common.Remote) {
+	self.ring.Remove(node)
+	self.Reconnect()
+}
 func (self *Conn) update() {
 	myRingHash := self.ring.Hash()
 	var otherRingHash []byte
 	node := self.ring.Random()
 	if err := node.Call("DHash.RingHash", 0, &otherRingHash); err != nil {
-		self.ring.Remove(node)
-		self.Reconnect()
+		self.removeNode(node)
 		return
 	}
 	if bytes.Compare(myRingHash, otherRingHash) != 0 {
 		var newNodes common.Remotes
 		if err := node.Call("Node.Nodes", 0, &newNodes); err != nil {
-			self.ring.Remove(node)
-			self.Reconnect()
+			self.removeNode(node)
 			return
 		}
 		self.ring.SetNodes(newNodes)
@@ -97,9 +99,55 @@ func (self *Conn) Put(key, value []byte) {
 	_, _, successor := self.ring.Remotes(key)
 	var x int
 	if err := successor.Call("DHash.Put", data, &x); err != nil {
-		self.Reconnect()
+		self.removeNode(*successor)
 		self.Put(key, value)
 	}
+}
+func (self *Conn) Prev(key []byte) (prevKey, prevValue []byte, existed bool) {
+	data := common.Item{
+		Key: key,
+	}
+	result := &common.Item{}
+	_, _, successor := self.ring.Remotes(key)
+	firstAddr := successor.Addr
+	for {
+		if err := successor.Call("DHash.Prev", data, result); err != nil {
+			self.removeNode(*successor)
+			return self.Prev(key)
+		}
+		if result.Exists {
+			break
+		}
+		successor, _, _ = self.ring.Remotes(successor.Pos)
+		if successor.Addr == firstAddr {
+			break
+		}
+	}
+	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
+	return
+}
+func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
+	data := common.Item{
+		Key: key,
+	}
+	result := &common.Item{}
+	_, _, successor := self.ring.Remotes(key)
+	firstAddr := successor.Addr
+	for {
+		if err := successor.Call("DHash.Next", data, result); err != nil {
+			self.removeNode(*successor)
+			return self.Next(key)
+		}
+		if result.Exists {
+			break
+		}
+		_, _, successor = self.ring.Remotes(successor.Pos)
+		if successor.Addr == firstAddr {
+			break
+		}
+	}
+	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
+	return
 }
 func (self *Conn) Get(key []byte) (value []byte, existed bool) {
 	data := common.Item{
@@ -108,11 +156,13 @@ func (self *Conn) Get(key []byte) (value []byte, existed bool) {
 	currentRedundancy := self.ring.Redundancy()
 	futures := make([]*rpc.Call, currentRedundancy)
 	results := make([]*common.Item, currentRedundancy)
+	nodes := make(common.Remotes, currentRedundancy)
 	nextKey := key
 	var nextSuccessor *common.Remote
 	for i := 0; i < currentRedundancy; i++ {
 		_, _, nextSuccessor = self.ring.Remotes(nextKey)
 		result := &common.Item{}
+		nodes[i] = *nextSuccessor
 		results[i] = result
 		futures[i] = nextSuccessor.Go("DHash.Get", data, result)
 		nextKey = nextSuccessor.Pos
@@ -121,7 +171,7 @@ func (self *Conn) Get(key []byte) (value []byte, existed bool) {
 	for index, future := range futures {
 		<-future.Done
 		if future.Error != nil {
-			self.Reconnect()
+			self.removeNode(nodes[index])
 			return self.Get(key)
 		}
 		if result == nil || result.Timestamp < results[index].Timestamp {
