@@ -2,12 +2,22 @@ package client
 
 import (
 	"../common"
+	"bytes"
 	"fmt"
 	"net/rpc"
+	"sync/atomic"
+	"time"
+)
+
+const (
+	created = iota
+	started
+	stopped
 )
 
 type Conn struct {
-	ring *common.Ring
+	ring  *common.Ring
+	state int32
 }
 
 func NewConnRing(ring *common.Ring) *Conn {
@@ -26,6 +36,42 @@ func MustConn(addr string) (result *Conn) {
 		panic(err)
 	}
 	return
+}
+func (self *Conn) hasState(s int32) bool {
+	return atomic.LoadInt32(&self.state) == s
+}
+func (self *Conn) changeState(old, neu int32) bool {
+	return atomic.CompareAndSwapInt32(&self.state, old, neu)
+}
+func (self *Conn) update() {
+	myRingHash := self.ring.Hash()
+	var otherRingHash []byte
+	node := self.ring.Random()
+	if err := node.Call("DHash.RingHash", 0, &otherRingHash); err != nil {
+		self.ring.Remove(node)
+		self.Reconnect()
+		return
+	}
+	if bytes.Compare(myRingHash, otherRingHash) != 0 {
+		var newNodes common.Remotes
+		if err := node.Call("Node.Nodes", 0, &newNodes); err != nil {
+			self.ring.Remove(node)
+			self.Reconnect()
+			return
+		}
+		self.ring.SetNodes(newNodes)
+	}
+}
+func (self *Conn) updateRegularly() {
+	for self.hasState(started) {
+		self.update()
+		time.Sleep(common.PingInterval)
+	}
+}
+func (self *Conn) Start() {
+	if self.changeState(created, started) {
+		go self.updateRegularly()
+	}
 }
 func (self *Conn) Reconnect() {
 	node := self.ring.Random()
