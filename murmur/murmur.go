@@ -68,6 +68,11 @@ func (self *Hash) Sum(p []byte) []byte {
 	(*bytes.Buffer)(self).Write(p)
 	return self.Get()
 }
+func (self *Hash) MustWrite(p []byte) {
+	if i, err := (*bytes.Buffer)(self).Write(p); i != len(p) || err != nil {
+		panic(fmt.Errorf("When Writing %v to %v, got %v, %v", p, self, i, err))
+	}
+}
 func (self *Hash) Write(p []byte) (n int, err error) {
 	return (*bytes.Buffer)(self).Write(p)
 }
