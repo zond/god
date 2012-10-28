@@ -40,10 +40,9 @@ type Remote struct {
 }
 
 func (self Remote) Clone() (result Remote) {
-	result = Remote{
-		Pos:  append([]byte{}, self.Pos...),
-		Addr: self.Addr,
-	}
+	result.Pos = make([]byte, len(self.Pos))
+	copy(result.Pos, self.Pos)
+	result.Addr = self.Addr
 	return
 }
 func (self Remote) Equal(other Remote) bool {
