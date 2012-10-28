@@ -6,8 +6,8 @@ import (
 
 type nodeServer Node
 
-func (self *nodeServer) Notify(caller common.Remote, nodes *common.Remotes) error {
-	*nodes = (*Node)(self).Notify(caller)
+func (self *nodeServer) Notify(caller common.Remote, ringHash *[]byte) error {
+	*ringHash = (*Node)(self).Notify(caller)
 	return nil
 }
 func (self *nodeServer) Nodes(x int, nodes *common.Remotes) error {

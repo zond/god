@@ -185,21 +185,29 @@ func (self *Node) pingPredecessor() {
 func (self *Node) Nodes() common.Remotes {
 	return self.ring.Nodes()
 }
-func (self *Node) Notify(caller common.Remote) common.Remotes {
+func (self *Node) Notify(caller common.Remote) []byte {
 	self.ring.Add(caller)
-	return self.ring.Nodes()
+	return self.ring.Hash()
 }
 func (self *Node) notifySuccessor() {
 	_, _, successor := self.ring.Remotes(self.GetPosition())
-	var newNodes common.Remotes
-	if err := successor.Call("Node.Notify", self.remote(), &newNodes); err != nil {
+	myRingHash := self.ring.Hash()
+	var otherRingHash []byte
+	if err := successor.Call("Node.Notify", self.remote(), &otherRingHash); err != nil {
 		self.RemoveNode(*successor)
 	} else {
-		predecessor := self.GetPredecessor()
-		self.ring.SetNodes(newNodes)
-		self.ring.Add(predecessor)
-		if predecessor.Addr != self.GetAddr() {
-			self.ring.Clean(predecessor.Pos, self.GetPosition())
+		if bytes.Compare(myRingHash, otherRingHash) != 0 {
+			var newNodes common.Remotes
+			if err := successor.Call("Node.Nodes", 0, &newNodes); err != nil {
+				self.RemoveNode(*successor)
+			} else {
+				predecessor := self.GetPredecessor()
+				self.ring.SetNodes(newNodes)
+				self.ring.Add(predecessor)
+				if predecessor.Addr != self.GetAddr() {
+					self.ring.Clean(predecessor.Pos, self.GetPosition())
+				}
+			}
 		}
 	}
 }
@@ -209,18 +217,15 @@ func (self *Node) MustJoin(addr string) {
 	}
 }
 func (self *Node) Join(addr string) (err error) {
-	if bytes.Compare(self.GetPosition(), make([]byte, murmur.Size)) == 0 {
-		var newNodes common.Remotes
-		if err = common.Switch.Call(addr, "Node.Nodes", 0, &newNodes); err != nil {
-			return
-		}
-		self.SetPosition(common.NewRingNodes(newNodes).GetSlot())
-	}
 	var newNodes common.Remotes
-	if err = common.Switch.Call(addr, "Node.Notify", self.remote(), &newNodes); err != nil {
+	if err = common.Switch.Call(addr, "Node.Nodes", 0, &newNodes); err != nil {
 		return
 	}
+	if bytes.Compare(self.GetPosition(), make([]byte, murmur.Size)) == 0 {
+		self.SetPosition(common.NewRingNodes(newNodes).GetSlot())
+	}
 	self.ring.SetNodes(newNodes)
+	self.notifySuccessor()
 	return
 }
 func (self *Node) RemoveNode(remote common.Remote) {
