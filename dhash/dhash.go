@@ -172,6 +172,10 @@ func (self *DHash) Prev(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
+func (self *DHash) RingHash(x int, ringHash *[]byte) error {
+	*ringHash = self.node.RingHash()
+	return nil
+}
 func (self *DHash) Next(data common.Item, result *common.Item) error {
 	*result = data
 	if key, value, timestamp, exists := self.tree.Next(data.Key); exists {
