@@ -1,6 +1,7 @@
 package dhash
 
 import (
+	"../client"
 	"../common"
 	"../discord"
 	"../murmur"
@@ -153,6 +154,14 @@ func (self *DHash) Describe() string {
 }
 func (self *DHash) DescribeTree() string {
 	return self.tree.Describe()
+}
+func (self *DHash) client() *client.Conn {
+	return client.NewConnRing(common.NewRingNodes(self.node.Nodes()))
+}
+func (self *DHash) Find(data common.Item, result *common.Item) error {
+	*result = data
+	result.Value, result.Exists = self.client().Get(data.Key)
+	return nil
 }
 func (self *DHash) Get(data common.Item, result *common.Item) error {
 	*result = data
