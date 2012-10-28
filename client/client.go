@@ -10,6 +10,9 @@ type Conn struct {
 	ring *common.Ring
 }
 
+func NewConnRing(ring *common.Ring) *Conn {
+	return &Conn{ring: ring}
+}
 func NewConn(addr string) (result *Conn, err error) {
 	result = &Conn{common.NewRing()}
 	var newNodes common.Remotes
