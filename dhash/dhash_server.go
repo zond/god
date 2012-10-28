@@ -15,6 +15,12 @@ func (self *dhashServer) Put(data common.Item, x *int) error {
 func (self *dhashServer) Find(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Find(data, result)
 }
+func (self *dhashServer) Next(data common.Item, result *common.Item) error {
+	return (*DHash)(self).Next(data, result)
+}
+func (self *dhashServer) Prev(data common.Item, result *common.Item) error {
+	return (*DHash)(self).Next(data, result)
+}
 func (self *dhashServer) Get(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Get(data, result)
 }
