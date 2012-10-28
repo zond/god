@@ -163,13 +163,29 @@ func (self *DHash) Find(data common.Item, result *common.Item) error {
 	result.Value, result.Exists = self.client().Get(data.Key)
 	return nil
 }
+func (self *DHash) Prev(data common.Item, result *common.Item) error {
+	*result = data
+	if key, value, timestamp, exists := self.tree.Prev(data.Key); exists {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			result.Key, result.Value, result.Timestamp, result.Exists = key, []byte(byteHasher), timestamp, exists
+		}
+	}
+	return nil
+}
+func (self *DHash) Next(data common.Item, result *common.Item) error {
+	*result = data
+	if key, value, timestamp, exists := self.tree.Next(data.Key); exists {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			result.Key, result.Value, result.Timestamp, result.Exists = key, []byte(byteHasher), timestamp, exists
+		}
+	}
+	return nil
+}
 func (self *DHash) Get(data common.Item, result *common.Item) error {
 	*result = data
 	if value, timestamp, exists := self.tree.Get(data.Key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
-			result.Exists = true
-			result.Value = []byte(byteHasher)
-			result.Timestamp = timestamp
+			result.Exists, result.Value, result.Timestamp = true, []byte(byteHasher), timestamp
 		}
 	}
 	return nil
@@ -180,8 +196,7 @@ func (self *DHash) Put(data common.Item) error {
 	if successor.Addr != self.node.GetAddr() {
 		return successor.Call("DHash.Put", data, &x)
 	}
-	data.TTL = self.node.Redundancy()
-	data.Timestamp = self.timer.ContinuousTime()
+	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.put(data)
 }
 func (self *DHash) forwardPut(data common.Item) {

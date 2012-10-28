@@ -8,6 +8,8 @@ A Go database
 * Main tree
  * Functionality
   * Next/Prev
+	 * Implement in Tree -CHECK-
+	 * Implement in DHash ...
 	* Slice (offset, limit..)
 	* Push/Pop
 	* Shift/Unshift
