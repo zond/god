@@ -14,7 +14,7 @@ func NewConnRing(ring *common.Ring) *Conn {
 	return &Conn{ring: ring}
 }
 func NewConn(addr string) (result *Conn, err error) {
-	result = &Conn{common.NewRing()}
+	result = &Conn{ring: common.NewRing()}
 	var newNodes common.Remotes
 	err = common.Switch.Call(addr, "Node.Nodes", 0, &newNodes)
 	result.ring.SetNodes(newNodes)
@@ -28,16 +28,19 @@ func MustConn(addr string) (result *Conn) {
 	return
 }
 func (self *Conn) Reconnect() {
-	_, _, successor := self.ring.Remotes(nil)
+	node := self.ring.Random()
 	var err error
 	for {
 		var newNodes common.Remotes
-		if err = successor.Call("Node.Ring", 0, &newNodes); err == nil {
+		if err = node.Call("Node.Ring", 0, &newNodes); err == nil {
 			self.ring.SetNodes(newNodes)
 			return
 		}
-		self.ring.Remove(*successor)
-		_, _, successor = self.ring.Remotes(nil)
+		self.ring.Remove(node)
+		if self.ring.Size() == 0 {
+			panic(fmt.Errorf("%v doesn't know of any live nodes!", self))
+		}
+		node = self.ring.Random()
 	}
 }
 func (self *Conn) Put(key, value []byte) {
