@@ -26,6 +26,16 @@ func NewRingNodes(nodes Remotes) *Ring {
 	}
 }
 
+func (self *Ring) Hash() []byte {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	hasher := murmur.New()
+	for _, node := range self.nodes {
+		hasher.MustWrite(node.Pos)
+		hasher.MustWrite([]byte(node.Addr))
+	}
+	return hasher.Get()
+}
 func (self *Ring) Validate() {
 	clone := self.Clone()
 	seen := make(map[string]bool)
