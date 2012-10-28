@@ -18,11 +18,6 @@ const (
 	stopped
 )
 
-const (
-	notifyInterval = time.Second
-	pingInterval   = time.Second
-)
-
 type Node struct {
 	ring     *common.Ring
 	position []byte
@@ -163,13 +158,13 @@ func (self *Node) Start() (err error) {
 func (self *Node) notifyPeriodically() {
 	for self.hasState(started) {
 		self.notifySuccessor()
-		time.Sleep(notifyInterval)
+		time.Sleep(common.PingInterval)
 	}
 }
 func (self *Node) pingPeriodically() {
 	for self.hasState(started) {
 		self.pingPredecessor()
-		time.Sleep(pingInterval)
+		time.Sleep(common.PingInterval)
 	}
 }
 func (self *Node) Ping() {
