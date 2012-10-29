@@ -116,6 +116,7 @@ func (self *Conn) Prev(key []byte) (prevKey, prevValue []byte, existed bool) {
 			return self.Prev(key)
 		}
 		if result.Exists {
+			result.Value, result.Exists = self.Get(result.Key)
 			break
 		}
 		successor, _, _ = self.ring.Remotes(successor.Pos)
@@ -139,6 +140,7 @@ func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
 			return self.Next(key)
 		}
 		if result.Exists {
+			result.Value, result.Exists = self.Get(result.Key)
 			break
 		}
 		_, _, successor = self.ring.Remotes(successor.Pos)
