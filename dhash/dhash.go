@@ -48,6 +48,9 @@ func (self *DHash) hasState(s int32) bool {
 func (self *DHash) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
+func (self *DHash) AddChangeListener(f common.RingChangeListener) {
+	self.node.AddChangeListener(f)
+}
 func (self *DHash) Stop() {
 	if self.changeState(started, stopped) {
 		self.node.Stop()
