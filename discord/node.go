@@ -47,6 +47,9 @@ func (self *Node) Export(name string, api interface{}) error {
 	}
 	return fmt.Errorf("%v can only export when in state 'created'")
 }
+func (self *Node) AddChangeListener(f common.RingChangeListener) {
+	self.ring.AddChangeListener(f)
+}
 func (self *Node) SetPosition(position []byte) *Node {
 	self.lock.Lock()
 	defer self.lock.Unlock()
