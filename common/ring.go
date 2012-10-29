@@ -10,9 +10,12 @@ import (
 	"sync"
 )
 
+type RingChangeListener func(ring *Ring)
+
 type Ring struct {
-	nodes Remotes
-	lock  *sync.RWMutex
+	nodes           Remotes
+	lock            *sync.RWMutex
+	changeListeners []RingChangeListener
 }
 
 func NewRing() *Ring {
@@ -27,20 +30,28 @@ func NewRingNodes(nodes Remotes) *Ring {
 	}
 }
 
+func (self *Ring) AddChangeListener(f RingChangeListener) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.changeListeners = append(self.changeListeners, f)
+}
 func (self *Ring) Random() Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.nodes[rand.Int()%len(self.nodes)].Clone()
 }
-func (self *Ring) Hash() []byte {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+func (self *Ring) hash() []byte {
 	hasher := murmur.New()
 	for _, node := range self.nodes {
 		hasher.MustWrite(node.Pos)
 		hasher.MustWrite([]byte(node.Addr))
 	}
 	return hasher.Get()
+}
+func (self *Ring) Hash() []byte {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.hash()
 }
 func (self *Ring) Validate() {
 	clone := self.Clone()
@@ -65,7 +76,19 @@ func (self *Ring) Describe() string {
 func (self *Ring) SetNodes(nodes Remotes) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
+	h := self.hash()
 	self.nodes = nodes.Clone()
+	self.sendChanges(h)
+}
+func (self *Ring) sendChanges(oldHash []byte) {
+	if bytes.Compare(oldHash, self.hash()) != 0 {
+		clone := NewRingNodes(self.nodes.Clone())
+		for _, listener := range self.changeListeners {
+			self.lock.Unlock()
+			listener(clone)
+			self.lock.Lock()
+		}
+	}
 }
 func (self *Ring) Nodes() Remotes {
 	self.lock.RLock()
@@ -84,9 +107,10 @@ func (self *Ring) Equal(other *Ring) bool {
 	return self.Nodes().Equal(other.Nodes())
 }
 func (self *Ring) Add(r Remote) {
-	remote := r.Clone()
 	self.lock.Lock()
 	defer self.lock.Unlock()
+	oldHash := self.hash()
+	remote := r.Clone()
 	for index, current := range self.nodes {
 		if current.Addr == remote.Addr {
 			if bytes.Compare(current.Pos, remote.Pos) == 0 {
@@ -103,6 +127,7 @@ func (self *Ring) Add(r Remote) {
 	} else {
 		self.nodes = append(self.nodes, remote)
 	}
+	self.sendChanges(oldHash)
 }
 func (self *Ring) Redundancy() int {
 	self.lock.RLock()
@@ -207,6 +232,7 @@ func (self *Ring) GetSlot() []byte {
 func (self *Ring) Remove(remote Remote) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
+	oldHash := self.hash()
 	for index, current := range self.nodes {
 		if current.Addr == remote.Addr {
 			if len(self.nodes) == 1 {
@@ -215,10 +241,12 @@ func (self *Ring) Remove(remote Remote) {
 			self.nodes = append(self.nodes[:index], self.nodes[index+1:]...)
 		}
 	}
+	self.sendChanges(oldHash)
 }
 func (self *Ring) Clean(predecessor, successor []byte) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
+	oldHash := self.hash()
 	_, _, from := self.indices(predecessor)
 	to, at, _ := self.indices(successor)
 	if at != -1 {
@@ -229,4 +257,5 @@ func (self *Ring) Clean(predecessor, successor []byte) {
 	} else {
 		self.nodes = append(self.nodes[:from], self.nodes[to:]...)
 	}
+	self.sendChanges(oldHash)
 }
