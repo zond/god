@@ -1,6 +1,7 @@
 package main
 
 import (
+	"../common"
 	"../dhash"
 	"flag"
 	"fmt"
@@ -15,13 +16,15 @@ var joinPort = flag.Int("joinPort", 9191, "Port to join")
 func main() {
 	flag.Parse()
 	s := dhash.NewDHash(fmt.Sprintf("%v:%v", *ip, *port))
+	s.AddChangeListener(func(ring *common.Ring) {
+		fmt.Println(s.Describe())
+	})
 	s.MustStart()
 	if *joinIp != "" {
 		s.MustJoin(fmt.Sprintf("%v:%v", *joinIp, *joinPort))
 	}
 
 	for {
-		fmt.Println(time.Now(), s.Describe())
 		time.Sleep(time.Second * 10)
 	}
 }
