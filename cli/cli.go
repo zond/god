@@ -19,10 +19,24 @@ var actions = map[*regexp.Regexp]action{
 	regexp.MustCompile("^$"):                    show,
 	regexp.MustCompile("^describeTree (\\S+)$"): describeTree,
 	regexp.MustCompile("^get (\\S+)$"):          get,
+	regexp.MustCompile("^next (\\S+)$"):         next,
+	regexp.MustCompile("^prev (\\S+)$"):         prev,
 }
 
 func show(conn *client.Conn, args []string) {
 	fmt.Println(conn.Describe())
+}
+
+func prev(conn *client.Conn, args []string) {
+	if key, value, existed := conn.Prev([]byte(args[1])); existed {
+		fmt.Println(string(key), "=>", string(value))
+	}
+}
+
+func next(conn *client.Conn, args []string) {
+	if key, value, existed := conn.Next([]byte(args[1])); existed {
+		fmt.Println(string(key), "=>", string(value))
+	}
 }
 
 func describeTree(conn *client.Conn, args []string) {
@@ -38,8 +52,7 @@ func describeTree(conn *client.Conn, args []string) {
 }
 
 func get(conn *client.Conn, args []string) {
-	value, existed := conn.Get([]byte(args[1]))
-	if existed {
+	if value, existed := conn.Get([]byte(args[1])); existed {
 		fmt.Println(string(value))
 	}
 }
