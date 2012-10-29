@@ -22,7 +22,7 @@ func (self *dhashServer) Next(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Next(data, result)
 }
 func (self *dhashServer) Prev(data common.Item, result *common.Item) error {
-	return (*DHash)(self).Next(data, result)
+	return (*DHash)(self).Prev(data, result)
 }
 func (self *dhashServer) Get(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Get(data, result)
