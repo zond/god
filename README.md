@@ -7,8 +7,6 @@ A Go database
 
 * Main tree
  * Functionality
-  * Next/Prev
-	 * Automated tests
 	* Slice (offset, limit..)
 	* Push/Pop
 	* Shift/Unshift
