@@ -9,14 +9,12 @@ import (
 
 type Tree struct {
 	lock *sync.RWMutex
-	size int
 	root *node
 }
 
 func NewTree() (result *Tree) {
 	result = &Tree{
 		lock: new(sync.RWMutex),
-		size: 0,
 		root: newNode(nil, nil, 0, false),
 	}
 	result.root.rehash(nil)
@@ -27,16 +25,21 @@ func newTreeWith(key []Nibble, value Hasher, version int64) (result *Tree) {
 	result.PutVersion(key, value, 0, version)
 	return
 }
-
-func (self *Tree) Each(f TreeIterator) {
+func (self *Tree) Navigator() *Navigator {
+	return &Navigator{tree: self}
+}
+func (self *Tree) iterate(nav *Navigator, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	newIterator := func(key []byte, value Hasher) {
+	newIteratorFunc := func(key []byte, value Hasher) {
 		self.lock.RUnlock()
 		f(key, value)
 		self.lock.RLock()
 	}
-	self.root.each(nil, newIterator)
+	self.root.iterate(nil, nav, newIteratorFunc)
+}
+func (self *Tree) Each(f TreeIterator) {
+	self.iterate(self.Navigator(), f)
 }
 
 func (self *Tree) Hash() []byte {
@@ -62,26 +65,25 @@ func (self *Tree) String() string {
 func (self *Tree) Size() int {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.size
+	return self.root.size
 }
 func (self *Tree) describeIndented(indent int) string {
-	buffer := bytes.NewBufferString(fmt.Sprintf("<Radix size:%v hash:%v>\n", self.Size(), hex.EncodeToString(self.Hash())))
-	self.root.eachChild(func(node *node) {
-		node.describe(indent, buffer)
-	})
+	indentation := &bytes.Buffer{}
+	for i := 0; i < indent; i++ {
+		fmt.Fprint(indentation, " ")
+	}
+	buffer := bytes.NewBufferString(fmt.Sprintf("%v<Radix size:%v hash:%v>\n", indentation, self.Size(), hex.EncodeToString(self.Hash())))
+	self.root.describe(indent+2, buffer)
 	return string(buffer.Bytes())
 }
 func (self *Tree) Describe() string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.describeIndented(2)
+	return self.describeIndented(0)
 }
 
 func (self *Tree) put(key []Nibble, value Hasher, version int64) (old Hasher, existed bool) {
 	self.root, old, _, existed = self.root.insert(nil, newNode(key, value, version, true))
-	if !existed {
-		self.size++
-	}
 	return
 }
 func (self *Tree) Put(key []byte, value Hasher, version int64) (old Hasher, existed bool) {
@@ -116,9 +118,6 @@ func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
 }
 func (self *Tree) del(key []Nibble) (old Hasher, existed bool) {
 	self.root, old, existed = self.root.del(nil, key)
-	if existed {
-		self.size--
-	}
 	return
 }
 
@@ -182,9 +181,6 @@ func (self *Tree) GetVersion(key []Nibble) (value Hasher, version int64, existed
 func (self *Tree) putVersion(key []Nibble, value Hasher, expected, version int64) bool {
 	if _, current, existed := self.root.get(key); !existed || current == expected {
 		self.root, _, _, existed = self.root.insert(nil, newNode(key, value, version, true))
-		if !existed {
-			self.size++
-		}
 		return true
 	}
 	return false
@@ -198,13 +194,7 @@ func (self *Tree) DelVersion(key []Nibble, expected int64) bool {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	if _, current, existed := self.root.get(key); existed && current == expected {
-		var existed bool
-		self.root, _, existed = self.root.del(nil, key)
-		self.lock.Unlock()
-		self.lock.Lock()
-		if existed {
-			self.size--
-		}
+		self.root, _, _ = self.root.del(nil, key)
 		return true
 	}
 	return false
