@@ -14,7 +14,6 @@ type Navigator struct {
 	from    []byte
 	to      []byte
 	hits    int
-	state   int
 }
 
 func (self *Navigator) Reverse() *Navigator {
@@ -37,15 +36,28 @@ func (self *Navigator) To(key []byte) *Navigator {
 	self.to = key
 	return self
 }
-func (self *Navigator) Run(f TreeIterator) {
-	self.tree.iterate(self, f)
+func (self *Navigator) findStart() {
+
 }
-func (self *Navigator) register() {
-	self.hits++
+func (self *Navigator) next() (key []byte, value Hasher, exists bool) {
+	return
 }
-func (self *Navigator) validChild(n *node) bool {
-	return true
+func (self *Navigator) outsideScope(key []byte) bool {
+	return false
 }
-func (self *Navigator) validNode(n *node) bool {
-	return true
+func (self *Navigator) Each(f TreeIterator) {
+	self.tree.lock.RLock()
+	defer self.tree.lock.RUnlock()
+	self.findStart()
+	nextKey, nextValue, exists := self.next()
+	for exists {
+		if self.outsideScope(nextKey) {
+			break
+		}
+		self.tree.lock.RUnlock()
+		self.hits++
+		f(nextKey, nextValue)
+		self.tree.lock.RLock()
+		nextKey, nextValue, exists = self.next()
+	}
 }
