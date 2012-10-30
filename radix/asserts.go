@@ -4,6 +4,12 @@ import (
 	"testing"
 )
 
+func assertSize(t *testing.T, tree *Tree, s int) {
+	if tree.Size() != s {
+		t.Errorf("%v should have size %v", tree.Describe(), s)
+	}
+}
+
 func assertExistance(t *testing.T, tree *Tree, k, v string) {
 	if value, _, existed := tree.Get([]byte(k)); !existed || value != StringHasher(v) {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), rip([]byte(k)), v, value, existed)
