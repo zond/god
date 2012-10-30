@@ -48,6 +48,17 @@ func (self *node) rehash(key []Nibble) {
 	})
 	h.Extrude(&self.hash)
 }
+func (self *node) each(prefix []Nibble, f TreeIterator) {
+	if self != nil {
+		prefix = append(prefix, self.segment...)
+		if self.valueHash != nil {
+			f(stitch(prefix), self.value)
+		}
+		for _, child := range self.children {
+			child.each(prefix, f)
+		}
+	}
+}
 func (self *node) eachChild(f func(child *node)) {
 	if self != nil {
 		for _, child := range self.children {
@@ -76,32 +87,6 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	self.eachChild(func(node *node) {
 		node.describe(indent+len(encodedSegment), buffer)
 	})
-}
-func (self *node) iterate(prefix []Nibble, nav *Navigator, f TreeIterator) {
-	if self != nil {
-		prefix = append(prefix, self.segment...)
-		if nav.reverse {
-			for i := len(self.children) - 1; i >= 0; i-- {
-				if nav.validChild(self.children[i]) {
-					self.children[i].iterate(prefix, nav, f)
-				}
-			}
-			if self.valueHash != nil && nav.validNode(self) {
-				f(stitch(prefix), self.value)
-				nav.register()
-			}
-		} else {
-			if self.valueHash != nil && nav.validNode(self) {
-				f(stitch(prefix), self.value)
-				nav.register()
-			}
-			for _, child := range self.children {
-				if nav.validChild(child) {
-					child.iterate(prefix, nav, f)
-				}
-			}
-		}
-	}
 }
 func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
 	result = allocated
@@ -149,6 +134,9 @@ func (self *node) get(segment []Nibble) (value Hasher, version int64, existed bo
 		}
 	}
 	panic("Shouldn't happen")
+}
+func (self *node) index(prefix []Nibble, n int) (nibble []Nibble, value Hasher, version int64, existed bool) {
+	return
 }
 func (self *node) nextChild(prefix, segment []Nibble) (nextNibble []Nibble, nextValue Hasher, nextVersion int64, existed bool) {
 	recursePrefix := make([]Nibble, len(prefix)+len(self.segment))
