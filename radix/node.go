@@ -14,6 +14,7 @@ type node struct {
 	valueHash []byte
 	hash      []byte
 	children  []*node
+	size      int
 }
 
 func newNode(segment []Nibble, value Hasher, version int64, hasValue bool) (result *node) {
@@ -35,9 +36,14 @@ func (self *node) setSegment(part []Nibble) {
 	self.segment = new_segment
 }
 func (self *node) rehash(key []Nibble) {
+	self.size = 0
+	if self.valueHash != nil {
+		self.size++
+	}
 	h := murmur.NewBytes(toBytes(key))
 	h.Write(self.valueHash)
 	self.eachChild(func(node *node) {
+		self.size += node.size
 		h.Write(node.hash)
 	})
 	h.Extrude(&self.hash)
@@ -58,27 +64,42 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	}
 	encodedSegment := stringEncode(toBytes(self.segment))
 	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), encodedSegment)
-	if self.value != nil {
+	if self.valueHash != nil {
 		if subTree, ok := self.value.(*Tree); ok {
 			fmt.Fprintf(buffer, " => %v", subTree.describeIndented(indent+2))
 		} else {
 			fmt.Fprintf(buffer, " => %v", self.value)
 		}
 	}
-	fmt.Fprintf(buffer, " (%v, %v)", self.version, hex.EncodeToString(self.hash))
+	fmt.Fprintf(buffer, " (%v, %v, %v)", self.version, self.size, hex.EncodeToString(self.hash))
 	fmt.Fprintf(buffer, "\n")
 	self.eachChild(func(node *node) {
 		node.describe(indent+len(encodedSegment), buffer)
 	})
 }
-func (self *node) each(prefix []Nibble, f TreeIterator) {
+func (self *node) iterate(prefix []Nibble, nav *Navigator, f TreeIterator) {
 	if self != nil {
 		prefix = append(prefix, self.segment...)
-		if self.valueHash != nil {
-			f(stitch(prefix), self.value)
-		}
-		for _, child := range self.children {
-			child.each(prefix, f)
+		if nav.reverse {
+			for i := len(self.children) - 1; i >= 0; i-- {
+				if nav.validChild(self.children[i]) {
+					self.children[i].iterate(prefix, nav, f)
+				}
+			}
+			if self.valueHash != nil && nav.validNode(self) {
+				f(stitch(prefix), self.value)
+				nav.register()
+			}
+		} else {
+			if self.valueHash != nil && nav.validNode(self) {
+				f(stitch(prefix), self.value)
+				nav.register()
+			}
+			for _, child := range self.children {
+				if nav.validChild(child) {
+					child.iterate(prefix, nav, f)
+				}
+			}
 		}
 	}
 }
