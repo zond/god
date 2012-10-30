@@ -638,7 +638,7 @@ func BenchmarkTreeSync100000_1000(b *testing.B) {
 	benchTreeSync(b, 100000, 1000)
 }
 
-func benchTree(b *testing.B, n int) {
+func benchTree(b *testing.B, n int, put, get bool) {
 	b.StopTimer()
 	for len(benchmarkTestKeys) < n {
 		benchmarkTestKeys = append(benchmarkTestKeys, murmur.HashString(fmt.Sprint(len(benchmarkTestKeys))))
@@ -659,34 +659,58 @@ func benchTree(b *testing.B, n int) {
 	for i := 0; i < b.N; i++ {
 		k = benchmarkTestKeys[i%len(benchmarkTestKeys)]
 		v = benchmarkTestValues[i%len(benchmarkTestValues)]
-		benchmarkTestTree.Put(k, v, 0)
-		j, _, existed := benchmarkTestTree.Get(k)
-		if j != v {
-			b.Fatalf("%v should contain %v, but got %v, %v", benchmarkTestTree.Describe(), v, j, existed)
+		if put {
+			benchmarkTestTree.Put(k, v, 0)
+		}
+		if get {
+			j, _, existed := benchmarkTestTree.Get(k)
+			if j != v {
+				b.Fatalf("%v should contain %v, but got %v, %v", benchmarkTestTree.Describe(), v, j, existed)
+			}
 		}
 	}
 }
 
-func BenchmarkTree10(b *testing.B) {
-	benchTree(b, 10)
+func BenchmarkTreePut10(b *testing.B) {
+	benchTree(b, 10, true, false)
 }
 
-func BenchmarkTree100(b *testing.B) {
-	benchTree(b, 100)
+func BenchmarkTreeGet10(b *testing.B) {
+	benchTree(b, 10, false, true)
 }
 
-func BenchmarkTree1000(b *testing.B) {
-	benchTree(b, 1000)
+func BenchmarkTreePut100(b *testing.B) {
+	benchTree(b, 100, true, false)
 }
 
-func BenchmarkTree10000(b *testing.B) {
-	benchTree(b, 10000)
+func BenchmarkTreeGet100(b *testing.B) {
+	benchTree(b, 100, false, true)
 }
 
-func BenchmarkTree100000(b *testing.B) {
-	benchTree(b, 100000)
+func BenchmarkTreePut1000(b *testing.B) {
+	benchTree(b, 1000, true, false)
 }
 
-func BenchmarkTree1000000(b *testing.B) {
-	benchTree(b, 1000000)
+func BenchmarkTreeGet1000(b *testing.B) {
+	benchTree(b, 1000, false, true)
+}
+
+func BenchmarkTreePut10000(b *testing.B) {
+	benchTree(b, 10000, true, false)
+}
+
+func BenchmarkTreeGet10000(b *testing.B) {
+	benchTree(b, 10000, false, true)
+}
+
+func BenchmarkTreePut100000(b *testing.B) {
+	benchTree(b, 100000, true, false)
+}
+
+func BenchmarkTreeGet1000000(b *testing.B) {
+	benchTree(b, 1000000, false, true)
+}
+
+func BenchmarkTreePut1000000(b *testing.B) {
+	benchTree(b, 1000000, true, false)
 }
