@@ -110,14 +110,14 @@ func (self *Tree) Next(key []byte) (nextKey []byte, nextValue Hasher, nextVersio
 func (self *Tree) First() (key []byte, value Hasher, version int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	nibble, value, version, existed := self.root.next(nil, nil)
+	nibble, value, version, existed := self.root.first(nil)
 	key = stitch(nibble)
 	return
 }
 func (self *Tree) Last() (key []byte, value Hasher, version int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	nibble, value, version, existed := self.root.prev(nil, nil)
+	nibble, value, version, existed := self.root.last(nil)
 	key = stitch(nibble)
 	return
 }
@@ -127,9 +127,14 @@ func (self *Tree) Index(n int) (key []byte, value Hasher, version int64, existed
 	} else if n == -1 {
 		return self.Last()
 	}
+
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	nibble, value, version, existed := self.root.index(nil, n)
+	up := n > 0
+	if n < 0 {
+		n = -n - 1
+	}
+	nibble, value, version, existed := self.root.index(nil, n, up)
 	key = stitch(nibble)
 	return
 }

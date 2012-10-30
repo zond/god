@@ -470,6 +470,36 @@ func TestTreeNilKey(t *testing.T) {
 	}
 }
 
+func TestTreeFirstLast(t *testing.T) {
+	tree := NewTree()
+	for i := 10; i < 20; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	if key, value, version, existed := tree.First(); !existed || bytes.Compare(key, []byte(fmt.Sprint(10))) != 0 || version != 0 || value != StringHasher(fmt.Sprint(10)) {
+		t.Errorf("%v.First() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), []byte(fmt.Sprint(10)), StringHasher(fmt.Sprint(10)), 0, true, key, value, version, existed)
+	}
+	if key, value, version, existed := tree.Last(); !existed || bytes.Compare(key, []byte(fmt.Sprint(19))) != 0 || version != 0 || value != StringHasher(fmt.Sprint(19)) {
+		t.Errorf("%v.Last() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), string([]byte(fmt.Sprint(19))), StringHasher(fmt.Sprint(19)), 0, true, string(key), string(value.(StringHasher)), version, existed)
+	}
+}
+
+func TestTreeIndex(t *testing.T) {
+	tree := NewTree()
+	for i := 100; i < 200; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	for i := 0; i < 100; i++ {
+		if key, value, version, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+100))) != 0 || version != 0 || value != StringHasher(fmt.Sprint(i+100)) {
+			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+100)), StringHasher(fmt.Sprint(i+100)), 0, true, key, value, version, existed)
+		}
+	}
+	for i := -1; i > -101; i-- {
+		if key, value, version, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+200))) != 0 || version != 0 || value != StringHasher(fmt.Sprint(i+200)) {
+			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+200)), StringHasher(fmt.Sprint(i+200)), 0, true, key, value, version, existed)
+		}
+	}
+}
+
 func TestTreePrev(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {

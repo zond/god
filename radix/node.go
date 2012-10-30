@@ -135,7 +135,70 @@ func (self *node) get(segment []Nibble) (value Hasher, version int64, existed bo
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) index(prefix []Nibble, n int) (nibble []Nibble, value Hasher, version int64, existed bool) {
+func (self *node) index(prefix []Nibble, n int, up bool) (nibble []Nibble, value Hasher, version int64, existed bool) {
+	if n == 0 {
+		if self.valueHash != nil {
+			nibble, value, version, existed = append(prefix, self.segment...), self.value, self.version, true
+			return
+		}
+		if up {
+			return self.nextChild(prefix, nil)
+		} else {
+			return self.prevChild(prefix, nil)
+		}
+	}
+	if self.valueHash != nil {
+		n--
+	}
+	if self.size < n {
+		return
+	}
+	start, step, end := 0, 1, len(self.children)
+	if !up {
+		start, step, end = len(self.children)-1, -1, -1
+	}
+	var child *node
+	for i := start; i != end; i += step {
+		child = self.children[i]
+		if child != nil {
+			if child.size <= n {
+				n -= child.size
+			} else {
+				return child.index(append(prefix, self.segment...), n, up)
+			}
+		}
+	}
+	panic("Shouldn't happen")
+}
+func (self *node) first(prefix []Nibble) (nibble []Nibble, value Hasher, version int64, existed bool) {
+	if self == nil {
+		return
+	}
+	prefix = append(prefix, self.segment...)
+	for _, child := range self.children {
+		if child != nil {
+			if nibble, value, version, existed = child.first(prefix); existed {
+				return
+			}
+		}
+	}
+	nibble, value, version, existed = prefix, self.value, self.version, self.valueHash != nil
+	return
+}
+func (self *node) last(prefix []Nibble) (nibble []Nibble, value Hasher, version int64, existed bool) {
+	if self == nil {
+		return
+	}
+	prefix = append(prefix, self.segment...)
+	for i := len(self.children) - 1; i >= 0; i-- {
+		child := self.children[i]
+		if child != nil {
+			if nibble, value, version, existed = child.last(prefix); existed {
+				return
+			}
+		}
+	}
+	nibble, value, version, existed = prefix, self.value, self.version, self.valueHash != nil
 	return
 }
 func (self *node) nextChild(prefix, segment []Nibble) (nextNibble []Nibble, nextValue Hasher, nextVersion int64, existed bool) {
