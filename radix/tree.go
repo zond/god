@@ -28,20 +28,16 @@ func newTreeWith(key []Nibble, value Hasher, version int64) (result *Tree) {
 func (self *Tree) Navigator() *Navigator {
 	return &Navigator{tree: self}
 }
-func (self *Tree) iterate(nav *Navigator, f TreeIterator) {
+func (self *Tree) Each(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	newIteratorFunc := func(key []byte, value Hasher) {
+	newIterator := func(key []byte, value Hasher) {
 		self.lock.RUnlock()
 		f(key, value)
 		self.lock.RLock()
 	}
-	self.root.iterate(nil, nav, newIteratorFunc)
+	self.root.each(nil, newIterator)
 }
-func (self *Tree) Each(f TreeIterator) {
-	self.iterate(self.Navigator(), f)
-}
-
 func (self *Tree) Hash() []byte {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -109,6 +105,32 @@ func (self *Tree) Next(key []byte) (nextKey []byte, nextValue Hasher, nextVersio
 	defer self.lock.RUnlock()
 	nextNibble, nextValue, nextVersion, existed := self.root.next(nil, rip(key))
 	nextKey = stitch(nextNibble)
+	return
+}
+func (self *Tree) First() (key []byte, value Hasher, version int64, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	nibble, value, version, existed := self.root.next(nil, nil)
+	key = stitch(nibble)
+	return
+}
+func (self *Tree) Last() (key []byte, value Hasher, version int64, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	nibble, value, version, existed := self.root.prev(nil, nil)
+	key = stitch(nibble)
+	return
+}
+func (self *Tree) Index(n int) (key []byte, value Hasher, version int64, existed bool) {
+	if n == 0 {
+		return self.First()
+	} else if n == -1 {
+		return self.Last()
+	}
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	nibble, value, version, existed := self.root.index(nil, n)
+	key = stitch(nibble)
 	return
 }
 func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
