@@ -447,6 +447,86 @@ func TestTreeHash(t *testing.T) {
 	})
 }
 
+func createKVArrays(from, to int) (keys [][]byte, values []Hasher) {
+	for i := from; i <= to; i++ {
+		keys = append(keys, []byte(fmt.Sprint(i)))
+		values = append(values, StringHasher(fmt.Sprint(i)))
+	}
+	return
+}
+
+func TestTreeEachBetween(t *testing.T) {
+	tree := NewTree()
+	for i := 100; i < 200; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	var foundKeys [][]byte
+	var foundValues []Hasher
+	tree.EachBetween([]byte(fmt.Sprint(123)), []byte(fmt.Sprint(126)), true, true, func(key []byte, value Hasher) {
+		foundKeys = append(foundKeys, key)
+		foundValues = append(foundValues, value)
+	})
+	cmpKeys, cmpValues := createKVArrays(123, 126)
+	if !reflect.DeepEqual(cmpKeys, foundKeys) {
+		t.Errorf("%v should be %v", foundKeys, cmpKeys)
+	}
+	if !reflect.DeepEqual(cmpValues, foundValues) {
+		t.Errorf("%v should be %v", foundValues, cmpValues)
+	}
+	foundKeys = nil
+	foundValues = nil
+	tree.EachBetween([]byte(fmt.Sprint(123)), []byte(fmt.Sprint(126)), false, true, func(key []byte, value Hasher) {
+		foundKeys = append(foundKeys, key)
+		foundValues = append(foundValues, value)
+	})
+	cmpKeys, cmpValues = createKVArrays(124, 126)
+	if !reflect.DeepEqual(cmpKeys, foundKeys) {
+		t.Errorf("%v should be %v", foundKeys, cmpKeys)
+	}
+	if !reflect.DeepEqual(cmpValues, foundValues) {
+		t.Errorf("%v should be %v", foundValues, cmpValues)
+	}
+	foundKeys = nil
+	foundValues = nil
+	tree.EachBetween([]byte(fmt.Sprint(123)), []byte(fmt.Sprint(126)), true, false, func(key []byte, value Hasher) {
+		foundKeys = append(foundKeys, key)
+		foundValues = append(foundValues, value)
+	})
+	cmpKeys, cmpValues = createKVArrays(123, 125)
+	if !reflect.DeepEqual(cmpKeys, foundKeys) {
+		t.Errorf("%v should be %v", foundKeys, cmpKeys)
+	}
+	if !reflect.DeepEqual(cmpValues, foundValues) {
+		t.Errorf("%v should be %v", foundValues, cmpValues)
+	}
+	foundKeys = nil
+	foundValues = nil
+	tree.EachBetween(nil, []byte(fmt.Sprint(126)), true, false, func(key []byte, value Hasher) {
+		foundKeys = append(foundKeys, key)
+		foundValues = append(foundValues, value)
+	})
+	cmpKeys, cmpValues = createKVArrays(100, 125)
+	if !reflect.DeepEqual(cmpKeys, foundKeys) {
+		t.Errorf("%v should be %v", foundKeys, cmpKeys)
+	}
+	if !reflect.DeepEqual(cmpValues, foundValues) {
+		t.Errorf("%v should be %v", foundValues, cmpValues)
+	}
+	foundKeys = nil
+	foundValues = nil
+	tree.EachBetween([]byte(fmt.Sprint(123)), nil, true, false, func(key []byte, value Hasher) {
+		foundKeys = append(foundKeys, key)
+		foundValues = append(foundValues, value)
+	})
+	cmpKeys, cmpValues = createKVArrays(123, 199)
+	if !reflect.DeepEqual(cmpKeys, foundKeys) {
+		t.Errorf("%v should be %v", foundKeys, cmpKeys)
+	}
+	if !reflect.DeepEqual(cmpValues, foundValues) {
+		t.Errorf("%v should be %v", foundValues, cmpValues)
+	}
+}
+
 func TestTreeNilKey(t *testing.T) {
 	tree := NewTree()
 	h := tree.Hash()
