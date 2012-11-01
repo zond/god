@@ -14,7 +14,8 @@ type Hasher interface {
 	Hash() []byte
 }
 
-type TreeIterator func(key []byte, value Hasher)
+type TreeIterator func(key []byte, value Hasher) (cont bool)
+
 type Nibble byte
 
 func toBytes(n []Nibble) []byte {

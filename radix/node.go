@@ -48,51 +48,72 @@ func (self *node) rehash(key []Nibble) {
 	})
 	h.Extrude(&self.hash)
 }
-func (self *node) each(prefix []Nibble, f TreeIterator) {
+func (self *node) each(prefix []Nibble, f TreeIterator) (cont bool) {
+	cont = true
 	if self != nil {
 		prefix = append(prefix, self.segment...)
 		if self.valueHash != nil {
-			f(stitch(prefix), self.value)
+			cont = f(stitch(prefix), self.value)
 		}
-		for _, child := range self.children {
-			child.each(prefix, f)
+		if cont {
+			for _, child := range self.children {
+				cont = child.each(prefix, f)
+				if !cont {
+					break
+				}
+			}
 		}
 	}
+	return
 }
-func (self *node) reverseEach(prefix []Nibble, f TreeIterator) {
+func (self *node) reverseEach(prefix []Nibble, f TreeIterator) (cont bool) {
+	cont = true
 	if self != nil {
 		prefix = append(prefix, self.segment...)
 		for i := len(self.children) - 1; i >= 0; i-- {
-			self.children[i].reverseEach(prefix, f)
+			cont = self.children[i].reverseEach(prefix, f)
+			if !cont {
+				break
+			}
 		}
-		if self.valueHash != nil {
-			f(stitch(prefix), self.value)
+		if cont {
+			if self.valueHash != nil {
+				cont = f(stitch(prefix), self.value)
+			}
 		}
 	}
+	return
 }
-func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f TreeIterator) {
+func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f TreeIterator) (cont bool) {
+	cont = true
 	prefix = append(prefix, self.segment...)
 	if self.valueHash != nil && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-		f(stitch(prefix), self.value)
+		cont = f(stitch(prefix), self.value)
 	}
-	for _, child := range self.children {
-		if child != nil {
-			childKey := make([]Nibble, len(prefix)+len(child.segment))
-			copy(childKey, prefix)
-			copy(childKey[len(prefix):], child.segment)
-			minlen := len(min)
-			if minlen > len(childKey) {
-				minlen = len(childKey)
-			}
-			maxlen := len(max)
-			if maxlen > len(childKey) {
-				maxlen = len(childKey)
-			}
-			if (min == nil || nComp(childKey, min[:minlen]) > -1) && (max == nil || nComp(childKey, max[:maxlen]) < 1) {
-				child.eachBetween(prefix, min, max, mincmp, maxcmp, f)
+	if cont {
+		for _, child := range self.children {
+			if child != nil {
+				childKey := make([]Nibble, len(prefix)+len(child.segment))
+				copy(childKey, prefix)
+				copy(childKey[len(prefix):], child.segment)
+				minlen := len(min)
+				if minlen > len(childKey) {
+					minlen = len(childKey)
+				}
+				maxlen := len(max)
+				if maxlen > len(childKey) {
+					maxlen = len(childKey)
+				}
+				if (min == nil || nComp(childKey, min[:minlen]) > -1) && (max == nil || nComp(childKey, max[:maxlen]) < 1) {
+					cont = child.eachBetween(prefix, min, max, mincmp, maxcmp, f)
+				}
+				if !cont {
+					break
+				}
 			}
 		}
 	}
+	return
 }
 func (self *node) eachChild(f func(child *node)) {
 	if self != nil {

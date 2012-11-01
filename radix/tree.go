@@ -31,30 +31,30 @@ func (self *Tree) Navigator() *Navigator {
 func (self *Tree) ReverseEach(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	newIterator := func(key []byte, value Hasher) {
+	newIterator := func(key []byte, value Hasher) bool {
 		self.lock.RUnlock()
-		f(key, value)
-		self.lock.RLock()
+		defer self.lock.RLock()
+		return f(key, value)
 	}
 	self.root.reverseEach(nil, newIterator)
 }
 func (self *Tree) Each(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	newIterator := func(key []byte, value Hasher) {
+	newIterator := func(key []byte, value Hasher) bool {
 		self.lock.RUnlock()
-		f(key, value)
-		self.lock.RLock()
+		defer self.lock.RLock()
+		return f(key, value)
 	}
 	self.root.each(nil, newIterator)
 }
 func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	newIterator := func(key []byte, value Hasher) {
+	newIterator := func(key []byte, value Hasher) bool {
 		self.lock.RUnlock()
-		f(key, value)
-		self.lock.RLock()
+		defer self.lock.RLock()
+		return f(key, value)
 	}
 	mincmp := 0
 	if mininc {
@@ -73,15 +73,17 @@ func (self *Tree) Hash() []byte {
 }
 func (self *Tree) ToMap() (result map[string]Hasher) {
 	result = make(map[string]Hasher)
-	self.Each(func(key []byte, value Hasher) {
+	self.Each(func(key []byte, value Hasher) bool {
 		result[hex.EncodeToString(key)] = value
+		return true
 	})
 	return
 }
 func (self *Tree) String() string {
 	buffer := bytes.NewBufferString(fmt.Sprintf("radix.Tree["))
-	self.Each(func(key []byte, value Hasher) {
+	self.Each(func(key []byte, value Hasher) bool {
 		fmt.Fprintf(buffer, "%v:%v, ", hex.EncodeToString(key), value)
+		return true
 	})
 	fmt.Fprint(buffer, "]")
 	return string(buffer.Bytes())
