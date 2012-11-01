@@ -59,6 +59,30 @@ func (self *node) each(prefix []Nibble, f TreeIterator) {
 		}
 	}
 }
+func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f TreeIterator) {
+	prefix = append(prefix, self.segment...)
+	if self.valueHash != nil && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
+		f(stitch(prefix), self.value)
+	}
+	for _, child := range self.children {
+		if child != nil {
+			childKey := make([]Nibble, len(prefix)+len(child.segment))
+			copy(childKey, prefix)
+			copy(childKey[len(prefix):], child.segment)
+			minlen := len(min)
+			if minlen > len(childKey) {
+				minlen = len(childKey)
+			}
+			maxlen := len(max)
+			if maxlen > len(childKey) {
+				maxlen = len(childKey)
+			}
+			if (min == nil || nComp(childKey, min[:minlen]) > -1) && (max == nil || nComp(childKey, max[:maxlen]) < 1) {
+				child.eachBetween(prefix, min, max, mincmp, maxcmp, f)
+			}
+		}
+	}
+}
 func (self *node) eachChild(f func(child *node)) {
 	if self != nil {
 		for _, child := range self.children {
