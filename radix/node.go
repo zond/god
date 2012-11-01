@@ -42,10 +42,12 @@ func (self *node) rehash(key []Nibble) {
 	}
 	h := murmur.NewBytes(toBytes(key))
 	h.Write(self.valueHash)
-	self.eachChild(func(node *node) {
-		self.size += node.size
-		h.Write(node.hash)
-	})
+	for _, child := range self.children {
+		if child != nil {
+			self.size += child.size
+			h.Write(child.hash)
+		}
+	}
 	h.Extrude(&self.hash)
 }
 func (self *node) each(prefix []Nibble, f TreeIterator) (cont bool) {
@@ -146,15 +148,6 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f T
 	}
 	return
 }
-func (self *node) eachChild(f func(child *node)) {
-	if self != nil {
-		for _, child := range self.children {
-			if child != nil {
-				f(child)
-			}
-		}
-	}
-}
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	indentation := &bytes.Buffer{}
 	for i := 0; i < indent; i++ {
@@ -171,9 +164,11 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	}
 	fmt.Fprintf(buffer, " (%v, %v, %v)", self.version, self.size, hex.EncodeToString(self.hash))
 	fmt.Fprintf(buffer, "\n")
-	self.eachChild(func(node *node) {
-		node.describe(indent+len(encodedSegment), buffer)
-	})
+	for _, child := range self.children {
+		if child != nil {
+			child.describe(indent+len(encodedSegment), buffer)
+		}
+	}
 }
 func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
 	result = allocated
