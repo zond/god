@@ -35,9 +35,6 @@ func newTreeWith(key []Nibble, value Hasher, version int64) (result *Tree) {
 	result.PutVersion(key, value, 0, version)
 	return
 }
-func (self *Tree) Navigator() *Navigator {
-	return &Navigator{tree: self}
-}
 func (self *Tree) ReverseEach(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -49,10 +46,10 @@ func (self *Tree) Each(f TreeIterator) {
 	self.root.each(nil, self.unlockingIterator(f))
 }
 func (self *Tree) unlockingIterator(f TreeIterator) TreeIterator {
-	return func(key []byte, value Hasher) bool {
+	return func(key []byte, value Hasher, version int64) bool {
 		self.lock.RUnlock()
 		defer self.lock.RLock()
-		return f(key, value)
+		return f(key, value, version)
 	}
 }
 func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
@@ -74,7 +71,7 @@ func (self *Tree) Hash() []byte {
 }
 func (self *Tree) ToMap() (result map[string]Hasher) {
 	result = make(map[string]Hasher)
-	self.Each(func(key []byte, value Hasher) bool {
+	self.Each(func(key []byte, value Hasher, version int64) bool {
 		result[hex.EncodeToString(key)] = value
 		return true
 	})
@@ -82,7 +79,7 @@ func (self *Tree) ToMap() (result map[string]Hasher) {
 }
 func (self *Tree) String() string {
 	buffer := bytes.NewBufferString(fmt.Sprintf("radix.Tree["))
-	self.Each(func(key []byte, value Hasher) bool {
+	self.Each(func(key []byte, value Hasher, version int64) bool {
 		fmt.Fprintf(buffer, "%v:%v, ", hex.EncodeToString(key), value)
 		return true
 	})

@@ -319,7 +319,7 @@ func TestSyncRandomLimits(t *testing.T) {
 		tree1.Put(k, v, 0)
 	}
 	var keys [][]byte
-	tree1.Each(func(key []byte, value Hasher) bool {
+	tree1.Each(func(key []byte, value Hasher, version int64) bool {
 		keys = append(keys, key)
 		return true
 	})
@@ -334,7 +334,7 @@ func TestSyncRandomLimits(t *testing.T) {
 				fromKey = keys[fromIndex]
 				toKey = keys[toIndex]
 				tree2 = NewTree()
-				tree1.Each(func(key []byte, value Hasher) bool {
+				tree1.Each(func(key []byte, value Hasher, version int64) bool {
 					if common.BetweenIE(key, fromKey, toKey) {
 						tree2.Put(key, value, 0)
 					}
@@ -406,7 +406,7 @@ func TestTreeHash(t *testing.T) {
 	if !reflect.DeepEqual(tree1.Finger(nil), tree2.Finger(nil)) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
-	tree1.Each(func(key []byte, value Hasher) bool {
+	tree1.Each(func(key []byte, value Hasher, version int64) bool {
 		f1 := tree1.Finger(rip(key))
 		f2 := tree2.Finger(rip(key))
 		if f1 == nil || f2 == nil {
@@ -438,7 +438,7 @@ func TestTreeHash(t *testing.T) {
 	if !reflect.DeepEqual(tree1.Finger(nil), tree2.Finger(nil)) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
-	tree1.Each(func(key []byte, value Hasher) bool {
+	tree1.Each(func(key []byte, value Hasher, version int64) bool {
 		f1 := tree1.Finger(rip(key))
 		f2 := tree2.Finger(rip(key))
 		if f1 == nil || f2 == nil {
@@ -477,7 +477,7 @@ func TestTreeReverseEach(t *testing.T) {
 	}
 	var foundKeys [][]byte
 	var foundValues []Hasher
-	tree.ReverseEach(func(key []byte, value Hasher) bool {
+	tree.ReverseEach(func(key []byte, value Hasher, version int64) bool {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 		return true
@@ -492,7 +492,7 @@ func TestTreeReverseEach(t *testing.T) {
 	foundKeys = nil
 	foundValues = nil
 	count := 10
-	tree.ReverseEach(func(key []byte, value Hasher) bool {
+	tree.ReverseEach(func(key []byte, value Hasher, version int64) bool {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 		count--
@@ -514,7 +514,7 @@ func TestTreeEach(t *testing.T) {
 	}
 	var foundKeys [][]byte
 	var foundValues []Hasher
-	tree.Each(func(key []byte, value Hasher) bool {
+	tree.Each(func(key []byte, value Hasher, version int64) bool {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 		return true
@@ -529,7 +529,7 @@ func TestTreeEach(t *testing.T) {
 	foundKeys = nil
 	foundValues = nil
 	count := 10
-	tree.Each(func(key []byte, value Hasher) bool {
+	tree.Each(func(key []byte, value Hasher, version int64) bool {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 		count--
@@ -572,7 +572,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 	for i := 10; i < 21; i++ {
 		for j := i; j < 21; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, value Hasher) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, value Hasher, version int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -583,7 +583,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, value Hasher) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, value Hasher, version int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -594,7 +594,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, value Hasher) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, value Hasher, version int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -605,7 +605,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, value Hasher) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, value Hasher, version int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -628,7 +628,7 @@ func TestTreeEachBetween(t *testing.T) {
 	for i := 10; i < 21; i++ {
 		for j := i; j < 21; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, value Hasher) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, value Hasher, version int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -639,7 +639,7 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, value Hasher) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, value Hasher, version int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -650,7 +650,7 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, value Hasher) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, value Hasher, version int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -661,7 +661,7 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, value Hasher) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, value Hasher, version int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -785,7 +785,7 @@ func TestTreeBasicOps(t *testing.T) {
 	assertOldPut(t, tree, "guanabana", "city", "man")
 	assertSize(t, tree, 6)
 	m := make(map[string]Hasher)
-	tree.Each(func(key []byte, value Hasher) bool {
+	tree.Each(func(key []byte, value Hasher, version int64) bool {
 		m[hex.EncodeToString(key)] = value
 		return true
 	})
