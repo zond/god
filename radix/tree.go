@@ -28,6 +28,16 @@ func newTreeWith(key []Nibble, value Hasher, version int64) (result *Tree) {
 func (self *Tree) Navigator() *Navigator {
 	return &Navigator{tree: self}
 }
+func (self *Tree) ReverseEach(f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	newIterator := func(key []byte, value Hasher) {
+		self.lock.RUnlock()
+		f(key, value)
+		self.lock.RLock()
+	}
+	self.root.reverseEach(nil, newIterator)
+}
 func (self *Tree) Each(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()

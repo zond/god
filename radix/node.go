@@ -59,6 +59,17 @@ func (self *node) each(prefix []Nibble, f TreeIterator) {
 		}
 	}
 }
+func (self *node) reverseEach(prefix []Nibble, f TreeIterator) {
+	if self != nil {
+		prefix = append(prefix, self.segment...)
+		for i := len(self.children) - 1; i >= 0; i-- {
+			self.children[i].reverseEach(prefix, f)
+		}
+		if self.valueHash != nil {
+			f(stitch(prefix), self.value)
+		}
+	}
+}
 func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f TreeIterator) {
 	prefix = append(prefix, self.segment...)
 	if self.valueHash != nil && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {

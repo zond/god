@@ -448,11 +448,55 @@ func TestTreeHash(t *testing.T) {
 }
 
 func createKVArrays(from, to int) (keys [][]byte, values []Hasher) {
-	for i := from; i <= to; i++ {
+	step := 1
+	if to < from {
+		step = -1
+	}
+	for i := from; i != to; i += step {
 		keys = append(keys, []byte(fmt.Sprint(i)))
 		values = append(values, StringHasher(fmt.Sprint(i)))
 	}
 	return
+}
+
+func TestTreeReverseEach(t *testing.T) {
+	tree := NewTree()
+	for i := 10; i < 20; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	var foundKeys [][]byte
+	var foundValues []Hasher
+	tree.ReverseEach(func(key []byte, value Hasher) {
+		foundKeys = append(foundKeys, key)
+		foundValues = append(foundValues, value)
+	})
+	cmpKeys, cmpValues := createKVArrays(19, 9)
+	if !reflect.DeepEqual(cmpKeys, foundKeys) {
+		t.Errorf("%v should be %v", foundKeys, cmpKeys)
+	}
+	if !reflect.DeepEqual(cmpValues, foundValues) {
+		t.Errorf("%v should be %v", foundValues, cmpValues)
+	}
+}
+
+func TestTreeEach(t *testing.T) {
+	tree := NewTree()
+	for i := 100; i < 200; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	var foundKeys [][]byte
+	var foundValues []Hasher
+	tree.Each(func(key []byte, value Hasher) {
+		foundKeys = append(foundKeys, key)
+		foundValues = append(foundValues, value)
+	})
+	cmpKeys, cmpValues := createKVArrays(100, 200)
+	if !reflect.DeepEqual(cmpKeys, foundKeys) {
+		t.Errorf("%v should be %v", foundKeys, cmpKeys)
+	}
+	if !reflect.DeepEqual(cmpValues, foundValues) {
+		t.Errorf("%v should be %v", foundValues, cmpValues)
+	}
 }
 
 func TestTreeEachBetween(t *testing.T) {
@@ -466,7 +510,7 @@ func TestTreeEachBetween(t *testing.T) {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 	})
-	cmpKeys, cmpValues := createKVArrays(123, 126)
+	cmpKeys, cmpValues := createKVArrays(123, 127)
 	if !reflect.DeepEqual(cmpKeys, foundKeys) {
 		t.Errorf("%v should be %v", foundKeys, cmpKeys)
 	}
@@ -479,7 +523,7 @@ func TestTreeEachBetween(t *testing.T) {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 	})
-	cmpKeys, cmpValues = createKVArrays(124, 126)
+	cmpKeys, cmpValues = createKVArrays(124, 127)
 	if !reflect.DeepEqual(cmpKeys, foundKeys) {
 		t.Errorf("%v should be %v", foundKeys, cmpKeys)
 	}
@@ -492,7 +536,7 @@ func TestTreeEachBetween(t *testing.T) {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 	})
-	cmpKeys, cmpValues = createKVArrays(123, 125)
+	cmpKeys, cmpValues = createKVArrays(123, 126)
 	if !reflect.DeepEqual(cmpKeys, foundKeys) {
 		t.Errorf("%v should be %v", foundKeys, cmpKeys)
 	}
@@ -505,7 +549,7 @@ func TestTreeEachBetween(t *testing.T) {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 	})
-	cmpKeys, cmpValues = createKVArrays(100, 125)
+	cmpKeys, cmpValues = createKVArrays(100, 126)
 	if !reflect.DeepEqual(cmpKeys, foundKeys) {
 		t.Errorf("%v should be %v", foundKeys, cmpKeys)
 	}
@@ -518,7 +562,7 @@ func TestTreeEachBetween(t *testing.T) {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, value)
 	})
-	cmpKeys, cmpValues = createKVArrays(123, 199)
+	cmpKeys, cmpValues = createKVArrays(123, 200)
 	if !reflect.DeepEqual(cmpKeys, foundKeys) {
 		t.Errorf("%v should be %v", foundKeys, cmpKeys)
 	}
