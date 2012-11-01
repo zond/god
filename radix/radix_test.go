@@ -744,11 +744,6 @@ func TestTreeIndex(t *testing.T) {
 			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+100)), StringHasher(fmt.Sprint(i+100)), 0, true, key, value, version, existed)
 		}
 	}
-	for i := -1; i > -101; i-- {
-		if key, value, version, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+200))) != 0 || version != 0 || value != StringHasher(fmt.Sprint(i+200)) {
-			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+200)), StringHasher(fmt.Sprint(i+200)), 0, true, key, value, version, existed)
-		}
-	}
 }
 
 func TestTreePrev(t *testing.T) {

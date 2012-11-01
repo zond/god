@@ -148,20 +148,10 @@ func (self *Tree) Last() (key []byte, value Hasher, version int64, existed bool)
 	return
 }
 func (self *Tree) Index(n int) (key []byte, value Hasher, version int64, existed bool) {
-	if n == 0 {
-		return self.First()
-	} else if n == -1 {
-		return self.Last()
-	}
-
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	up := n > 0
-	if n < 0 {
-		n = -n - 1
-	}
-	nibble, value, version, existed := self.root.index(nil, n, up)
-	key = stitch(nibble)
+	self.EachBetweenIndex(&n, &n, func(k []byte, v Hasher, ver int64) bool {
+		key, value, version, existed = k, v, ver, true
+		return false
+	})
 	return
 }
 func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
