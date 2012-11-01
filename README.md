@@ -7,6 +7,7 @@ A Go database
 
 * Main tree
  * Functionality
+  * IndexOf
 	* Slice (offset, limit..)
 	* Push/Pop
 	* Shift/Unshift
