@@ -75,15 +75,17 @@ func (self *Sync) potentiallyWithinLimits(key []Nibble) bool {
 	if self.from == nil || self.to == nil {
 		return true
 	}
+	cmpKey := toBytes(key)
 	cmpFrom := toBytes(self.from)
-	if len(cmpFrom) > len(key) {
-		cmpFrom = cmpFrom[:len(key)]
-	}
 	cmpTo := toBytes(self.to)
-	if len(cmpTo) > len(key) {
-		cmpTo = cmpTo[:len(key)]
+	m := len(cmpKey)
+	if m > len(cmpFrom) {
+		m = len(cmpFrom)
 	}
-	return common.BetweenII(toBytes(key), cmpFrom, cmpTo)
+	if m > len(cmpTo) {
+		m = len(cmpTo)
+	}
+	return common.BetweenII(cmpKey[:m], cmpFrom[:m], cmpTo[:m])
 }
 func (self *Sync) withinLimits(key []Nibble) bool {
 	if self.from == nil || self.to == nil {
