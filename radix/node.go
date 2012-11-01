@@ -257,22 +257,6 @@ func (self *node) index(prefix []Nibble, n int, up bool) (nibble []Nibble, value
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) last(prefix []Nibble) (nibble []Nibble, value Hasher, version int64, existed bool) {
-	if self == nil {
-		return
-	}
-	prefix = append(prefix, self.segment...)
-	for i := len(self.children) - 1; i >= 0; i-- {
-		child := self.children[i]
-		if child != nil {
-			if nibble, value, version, existed = child.last(prefix); existed {
-				return
-			}
-		}
-	}
-	nibble, value, version, existed = prefix, self.value, self.version, self.valueHash != nil
-	return
-}
 func (self *node) nextChild(prefix, segment []Nibble) (nextNibble []Nibble, nextValue Hasher, nextVersion int64, existed bool) {
 	recursePrefix := make([]Nibble, len(prefix)+len(self.segment))
 	copy(recursePrefix, prefix)
