@@ -122,17 +122,17 @@ func (self *Tree) Get(key []byte) (value Hasher, version int64, existed bool) {
 	return
 }
 func (self *Tree) Prev(key []byte) (prevKey []byte, prevValue Hasher, prevVersion int64, existed bool) {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	prevNibble, prevValue, prevVersion, existed := self.root.prev(nil, rip(key))
-	prevKey = stitch(prevNibble)
+	self.ReverseEachBetween(nil, key, true, false, func(k []byte, v Hasher, ver int64) bool {
+		prevKey, prevValue, prevVersion, existed = k, v, ver, true
+		return false
+	})
 	return
 }
 func (self *Tree) Next(key []byte) (nextKey []byte, nextValue Hasher, nextVersion int64, existed bool) {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	nextNibble, nextValue, nextVersion, existed := self.root.next(nil, rip(key))
-	nextKey = stitch(nextNibble)
+	self.EachBetween(key, nil, false, true, func(k []byte, v Hasher, ver int64) bool {
+		nextKey, nextValue, nextVersion, existed = k, v, ver, true
+		return false
+	})
 	return
 }
 func (self *Tree) First() (key []byte, value Hasher, version int64, existed bool) {
