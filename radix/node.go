@@ -96,15 +96,14 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f T
 				childKey := make([]Nibble, len(prefix)+len(child.segment))
 				copy(childKey, prefix)
 				copy(childKey[len(prefix):], child.segment)
-				minlen := len(min)
-				if minlen > len(childKey) {
-					minlen = len(childKey)
+				m := len(childKey)
+				if m > len(min) {
+					m = len(min)
 				}
-				maxlen := len(max)
-				if maxlen > len(childKey) {
-					maxlen = len(childKey)
+				if m > len(max) {
+					m = len(max)
 				}
-				if (min == nil || nComp(childKey, min[:minlen]) > -1) && (max == nil || nComp(childKey, max[:maxlen]) < 1) {
+				if (min == nil || nComp(childKey[:m], min[:m]) > -1) && (max == nil || nComp(childKey[:m], max[:m]) < 1) {
 					cont = child.eachBetween(prefix, min, max, mincmp, maxcmp, f)
 				}
 				if !cont {
