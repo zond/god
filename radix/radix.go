@@ -32,7 +32,14 @@ func hash(h Hasher) []byte {
 	return h.Hash()
 }
 
+func nComp(a, b []Nibble) int {
+	return bytes.Compare(toBytes(a), toBytes(b))
+}
+
 func rip(b []byte) (result []Nibble) {
+	if b == nil {
+		return nil
+	}
 	result = make([]Nibble, parts*len(b))
 	for i, char := range b {
 		for j := 0; j < parts; j++ {
@@ -49,6 +56,9 @@ func stringEncode(b []byte) string {
 	return string(buffer.Bytes())
 }
 func stitch(b []Nibble) (result []byte) {
+	if b == nil {
+		return nil
+	}
 	result = make([]byte, len(b)/parts)
 	for i, _ := range result {
 		for j := 0; j < parts; j++ {
