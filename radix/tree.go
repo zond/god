@@ -7,6 +7,16 @@ import (
 	"sync"
 )
 
+func cmps(mininc, maxinc bool) (mincmp, maxcmp int) {
+	if mininc {
+		mincmp = -1
+	}
+	if maxinc {
+		maxcmp = 1
+	}
+	return
+}
+
 type Tree struct {
 	lock *sync.RWMutex
 	root *node
@@ -31,40 +41,31 @@ func (self *Tree) Navigator() *Navigator {
 func (self *Tree) ReverseEach(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	newIterator := func(key []byte, value Hasher) bool {
-		self.lock.RUnlock()
-		defer self.lock.RLock()
-		return f(key, value)
-	}
-	self.root.reverseEach(nil, newIterator)
+	self.root.reverseEach(nil, self.unlockingIterator(f))
 }
 func (self *Tree) Each(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	newIterator := func(key []byte, value Hasher) bool {
+	self.root.each(nil, self.unlockingIterator(f))
+}
+func (self *Tree) unlockingIterator(f TreeIterator) TreeIterator {
+	return func(key []byte, value Hasher) bool {
 		self.lock.RUnlock()
 		defer self.lock.RLock()
 		return f(key, value)
 	}
-	self.root.each(nil, newIterator)
+}
+func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	mincmp, maxcmp := cmps(mininc, maxinc)
+	self.root.reverseEachBetween(nil, rip(min), rip(max), mincmp, maxcmp, self.unlockingIterator(f))
 }
 func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	newIterator := func(key []byte, value Hasher) bool {
-		self.lock.RUnlock()
-		defer self.lock.RLock()
-		return f(key, value)
-	}
-	mincmp := 0
-	if mininc {
-		mincmp = -1
-	}
-	maxcmp := 0
-	if maxinc {
-		maxcmp = 1
-	}
-	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, newIterator)
+	mincmp, maxcmp := cmps(mininc, maxinc)
+	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, self.unlockingIterator(f))
 }
 func (self *Tree) Hash() []byte {
 	self.lock.RLock()
