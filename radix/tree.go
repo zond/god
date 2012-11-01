@@ -38,31 +38,29 @@ func newTreeWith(key []Nibble, value Hasher, version int64) (result *Tree) {
 func (self *Tree) ReverseEach(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	self.root.reverseEach(nil, self.unlockingIterator(f))
+	self.root.reverseEach(nil, f)
 }
 func (self *Tree) Each(f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	self.root.each(nil, self.unlockingIterator(f))
-}
-func (self *Tree) unlockingIterator(f TreeIterator) TreeIterator {
-	return func(key []byte, value Hasher, version int64) bool {
-		self.lock.RUnlock()
-		defer self.lock.RLock()
-		return f(key, value, version)
-	}
+	self.root.each(nil, f)
 }
 func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	mincmp, maxcmp := cmps(mininc, maxinc)
-	self.root.reverseEachBetween(nil, rip(min), rip(max), mincmp, maxcmp, self.unlockingIterator(f))
+	self.root.reverseEachBetween(nil, rip(min), rip(max), mincmp, maxcmp, f)
 }
 func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	mincmp, maxcmp := cmps(mininc, maxinc)
-	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, self.unlockingIterator(f))
+	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, f)
+}
+func (self *Tree) EachBetweenIndex(min, max *int, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	self.root.eachBetweenIndex(nil, 0, min, max, f)
 }
 func (self *Tree) Hash() []byte {
 	self.lock.RLock()

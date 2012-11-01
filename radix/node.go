@@ -148,6 +148,28 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f T
 	}
 	return
 }
+func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, f TreeIterator) (cont bool) {
+	cont = true
+	prefix = append(prefix, self.segment...)
+	if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
+		cont = f(stitch(prefix), self.value, self.version)
+		count++
+	}
+	if cont {
+		for _, child := range self.children {
+			if child != nil {
+				if (min == nil || child.size+count > *min) && (max == nil || count <= *max) {
+					cont = child.eachBetweenIndex(prefix, count, min, max, f)
+				}
+				count += child.size
+				if !cont {
+					break
+				}
+			}
+		}
+	}
+	return
+}
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	indentation := &bytes.Buffer{}
 	for i := 0; i < indent; i++ {

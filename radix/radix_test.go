@@ -674,6 +674,30 @@ func TestTreeEachBetween(t *testing.T) {
 	}
 }
 
+func TestTreeEachBetweenIndex(t *testing.T) {
+	tree := NewTree()
+	for i := 11; i < 20; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	var foundKeys, cmpKeys [][]byte
+	var foundValues, cmpValues []Hasher
+	for i := -1; i < 9; i++ {
+		for j := i; j < 9; j++ {
+			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
+			tree.EachBetweenIndex(&i, &j, func(key []byte, value Hasher, version int64) bool {
+				foundKeys = append(foundKeys, key)
+				foundValues = append(foundValues, value)
+				return true
+			})
+
+			cmpKeys, cmpValues = createKVArraysUp(max(11, i+11), min(j+12, 20))
+			if !reflect.DeepEqual(cmpKeys, foundKeys) || !reflect.DeepEqual(cmpValues, foundValues) {
+				t.Errorf("%v.EachBetweenIndex(%v, %v) => %v should be %v", tree, i, j, foundValues, cmpValues)
+			}
+		}
+	}
+}
+
 func TestTreeNilKey(t *testing.T) {
 	tree := NewTree()
 	h := tree.Hash()
