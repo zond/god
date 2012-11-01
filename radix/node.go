@@ -170,6 +170,30 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, f 
 	}
 	return
 }
+func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *int, f TreeIterator) (cont bool) {
+	cont = true
+	prefix = append(prefix, self.segment...)
+	var child *node
+	for i := len(self.children) - 1; i >= 0; i-- {
+		child = self.children[i]
+		if child != nil {
+			if (min == nil || child.size+count > *min) && (max == nil || count <= *max) {
+				cont = child.reverseEachBetweenIndex(prefix, count, min, max, f)
+			}
+			count += child.size
+			if !cont {
+				break
+			}
+		}
+	}
+	if cont {
+		if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
+			cont = f(stitch(prefix), self.value, self.version)
+			count++
+		}
+	}
+	return
+}
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	indentation := &bytes.Buffer{}
 	for i := 0; i < indent; i++ {

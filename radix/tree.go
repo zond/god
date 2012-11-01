@@ -57,6 +57,11 @@ func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterat
 	mincmp, maxcmp := cmps(mininc, maxinc)
 	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, f)
 }
+func (self *Tree) ReverseEachBetweenIndex(min, max *int, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	self.root.reverseEachBetweenIndex(nil, 0, min, max, f)
+}
 func (self *Tree) EachBetweenIndex(min, max *int, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
