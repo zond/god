@@ -38,6 +38,24 @@ func (self *Tree) Each(f TreeIterator) {
 	}
 	self.root.each(nil, newIterator)
 }
+func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	newIterator := func(key []byte, value Hasher) {
+		self.lock.RUnlock()
+		f(key, value)
+		self.lock.RLock()
+	}
+	mincmp := 0
+	if mininc {
+		mincmp = -1
+	}
+	maxcmp := 0
+	if maxinc {
+		maxcmp = 1
+	}
+	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, newIterator)
+}
 func (self *Tree) Hash() []byte {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
