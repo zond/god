@@ -257,21 +257,6 @@ func (self *node) index(prefix []Nibble, n int, up bool) (nibble []Nibble, value
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) first(prefix []Nibble) (nibble []Nibble, value Hasher, version int64, existed bool) {
-	if self == nil {
-		return
-	}
-	prefix = append(prefix, self.segment...)
-	for _, child := range self.children {
-		if child != nil {
-			if nibble, value, version, existed = child.first(prefix); existed {
-				return
-			}
-		}
-	}
-	nibble, value, version, existed = prefix, self.value, self.version, self.valueHash != nil
-	return
-}
 func (self *node) last(prefix []Nibble) (nibble []Nibble, value Hasher, version int64, existed bool) {
 	if self == nil {
 		return

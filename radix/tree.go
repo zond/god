@@ -136,10 +136,10 @@ func (self *Tree) Next(key []byte) (nextKey []byte, nextValue Hasher, nextVersio
 	return
 }
 func (self *Tree) First() (key []byte, value Hasher, version int64, existed bool) {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	nibble, value, version, existed := self.root.first(nil)
-	key = stitch(nibble)
+	self.Each(func(k []byte, v Hasher, ver int64) bool {
+		key, value, version, existed = k, v, ver, true
+		return false
+	})
 	return
 }
 func (self *Tree) Last() (key []byte, value Hasher, version int64, existed bool) {
