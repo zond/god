@@ -40,3 +40,9 @@ func (self *dhashServer) DescribeTree(x int, result *string) error {
 	*result = (*DHash)(self).DescribeTree()
 	return nil
 }
+func (self *dhashServer) ReverseIndexOf(data common.Item, result *common.Index) error {
+	return (*DHash)(self).ReverseIndexOf(data, result)
+}
+func (self *dhashServer) IndexOf(data common.Item, result *common.Index) error {
+	return (*DHash)(self).IndexOf(data, result)
+}

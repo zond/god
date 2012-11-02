@@ -202,6 +202,14 @@ func (self *DHash) Get(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
+func (self *DHash) ReverseIndexOf(data common.Item, result *common.Index) error {
+	result.N, result.Existed = self.tree.SubReverseIndexOf(data.Key, data.SubKey)
+	return nil
+}
+func (self *DHash) IndexOf(data common.Item, result *common.Index) error {
+	result.N, result.Existed = self.tree.SubIndexOf(data.Key, data.SubKey)
+	return nil
+}
 func (self *DHash) SubGet(data common.Item, result *common.Item) error {
 	*result = data
 	if value, timestamp, exists := self.tree.SubGet(data.Key, data.SubKey); exists {
