@@ -5,7 +5,6 @@ A Go database
 
 # TODO
 
-* Main tree
 * Sub trees
  * Functionality
   * Get CHECK
