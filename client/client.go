@@ -91,6 +91,9 @@ func (self *Conn) Reconnect() {
 		node = self.ring.Random()
 	}
 }
+func (self *Conn) Del(key []byte) {
+	self.Put(key, nil)
+}
 func (self *Conn) Put(key, value []byte) {
 	data := common.Item{
 		Key:   key,
