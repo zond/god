@@ -8,7 +8,19 @@ A Go database
 * Main tree
 * Sub trees
  * Functionality
-  * Sub[METHODNAME]
+  * Get CHECK
+	* Put CHECK
+	* Del CHECK
+	* IndexOf
+	* ReverseIndexOf
+	* Next
+	* Prev
+	* BetweenIndex
+	* Between
+	* ReverseBetweenIndex
+	* ReverseBetween
+	* First
+	* Last
  * Manual testing
  * Automated tests
 * Node migrations
