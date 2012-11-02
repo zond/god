@@ -99,9 +99,9 @@ func (self *Tree) Size() int {
 	defer self.lock.RUnlock()
 	return self.root.size
 }
-func (self *Tree) describeIndented(indent int) string {
+func (self *Tree) describeIndented(first, indent int) string {
 	indentation := &bytes.Buffer{}
-	for i := 0; i < indent; i++ {
+	for i := 0; i < first; i++ {
 		fmt.Fprint(indentation, " ")
 	}
 	buffer := bytes.NewBufferString(fmt.Sprintf("%v<Radix size:%v hash:%v>\n", indentation, self.Size(), hex.EncodeToString(self.Hash())))
@@ -111,7 +111,7 @@ func (self *Tree) describeIndented(indent int) string {
 func (self *Tree) Describe() string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.describeIndented(0)
+	return self.describeIndented(0, 0)
 }
 
 func (self *Tree) put(key []Nibble, value Hasher, version int64) (old Hasher, existed bool) {

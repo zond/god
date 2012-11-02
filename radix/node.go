@@ -203,7 +203,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), encodedSegment)
 	if self.valueHash != nil {
 		if subTree, ok := self.value.(*Tree); ok {
-			fmt.Fprintf(buffer, " => %v", subTree.describeIndented(indent+2))
+			fmt.Fprintf(buffer, " => %v", subTree.describeIndented(0, len(" => ")+indent+2))
 		} else {
 			fmt.Fprintf(buffer, " => %v", self.value)
 		}
