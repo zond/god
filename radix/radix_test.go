@@ -674,6 +674,20 @@ func TestTreeEachBetween(t *testing.T) {
 	}
 }
 
+func TestTreeIndexOf(t *testing.T) {
+	tree := NewTree()
+	for i := 100; i < 200; i += 2 {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	for i := 100; i < 200; i++ {
+		shouldExist := i%2 == 0
+		wantedIndex := (i - 99) / 2
+		if ind, e := tree.IndexOf([]byte(fmt.Sprint(i))); ind != wantedIndex || e != shouldExist {
+			t.Errorf("%v.IndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), i, ind, e, wantedIndex, shouldExist)
+		}
+	}
+}
+
 func TestTreeReverseEachBetweenIndex(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {

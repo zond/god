@@ -240,6 +240,44 @@ func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
 	}
 	panic("Shouldn't happen")
 }
+func (self *node) indexOf(count int, segment []Nibble) (index int, existed bool) {
+	beyond_self := false
+	beyond_segment := false
+	for i := 0; ; i++ {
+		beyond_self = i >= len(self.segment)
+		beyond_segment = i >= len(segment)
+		if beyond_self && beyond_segment {
+			index, existed = count, true
+			return
+		} else if beyond_segment {
+			return
+		} else if beyond_self {
+			if self.valueHash != nil {
+				count++
+			}
+			for childIndex, child := range self.children {
+				if child != nil {
+					if childIndex < int(segment[i]) {
+						count += child.size
+					} else {
+						index, existed = child.indexOf(count, segment[i:])
+						return
+					}
+				}
+			}
+			index, existed = count, false
+			return
+		} else if segment[i] != self.segment[i] {
+			if segment[i] < self.segment[i] {
+				index, existed = count, false
+			} else {
+				index, existed = count+1, false
+			}
+			return
+		}
+	}
+	panic("Shouldn't happen")
+}
 func (self *node) get(segment []Nibble) (value Hasher, version int64, existed bool) {
 	if self == nil {
 		return
