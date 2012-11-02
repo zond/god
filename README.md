@@ -6,12 +6,6 @@ A Go database
 # TODO
 
 * Main tree
- * Functionality
-  * IndexOf
-	* Slice (offset, limit..)
-	* Push/Pop
-	* Shift/Unshift
-	* Size
 * Sub trees
  * Functionality
   * Sub[METHODNAME]
