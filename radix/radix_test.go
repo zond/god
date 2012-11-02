@@ -674,6 +674,26 @@ func TestTreeEachBetween(t *testing.T) {
 	}
 }
 
+func TestTreeReverseIndexOf(t *testing.T) {
+	tree := NewTree()
+	for i := 100; i < 200; i += 2 {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	for i := 100; i < 200; i++ {
+		shouldExist := i%2 == 0
+		wantedIndex := 49 - (i-100)/2
+		if ind, e := tree.ReverseIndexOf([]byte(fmt.Sprint(i))); ind != wantedIndex || e != shouldExist {
+			t.Errorf("%v.ReverseIndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), i, ind, e, wantedIndex, shouldExist)
+		}
+	}
+	if ind, e := tree.ReverseIndexOf([]byte("1991")); ind != 0 || e {
+		t.Errorf("%v.IndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), "1991", ind, e, 0, false)
+	}
+	if ind, e := tree.ReverseIndexOf([]byte("099")); ind != 50 || e {
+		t.Errorf("%v.IndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), "099", ind, e, 50, false)
+	}
+}
+
 func TestTreeIndexOf(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i += 2 {
@@ -685,6 +705,12 @@ func TestTreeIndexOf(t *testing.T) {
 		if ind, e := tree.IndexOf([]byte(fmt.Sprint(i))); ind != wantedIndex || e != shouldExist {
 			t.Errorf("%v.IndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), i, ind, e, wantedIndex, shouldExist)
 		}
+	}
+	if ind, e := tree.IndexOf([]byte("1991")); ind != 50 || e {
+		t.Errorf("%v.IndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), "1991", ind, e, 50, false)
+	}
+	if ind, e := tree.IndexOf([]byte("099")); ind != 0 || e {
+		t.Errorf("%v.IndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), "099", ind, e, 0, false)
 	}
 }
 

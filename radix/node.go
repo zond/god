@@ -240,7 +240,7 @@ func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) indexOf(count int, segment []Nibble) (index int, existed bool) {
+func (self *node) indexOf(count int, segment []Nibble, up bool) (index int, existed bool) {
 	beyond_self := false
 	beyond_segment := false
 	for i := 0; ; i++ {
@@ -255,12 +255,20 @@ func (self *node) indexOf(count int, segment []Nibble) (index int, existed bool)
 			if self.valueHash != nil {
 				count++
 			}
-			for childIndex, child := range self.children {
+			start, step, stop := 0, 1, len(self.children)
+			if !up {
+				start, step, stop = len(self.children)-1, -1, -1
+			}
+			var child *node
+			for j := start; j != stop; j += step {
+				child = self.children[j]
 				if child != nil {
-					if childIndex < int(segment[i]) {
+					if up && j < int(segment[i]) {
+						count += child.size
+					} else if !up && j > int(segment[i]) {
 						count += child.size
 					} else {
-						index, existed = child.indexOf(count, segment[i:])
+						index, existed = child.indexOf(count, segment[i:], up)
 						return
 					}
 				}
@@ -268,10 +276,23 @@ func (self *node) indexOf(count int, segment []Nibble) (index int, existed bool)
 			index, existed = count, false
 			return
 		} else if segment[i] != self.segment[i] {
-			if segment[i] < self.segment[i] {
-				index, existed = count, false
+			if up {
+				if segment[i] < self.segment[i] {
+					index, existed = count, false
+				} else {
+					index, existed = count+1, false
+				}
 			} else {
-				index, existed = count+1, false
+				if segment[i] > self.segment[i] {
+					index, existed = count, false
+				} else {
+					for _, child := range self.children {
+						if child != nil {
+							count += child.size
+						}
+					}
+					index, existed = count, false
+				}
 			}
 			return
 		}
