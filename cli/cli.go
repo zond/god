@@ -15,16 +15,30 @@ var ip = flag.String("ip", "127.0.0.1", "IP address to connect to")
 var port = flag.Int("port", 9191, "Port to connect to")
 
 var actions = map[*regexp.Regexp]action{
-	regexp.MustCompile("^put (\\S+) (\\S+)$"):           put,
-	regexp.MustCompile("^get (\\S+)$"):                  get,
-	regexp.MustCompile("^del (\\S+)$"):                  del,
-	regexp.MustCompile("^subPut (\\S+) (\\S+) (\\S+)$"): subPut,
-	regexp.MustCompile("^subGet (\\S+) (\\S+)$"):        subGet,
-	regexp.MustCompile("^subDel (\\S+) (\\S+)$"):        subDel,
-	regexp.MustCompile("^$"):                            show,
-	regexp.MustCompile("^describeTree (\\S+)$"):         describeTree,
-	regexp.MustCompile("^next (\\S+)$"):                 next,
-	regexp.MustCompile("^prev (\\S+)$"):                 prev,
+	regexp.MustCompile("^put (\\S+) (\\S+)$"):            put,
+	regexp.MustCompile("^get (\\S+)$"):                   get,
+	regexp.MustCompile("^del (\\S+)$"):                   del,
+	regexp.MustCompile("^subPut (\\S+) (\\S+) (\\S+)$"):  subPut,
+	regexp.MustCompile("^subGet (\\S+) (\\S+)$"):         subGet,
+	regexp.MustCompile("^subDel (\\S+) (\\S+)$"):         subDel,
+	regexp.MustCompile("^$"):                             show,
+	regexp.MustCompile("^describeTree (\\S+)$"):          describeTree,
+	regexp.MustCompile("^next (\\S+)$"):                  next,
+	regexp.MustCompile("^prev (\\S+)$"):                  prev,
+	regexp.MustCompile("^indexOf (\\S+) (\\S+)$"):        indexOf,
+	regexp.MustCompile("^reverseIndexOf (\\S+) (\\S+)$"): reverseIndexOf,
+}
+
+func reverseIndexOf(conn *client.Conn, args []string) {
+	if index, existed := conn.ReverseIndexOf([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Println(index)
+	}
+}
+
+func indexOf(conn *client.Conn, args []string) {
+	if index, existed := conn.IndexOf([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Println(index)
+	}
 }
 
 func show(conn *client.Conn, args []string) {

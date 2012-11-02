@@ -122,6 +122,34 @@ func (self *Conn) Put(key, value []byte) {
 		self.Put(key, value)
 	}
 }
+func (self *Conn) ReverseIndexOf(key, subKey []byte) (index int, existed bool) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	var result common.Index
+	if err := successor.Call("DHash.ReverseIndexOf", data, &result); err != nil {
+		self.removeNode(*successor)
+		return self.ReverseIndexOf(key, subKey)
+	}
+	index, existed = result.N, result.Existed
+	return
+}
+func (self *Conn) IndexOf(key, subKey []byte) (index int, existed bool) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	var result common.Index
+	if err := successor.Call("DHash.IndexOf", data, &result); err != nil {
+		self.removeNode(*successor)
+		return self.IndexOf(key, subKey)
+	}
+	index, existed = result.N, result.Existed
+	return
+}
 func (self *Conn) Prev(key []byte) (prevKey, prevValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,

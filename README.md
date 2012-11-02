@@ -10,8 +10,8 @@ A Go database
   * Get CHECK
 	* Put CHECK
 	* Del CHECK
-	* IndexOf
-	* ReverseIndexOf
+	* IndexOf CHECK
+	* ReverseIndexOf CHECK
 	* Next
 	* Prev
 	* BetweenIndex
