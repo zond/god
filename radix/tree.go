@@ -201,6 +201,22 @@ func (self *Tree) SubPut(key, subKey []byte, value Hasher, version int64) (old H
 	self.putVersion(ripped, subTree, subTreeVersion, subTreeVersion)
 	return
 }
+func (self *Tree) SubReverseIndexOf(key, subKey []byte) (index int, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		index, existed = subTree.ReverseIndexOf(subKey)
+	}
+	return
+}
+func (self *Tree) SubIndexOf(key, subKey []byte) (index int, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		index, existed = subTree.IndexOf(subKey)
+	}
+	return
+}
 func (self *Tree) SubGet(key, subKey []byte) (value Hasher, version int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
