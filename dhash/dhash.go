@@ -161,6 +161,11 @@ func (self *DHash) DescribeTree() string {
 func (self *DHash) client() *client.Conn {
 	return client.NewConnRing(common.NewRingNodes(self.node.Nodes()))
 }
+func (self *DHash) SubFind(data common.Item, result *common.Item) error {
+	*result = data
+	result.Value, result.Exists = self.client().Get(data.Key)
+	return nil
+}
 func (self *DHash) Find(data common.Item, result *common.Item) error {
 	*result = data
 	result.Value, result.Exists = self.client().Get(data.Key)
@@ -197,29 +202,54 @@ func (self *DHash) Get(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
+func (self *DHash) SubGet(data common.Item, result *common.Item) error {
+	*result = data
+	if value, timestamp, exists := self.tree.SubGet(data.Key, data.SubKey); exists {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			result.Exists, result.Value, result.Timestamp = true, []byte(byteHasher), timestamp
+		}
+	}
+	return nil
+}
+func (self *DHash) SubPut(data common.Item) error {
+	successor := self.node.GetSuccessor(data.Key)
+	if successor.Addr != self.node.GetAddr() {
+		var x int
+		return successor.Call("DHash.SubPut", data, &x)
+	}
+	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
+	return self.subPut(data)
+}
 func (self *DHash) Put(data common.Item) error {
 	successor := self.node.GetSuccessor(data.Key)
-	var x int
 	if successor.Addr != self.node.GetAddr() {
+		var x int
 		return successor.Call("DHash.Put", data, &x)
 	}
 	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.put(data)
 }
-func (self *DHash) forwardPut(data common.Item) {
+func (self *DHash) forwardOperation(data common.Item, operation string) {
 	data.TTL--
 	successor := self.node.GetSuccessor(self.node.GetPosition())
 	var x int
-	err := successor.Call("DHash.SlavePut", data, &x)
+	err := successor.Call(operation, data, &x)
 	for err != nil {
 		self.node.RemoveNode(successor)
 		successor = self.node.GetSuccessor(self.node.GetPosition())
-		err = successor.Call("DHash.SlavePut", data, &x)
+		err = successor.Call(operation, data, &x)
 	}
+}
+func (self *DHash) subPut(data common.Item) error {
+	if data.TTL > 1 {
+		go self.forwardOperation(data, "DHash.SlaveSubPut")
+	}
+	self.tree.SubPut(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Timestamp)
+	return nil
 }
 func (self *DHash) put(data common.Item) error {
 	if data.TTL > 1 {
-		go self.forwardPut(data)
+		go self.forwardOperation(data, "DHash.SlavePut")
 	}
 	self.tree.Put(data.Key, radix.ByteHasher(data.Value), data.Timestamp)
 	return nil

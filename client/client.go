@@ -80,7 +80,7 @@ func (self *Conn) Reconnect() {
 	var err error
 	for {
 		var newNodes common.Remotes
-		if err = node.Call("Node.Ring", 0, &newNodes); err == nil {
+		if err = node.Call("Node.Nodes", 0, &newNodes); err == nil {
 			self.ring.SetNodes(newNodes)
 			return
 		}
@@ -93,6 +93,19 @@ func (self *Conn) Reconnect() {
 }
 func (self *Conn) Del(key []byte) {
 	self.Put(key, nil)
+}
+func (self *Conn) SubPut(key, subKey, value []byte) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+		Value:  value,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	var x int
+	if err := successor.Call("DHash.SubPut", data, &x); err != nil {
+		self.removeNode(*successor)
+		self.SubPut(key, subKey, value)
+	}
 }
 func (self *Conn) Put(key, value []byte) {
 	data := common.Item{
@@ -154,35 +167,47 @@ func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
 	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
 	return
 }
-func (self *Conn) Get(key []byte) (value []byte, existed bool) {
-	data := common.Item{
-		Key: key,
-	}
+func (self *Conn) findRecent(operation string, data common.Item) (result *common.Item) {
 	currentRedundancy := self.ring.Redundancy()
 	futures := make([]*rpc.Call, currentRedundancy)
 	results := make([]*common.Item, currentRedundancy)
 	nodes := make(common.Remotes, currentRedundancy)
-	nextKey := key
+	nextKey := data.Key
 	var nextSuccessor *common.Remote
 	for i := 0; i < currentRedundancy; i++ {
 		_, _, nextSuccessor = self.ring.Remotes(nextKey)
-		result := &common.Item{}
+		thisResult := &common.Item{}
 		nodes[i] = *nextSuccessor
-		results[i] = result
-		futures[i] = nextSuccessor.Go("DHash.Get", data, result)
+		results[i] = thisResult
+		futures[i] = nextSuccessor.Go(operation, data, thisResult)
 		nextKey = nextSuccessor.Pos
 	}
-	var result *common.Item
 	for index, future := range futures {
 		<-future.Done
 		if future.Error != nil {
 			self.removeNode(nodes[index])
-			return self.Get(key)
+			return self.findRecent(operation, data)
 		}
 		if result == nil || result.Timestamp < results[index].Timestamp {
 			result = results[index]
 		}
 	}
+	return
+}
+func (self *Conn) SubGet(key, subKey []byte) (value []byte, existed bool) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+	}
+	result := self.findRecent("DHash.SubGet", data)
+	value, existed = result.Value, result.Exists
+	return
+}
+func (self *Conn) Get(key []byte) (value []byte, existed bool) {
+	data := common.Item{
+		Key: key,
+	}
+	result := self.findRecent("DHash.Get", data)
 	value, existed = result.Value, result.Exists
 	return
 }

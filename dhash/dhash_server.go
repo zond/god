@@ -6,6 +6,12 @@ import (
 
 type dhashServer DHash
 
+func (self *dhashServer) SlaveSubPut(data common.Item, x *int) error {
+	return (*DHash)(self).subPut(data)
+}
+func (self *dhashServer) SubPut(data common.Item, x *int) error {
+	return (*DHash)(self).SubPut(data)
+}
 func (self *dhashServer) SlavePut(data common.Item, x *int) error {
 	return (*DHash)(self).put(data)
 }
@@ -23,6 +29,9 @@ func (self *dhashServer) Next(data common.Item, result *common.Item) error {
 }
 func (self *dhashServer) Prev(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Prev(data, result)
+}
+func (self *dhashServer) SubGet(data common.Item, result *common.Item) error {
+	return (*DHash)(self).SubGet(data, result)
 }
 func (self *dhashServer) Get(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Get(data, result)
