@@ -91,6 +91,9 @@ func (self *Conn) Reconnect() {
 		node = self.ring.Random()
 	}
 }
+func (self *Conn) SubDel(key, subKey []byte) {
+	self.SubPut(key, subKey, nil)
+}
 func (self *Conn) Del(key []byte) {
 	self.Put(key, nil)
 }

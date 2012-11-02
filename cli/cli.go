@@ -16,12 +16,13 @@ var port = flag.Int("port", 9191, "Port to connect to")
 
 var actions = map[*regexp.Regexp]action{
 	regexp.MustCompile("^put (\\S+) (\\S+)$"):           put,
+	regexp.MustCompile("^get (\\S+)$"):                  get,
+	regexp.MustCompile("^del (\\S+)$"):                  del,
 	regexp.MustCompile("^subPut (\\S+) (\\S+) (\\S+)$"): subPut,
 	regexp.MustCompile("^subGet (\\S+) (\\S+)$"):        subGet,
-	regexp.MustCompile("^del (\\S+)$"):                  del,
+	regexp.MustCompile("^subDel (\\S+) (\\S+)$"):        subDel,
 	regexp.MustCompile("^$"):                            show,
 	regexp.MustCompile("^describeTree (\\S+)$"):         describeTree,
-	regexp.MustCompile("^get (\\S+)$"):                  get,
 	regexp.MustCompile("^next (\\S+)$"):                 next,
 	regexp.MustCompile("^prev (\\S+)$"):                 prev,
 }
@@ -72,6 +73,10 @@ func put(conn *client.Conn, args []string) {
 
 func subPut(conn *client.Conn, args []string) {
 	conn.SubPut([]byte(args[1]), []byte(args[2]), []byte(args[3]))
+}
+
+func subDel(conn *client.Conn, args []string) {
+	conn.SubDel([]byte(args[1]), []byte(args[2]))
 }
 
 func del(conn *client.Conn, args []string) {
