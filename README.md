@@ -13,13 +13,13 @@ A Go database
 	* IndexOf CHECK
 	* ReverseIndexOf CHECK
 	* Next CHECK
-	* Prev CHECK
+	* Prev CHECK 
+	* First CHECK
+	* Last CHECK
 	* BetweenIndex
 	* Between
 	* ReverseBetweenIndex
 	* ReverseBetween
-	* First
-	* Last
  * Manual testing
  * Automated tests
 * Node migrations

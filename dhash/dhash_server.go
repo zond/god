@@ -52,3 +52,9 @@ func (self *dhashServer) SubPrev(data common.Item, result *common.Item) error {
 func (self *dhashServer) SubNext(data common.Item, result *common.Item) error {
 	return (*DHash)(self).SubNext(data, result)
 }
+func (self *dhashServer) First(data common.Item, result *common.Item) error {
+	return (*DHash)(self).First(data, result)
+}
+func (self *dhashServer) Last(data common.Item, result *common.Item) error {
+	return (*DHash)(self).Last(data, result)
+}

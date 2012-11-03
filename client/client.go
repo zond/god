@@ -243,6 +243,22 @@ func (self *Conn) SubNext(key, subKey []byte) (nextKey, nextValue []byte, existe
 	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+func (self *Conn) Last(key []byte) (lastKey, lastValue []byte, existed bool) {
+	data := common.Item{
+		Key: key,
+	}
+	result := self.findRecent("DHash.Last", data)
+	lastKey, lastValue, existed = result.Key, result.Value, result.Exists
+	return
+}
+func (self *Conn) First(key []byte) (firstKey, firstValue []byte, existed bool) {
+	data := common.Item{
+		Key: key,
+	}
+	result := self.findRecent("DHash.First", data)
+	firstKey, firstValue, existed = result.Key, result.Value, result.Exists
+	return
+}
 func (self *Conn) SubGet(key, subKey []byte) (value []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
