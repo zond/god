@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 )
@@ -59,6 +60,35 @@ func BetweenIE(needle, fromInc, toExc []byte) (result bool) {
 		result = bytes.Compare(fromInc, needle) < 1 || bytes.Compare(needle, toExc) < 0
 	default:
 		panic("Shouldn't happen")
+	}
+	return
+}
+
+func MergeItems(arys []*[]Item, up bool) (result []Item) {
+	result = *arys[0]
+	var items []Item
+	for i := 1; i < len(arys); i++ {
+		items = *arys[i]
+		for _, item := range items {
+			i := sort.Search(len(result), func(i int) bool {
+				cmp := bytes.Compare(item.Key, result[i].Key)
+				if up {
+					return cmp < 1
+				}
+				return cmp > -1
+			})
+			if i == len(result) {
+				result = append(result, item)
+			} else {
+				if bytes.Compare(result[i].Key, item.Key) == 0 {
+					if result[i].Timestamp < item.Timestamp {
+						result[i] = item
+					}
+				} else {
+					result = append(result[:i], append([]Item{item}, result[i:]...)...)
+				}
+			}
+		}
 	}
 	return
 }

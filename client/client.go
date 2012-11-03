@@ -198,6 +198,71 @@ func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
 	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+func (self *Conn) mergeRecent(operation string, r common.Range, up bool) (result []common.Item) {
+	currentRedundancy := self.ring.Redundancy()
+	futures := make([]*rpc.Call, currentRedundancy)
+	results := make([]*[]common.Item, currentRedundancy)
+	nodes := make(common.Remotes, currentRedundancy)
+	nextKey := r.Key
+	var nextSuccessor *common.Remote
+	for i := 0; i < currentRedundancy; i++ {
+		_, _, nextSuccessor = self.ring.Remotes(nextKey)
+		var thisResult []common.Item
+		nodes[i] = *nextSuccessor
+		results[i] = &thisResult
+		futures[i] = nextSuccessor.Go(operation, r, &thisResult)
+		nextKey = nextSuccessor.Pos
+	}
+	for index, future := range futures {
+		<-future.Done
+		if future.Error != nil {
+			self.removeNode(nodes[index])
+			return self.mergeRecent(operation, r, up)
+		}
+	}
+	result = common.MergeItems(results, up)
+	return
+}
+func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
+	r := common.Range{
+		Key:      key,
+		MinIndex: min,
+		MaxIndex: max,
+	}
+	result = self.mergeRecent("DHash.ReverseSliceIndex", r, false)
+	return
+}
+func (self *Conn) SliceIndex(key []byte, min, max *int) (result []common.Item) {
+	r := common.Range{
+		Key:      key,
+		MinIndex: min,
+		MaxIndex: max,
+	}
+	result = self.mergeRecent("DHash.SliceIndex", r, true)
+	return
+}
+func (self *Conn) ReverseSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
+	r := common.Range{
+		Key:    key,
+		Min:    min,
+		Max:    max,
+		MinInc: mininc,
+		MaxInc: maxinc,
+	}
+	result = self.mergeRecent("DHash.ReverseSlice", r, false)
+	return
+}
+func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
+	r := common.Range{
+		Key:    key,
+		Min:    min,
+		Max:    max,
+		MinInc: mininc,
+		MaxInc: maxinc,
+	}
+	result = self.mergeRecent("DHash.Slice", r, true)
+	return
+}
 func (self *Conn) findRecent(operation string, data common.Item) (result *common.Item) {
 	currentRedundancy := self.ring.Redundancy()
 	futures := make([]*rpc.Call, currentRedundancy)

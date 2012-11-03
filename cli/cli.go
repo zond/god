@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -15,22 +16,58 @@ var ip = flag.String("ip", "127.0.0.1", "IP address to connect to")
 var port = flag.Int("port", 9191, "Port to connect to")
 
 var actions = map[*regexp.Regexp]action{
-	regexp.MustCompile("^put (\\S+) (\\S+)$"):            put,
-	regexp.MustCompile("^get (\\S+)$"):                   get,
-	regexp.MustCompile("^del (\\S+)$"):                   del,
-	regexp.MustCompile("^subPut (\\S+) (\\S+) (\\S+)$"):  subPut,
-	regexp.MustCompile("^subGet (\\S+) (\\S+)$"):         subGet,
-	regexp.MustCompile("^subDel (\\S+) (\\S+)$"):         subDel,
-	regexp.MustCompile("^$"):                             show,
-	regexp.MustCompile("^describeTree (\\S+)$"):          describeTree,
-	regexp.MustCompile("^first (\\S+)$"):                 first,
-	regexp.MustCompile("^last (\\S+)$"):                  last,
-	regexp.MustCompile("^next (\\S+)$"):                  next,
-	regexp.MustCompile("^prev (\\S+)$"):                  prev,
-	regexp.MustCompile("^subNext (\\S+) (\\S+)$"):        subNext,
-	regexp.MustCompile("^subPrev (\\S+) (\\S+)$"):        subPrev,
-	regexp.MustCompile("^indexOf (\\S+) (\\S+)$"):        indexOf,
-	regexp.MustCompile("^reverseIndexOf (\\S+) (\\S+)$"): reverseIndexOf,
+	regexp.MustCompile("^reverseSliceIndex (\\S+) (\\d+) (\\d+)$"): reverseSliceIndex,
+	regexp.MustCompile("^sliceIndex (\\S+) (\\d+) (\\d+)$"):        sliceIndex,
+	regexp.MustCompile("^reverseSlice (\\S+) (\\S+) (\\S+)$"):      reverseSlice,
+	regexp.MustCompile("^slice (\\S+) (\\S+) (\\S+)$"):             slice,
+	regexp.MustCompile("^put (\\S+) (\\S+)$"):                      put,
+	regexp.MustCompile("^get (\\S+)$"):                             get,
+	regexp.MustCompile("^del (\\S+)$"):                             del,
+	regexp.MustCompile("^subPut (\\S+) (\\S+) (\\S+)$"):            subPut,
+	regexp.MustCompile("^subGet (\\S+) (\\S+)$"):                   subGet,
+	regexp.MustCompile("^subDel (\\S+) (\\S+)$"):                   subDel,
+	regexp.MustCompile("^$"):                                       show,
+	regexp.MustCompile("^describeTree (\\S+)$"):                    describeTree,
+	regexp.MustCompile("^first (\\S+)$"):                           first,
+	regexp.MustCompile("^last (\\S+)$"):                            last,
+	regexp.MustCompile("^next (\\S+)$"):                            next,
+	regexp.MustCompile("^prev (\\S+)$"):                            prev,
+	regexp.MustCompile("^subNext (\\S+) (\\S+)$"):                  subNext,
+	regexp.MustCompile("^subPrev (\\S+) (\\S+)$"):                  subPrev,
+	regexp.MustCompile("^indexOf (\\S+) (\\S+)$"):                  indexOf,
+	regexp.MustCompile("^reverseIndexOf (\\S+) (\\S+)$"):           reverseIndexOf,
+}
+
+func mustAtoi(s string) *int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	return &i
+}
+
+func reverseSliceIndex(conn *client.Conn, args []string) {
+	for i, item := range conn.ReverseSliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
+		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	}
+}
+
+func sliceIndex(conn *client.Conn, args []string) {
+	for i, item := range conn.SliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
+		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	}
+}
+
+func reverseSlice(conn *client.Conn, args []string) {
+	for i, item := range conn.ReverseSlice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
+		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	}
+}
+
+func slice(conn *client.Conn, args []string) {
+	for i, item := range conn.Slice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
+		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	}
 }
 
 func reverseIndexOf(conn *client.Conn, args []string) {
