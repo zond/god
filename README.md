@@ -6,20 +6,6 @@ A Go database
 # TODO
 
 * Sub trees
- * Functionality
-  * Get CHECK
-	* Put CHECK
-	* Del CHECK
-	* IndexOf CHECK
-	* ReverseIndexOf CHECK
-	* Next CHECK
-	* Prev CHECK 
-	* First CHECK
-	* Last CHECK
-	* BetweenIndex
-	* Between
-	* ReverseBetweenIndex
-	* ReverseBetween
  * Manual testing
  * Automated tests
 * Node migrations
