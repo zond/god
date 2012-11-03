@@ -12,8 +12,8 @@ A Go database
 	* Del CHECK
 	* IndexOf CHECK
 	* ReverseIndexOf CHECK
-	* Next
-	* Prev
+	* Next CHECK
+	* Prev CHECK
 	* BetweenIndex
 	* Between
 	* ReverseBetweenIndex

@@ -46,3 +46,9 @@ func (self *dhashServer) ReverseIndexOf(data common.Item, result *common.Index) 
 func (self *dhashServer) IndexOf(data common.Item, result *common.Index) error {
 	return (*DHash)(self).IndexOf(data, result)
 }
+func (self *dhashServer) SubPrev(data common.Item, result *common.Item) error {
+	return (*DHash)(self).SubPrev(data, result)
+}
+func (self *dhashServer) SubNext(data common.Item, result *common.Item) error {
+	return (*DHash)(self).SubNext(data, result)
+}

@@ -25,6 +25,8 @@ var actions = map[*regexp.Regexp]action{
 	regexp.MustCompile("^describeTree (\\S+)$"):          describeTree,
 	regexp.MustCompile("^next (\\S+)$"):                  next,
 	regexp.MustCompile("^prev (\\S+)$"):                  prev,
+	regexp.MustCompile("^subNext (\\S+) (\\S+)$"):        subNext,
+	regexp.MustCompile("^subPrev (\\S+) (\\S+)$"):        subPrev,
 	regexp.MustCompile("^indexOf (\\S+) (\\S+)$"):        indexOf,
 	regexp.MustCompile("^reverseIndexOf (\\S+) (\\S+)$"): reverseIndexOf,
 }
@@ -53,6 +55,18 @@ func prev(conn *client.Conn, args []string) {
 
 func next(conn *client.Conn, args []string) {
 	if key, value, existed := conn.Next([]byte(args[1])); existed {
+		fmt.Println(string(key), "=>", string(value))
+	}
+}
+
+func subNext(conn *client.Conn, args []string) {
+	if key, value, existed := conn.SubNext([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Println(string(key), "=>", string(value))
+	}
+}
+
+func subPrev(conn *client.Conn, args []string) {
+	if key, value, existed := conn.SubPrev([]byte(args[1]), []byte(args[2])); existed {
 		fmt.Println(string(key), "=>", string(value))
 	}
 }
