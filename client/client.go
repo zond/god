@@ -226,8 +226,10 @@ func (self *Conn) mergeRecent(operation string, r common.Range, up bool) (result
 func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
 	r := common.Range{
 		Key:      key,
-		MinIndex: min,
-		MaxIndex: max,
+		MinIndex: *min,
+		MaxIndex: *max,
+		MinInc:   min != nil,
+		MaxInc:   max != nil,
 	}
 	result = self.mergeRecent("DHash.ReverseSliceIndex", r, false)
 	return
@@ -235,8 +237,10 @@ func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.
 func (self *Conn) SliceIndex(key []byte, min, max *int) (result []common.Item) {
 	r := common.Range{
 		Key:      key,
-		MinIndex: min,
-		MaxIndex: max,
+		MinIndex: *min,
+		MaxIndex: *max,
+		MinInc:   min != nil,
+		MaxInc:   max != nil,
 	}
 	result = self.mergeRecent("DHash.SliceIndex", r, true)
 	return

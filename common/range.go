@@ -6,6 +6,6 @@ type Range struct {
 	Max      []byte
 	MinInc   bool
 	MaxInc   bool
-	MinIndex *int
-	MaxIndex *int
+	MinIndex int
+	MaxIndex int
 }
