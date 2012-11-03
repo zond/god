@@ -148,11 +148,11 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f T
 	}
 	return
 }
-func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, f TreeIterator) (cont bool) {
+func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, f TreeIndexIterator) (cont bool) {
 	cont = true
 	prefix = append(prefix, self.segment...)
 	if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
-		cont = f(stitch(prefix), self.value, self.version)
+		cont = f(stitch(prefix), self.value, self.version, count)
 		count++
 	}
 	if cont {
@@ -170,7 +170,7 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, f 
 	}
 	return
 }
-func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *int, f TreeIterator) (cont bool) {
+func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *int, f TreeIndexIterator) (cont bool) {
 	cont = true
 	prefix = append(prefix, self.segment...)
 	var child *node
@@ -188,7 +188,7 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 	}
 	if cont {
 		if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
-			cont = f(stitch(prefix), self.value, self.version)
+			cont = f(stitch(prefix), self.value, self.version, count)
 			count++
 		}
 	}

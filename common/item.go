@@ -7,4 +7,5 @@ type Item struct {
 	Exists    bool
 	Timestamp int64
 	TTL       int
+	Index     int
 }

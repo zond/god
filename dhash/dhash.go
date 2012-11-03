@@ -243,12 +243,13 @@ func (self *DHash) SliceIndex(r common.Range, items *[]common.Item) error {
 	if !r.MaxInc {
 		max = nil
 	}
-	self.tree.SubEachBetweenIndex(r.Key, min, max, func(key []byte, value radix.Hasher, version int64) bool {
+	self.tree.SubEachBetweenIndex(r.Key, min, max, func(key []byte, value radix.Hasher, version int64, index int) bool {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			*items = append(*items, common.Item{
 				Key:       key,
 				Value:     []byte(byteHasher),
 				Timestamp: version,
+				Index:     index,
 			})
 		}
 		return true
@@ -264,12 +265,13 @@ func (self *DHash) ReverseSliceIndex(r common.Range, items *[]common.Item) error
 	if !r.MaxInc {
 		max = nil
 	}
-	self.tree.SubReverseEachBetweenIndex(r.Key, min, max, func(key []byte, value radix.Hasher, version int64) bool {
+	self.tree.SubReverseEachBetweenIndex(r.Key, min, max, func(key []byte, value radix.Hasher, version int64, index int) bool {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			*items = append(*items, common.Item{
 				Key:       key,
 				Value:     []byte(byteHasher),
 				Timestamp: version,
+				Index:     index,
 			})
 		}
 		return true

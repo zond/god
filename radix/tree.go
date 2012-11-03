@@ -67,12 +67,12 @@ func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterat
 	mincmp, maxcmp := cmps(mininc, maxinc)
 	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, f)
 }
-func (self *Tree) ReverseEachBetweenIndex(min, max *int, f TreeIterator) {
+func (self *Tree) ReverseEachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	self.root.reverseEachBetweenIndex(nil, 0, min, max, f)
 }
-func (self *Tree) EachBetweenIndex(min, max *int, f TreeIterator) {
+func (self *Tree) EachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	self.root.eachBetweenIndex(nil, 0, min, max, f)
@@ -163,7 +163,7 @@ func (self *Tree) Last() (key []byte, value Hasher, version int64, existed bool)
 	return
 }
 func (self *Tree) Index(n int) (key []byte, value Hasher, version int64, existed bool) {
-	self.EachBetweenIndex(&n, &n, func(k []byte, v Hasher, ver int64) bool {
+	self.EachBetweenIndex(&n, &n, func(k []byte, v Hasher, ver int64, index int) bool {
 		key, value, version, existed = k, v, ver, true
 		return false
 	})
@@ -258,14 +258,14 @@ func (self *Tree) SubEachBetween(key, min, max []byte, mininc, maxinc bool, f Tr
 		subTree.EachBetween(min, max, mininc, maxinc, f)
 	}
 }
-func (self *Tree) SubReverseEachBetweenIndex(key []byte, min, max *int, f TreeIterator) {
+func (self *Tree) SubReverseEachBetweenIndex(key []byte, min, max *int, f TreeIndexIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
 		subTree.ReverseEachBetweenIndex(min, max, f)
 	}
 }
-func (self *Tree) SubEachBetweenIndex(key []byte, min, max *int, f TreeIterator) {
+func (self *Tree) SubEachBetweenIndex(key []byte, min, max *int, f TreeIndexIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {

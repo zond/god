@@ -47,14 +47,14 @@ func mustAtoi(s string) *int {
 }
 
 func reverseSliceIndex(conn *client.Conn, args []string) {
-	for i, item := range conn.ReverseSliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
-		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	for _, item := range conn.ReverseSliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
+		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), string(item.Value))
 	}
 }
 
 func sliceIndex(conn *client.Conn, args []string) {
-	for i, item := range conn.SliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
-		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	for _, item := range conn.SliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
+		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), string(item.Value))
 	}
 }
 
