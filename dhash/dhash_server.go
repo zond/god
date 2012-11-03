@@ -58,3 +58,15 @@ func (self *dhashServer) First(data common.Item, result *common.Item) error {
 func (self *dhashServer) Last(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Last(data, result)
 }
+func (self *dhashServer) ReverseSlice(r common.Range, result *[]common.Item) error {
+	return (*DHash)(self).ReverseSlice(r, result)
+}
+func (self *dhashServer) Slice(r common.Range, result *[]common.Item) error {
+	return (*DHash)(self).Slice(r, result)
+}
+func (self *dhashServer) SliceIndex(r common.Range, result *[]common.Item) error {
+	return (*DHash)(self).SliceIndex(r, result)
+}
+func (self *dhashServer) ReverseSliceIndex(r common.Range, result *[]common.Item) error {
+	return (*DHash)(self).ReverseSliceIndex(r, result)
+}

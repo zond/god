@@ -1,10 +1,11 @@
 package common
 
 type Range struct {
-	FromKey   []byte
-	ToKey     []byte
-	FromInc   bool
-	ToInc     bool
-	FromIndex int
-	ToIndex   int
+	Key      []byte
+	Min      []byte
+	Max      []byte
+	MinInc   bool
+	MaxInc   bool
+	MinIndex *int
+	MaxIndex *int
 }

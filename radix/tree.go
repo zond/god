@@ -188,19 +188,6 @@ func (self *Tree) getSubTree(key []Nibble) (subTree *Tree, version int64) {
 	return
 }
 
-func (self *Tree) SubPut(key, subKey []byte, value Hasher, version int64) (old Hasher, existed bool) {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-	ripped := rip(key)
-	subTree, subTreeVersion := self.getSubTree(ripped)
-	if subTree == nil {
-		subTree = newTreeWith(rip(subKey), value, version)
-	} else {
-		old, existed = subTree.Put(subKey, value, version)
-	}
-	self.putVersion(ripped, subTree, subTreeVersion, subTreeVersion)
-	return
-}
 func (self *Tree) SubReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -255,6 +242,47 @@ func (self *Tree) SubGet(key, subKey []byte) (value Hasher, version int64, exist
 	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
 		value, version, existed = subTree.Get(subKey)
 	}
+	return
+}
+func (self *Tree) SubReverseEachBetween(key, min, max []byte, mininc, maxinc bool, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		subTree.ReverseEachBetween(min, max, mininc, maxinc, f)
+	}
+}
+func (self *Tree) SubEachBetween(key, min, max []byte, mininc, maxinc bool, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		subTree.EachBetween(min, max, mininc, maxinc, f)
+	}
+}
+func (self *Tree) SubReverseEachBetweenIndex(key []byte, min, max *int, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		subTree.ReverseEachBetweenIndex(min, max, f)
+	}
+}
+func (self *Tree) SubEachBetweenIndex(key []byte, min, max *int, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		subTree.EachBetweenIndex(min, max, f)
+	}
+}
+func (self *Tree) SubPut(key, subKey []byte, value Hasher, version int64) (old Hasher, existed bool) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	ripped := rip(key)
+	subTree, subTreeVersion := self.getSubTree(ripped)
+	if subTree == nil {
+		subTree = newTreeWith(rip(subKey), value, version)
+	} else {
+		old, existed = subTree.Put(subKey, value, version)
+	}
+	self.putVersion(ripped, subTree, subTreeVersion, subTreeVersion)
 	return
 }
 func (self *Tree) SubDel(key, subKey []byte) (old Hasher, existed bool) {

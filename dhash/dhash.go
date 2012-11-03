@@ -234,6 +234,58 @@ func (self *DHash) Get(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
+func (self *DHash) SliceIndex(r common.Range, items *[]common.Item) error {
+	self.tree.SubEachBetweenIndex(r.Key, r.MinIndex, r.MaxIndex, func(key []byte, value radix.Hasher, version int64) bool {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			*items = append(*items, common.Item{
+				Key:       key,
+				Value:     []byte(byteHasher),
+				Timestamp: version,
+			})
+		}
+		return true
+	})
+	return nil
+}
+func (self *DHash) ReverseSliceIndex(r common.Range, items *[]common.Item) error {
+	self.tree.SubReverseEachBetweenIndex(r.Key, r.MinIndex, r.MaxIndex, func(key []byte, value radix.Hasher, version int64) bool {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			*items = append(*items, common.Item{
+				Key:       key,
+				Value:     []byte(byteHasher),
+				Timestamp: version,
+			})
+		}
+		return true
+	})
+	return nil
+}
+func (self *DHash) ReverseSlice(r common.Range, items *[]common.Item) error {
+	self.tree.SubReverseEachBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc, func(key []byte, value radix.Hasher, version int64) bool {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			*items = append(*items, common.Item{
+				Key:       key,
+				Value:     []byte(byteHasher),
+				Timestamp: version,
+			})
+		}
+		return true
+	})
+	return nil
+}
+func (self *DHash) Slice(r common.Range, items *[]common.Item) error {
+	self.tree.SubEachBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc, func(key []byte, value radix.Hasher, version int64) bool {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			*items = append(*items, common.Item{
+				Key:       key,
+				Value:     []byte(byteHasher),
+				Timestamp: version,
+			})
+		}
+		return true
+	})
+	return nil
+}
 func (self *DHash) ReverseIndexOf(data common.Item, result *common.Index) error {
 	result.N, result.Existed = self.tree.SubReverseIndexOf(data.Key, data.SubKey)
 	return nil
