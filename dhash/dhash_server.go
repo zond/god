@@ -21,6 +21,9 @@ func (self *dhashServer) Put(data common.Item, x *int) error {
 func (self *dhashServer) RingHash(x int, result *[]byte) error {
 	return (*DHash)(self).RingHash(x, result)
 }
+func (self *dhashServer) SubFind(data common.Item, result *common.Item) error {
+	return (*DHash)(self).SubFind(data, result)
+}
 func (self *dhashServer) Find(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Find(data, result)
 }
