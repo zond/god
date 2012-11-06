@@ -38,7 +38,11 @@ func (self *node) setSegment(part []Nibble) {
 func (self *node) rehash(key []Nibble) {
 	self.size = 0
 	if self.valueHash != nil {
-		self.size++
+		if subTree, ok := self.value.(*Tree); ok {
+			self.size += subTree.Size()
+		} else {
+			self.size++
+		}
 	}
 	h := murmur.NewBytes(toBytes(key))
 	h.Write(self.valueHash)
