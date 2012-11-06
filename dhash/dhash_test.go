@@ -5,6 +5,7 @@ import (
 	"../radix"
 	"bytes"
 	"fmt"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -84,10 +85,23 @@ func testFind(t *testing.T, dhashes []*DHash) {
 	}, time.Second*10)
 }
 
+func stopServers(servers []*DHash) {
+	for _, d := range servers {
+		d.Stop()
+	}
+}
+
 func TestAll(t *testing.T) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	fmt.Println("starting up dhash_test")
 	dhashes := testStartup(t, 6)
+	fmt.Println("testSync")
 	testSync(t, dhashes)
+	fmt.Println("testClean")
 	testClean(t, dhashes)
+	fmt.Println("testPut")
 	testPut(t, dhashes)
+	fmt.Println("testFind")
 	testFind(t, dhashes)
+	fmt.Println("dhash_test done")
 }
