@@ -148,6 +148,37 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 	}
 }
 
+func TestTreeSizeBetween(t *testing.T) {
+	tree := NewTree()
+	for i := 11; i < 20; i++ {
+		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+	}
+	for i := 10; i < 21; i++ {
+		for j := i; j < 21; j++ {
+			expected := max(0, min(j+1, 20)-max(11, i))
+			val := tree.SizeBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true)
+			if val != expected {
+				t.Errorf("%v.SizeBetween(%v, %v, true, true) should be %v but was %v", tree.Describe(), i, j, expected, val)
+			}
+			expected = max(0, min(j+1, 20)-max(11, i+1))
+			val = tree.SizeBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true)
+			if val != expected {
+				t.Errorf("%v.SizeBetween(%v, %v, false, true) should be %v but was %v", tree.Describe(), i, j, expected, val)
+			}
+			expected = max(0, min(j, 20)-max(11, i))
+			val = tree.SizeBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false)
+			if val != expected {
+				t.Errorf("%v.SizeBetween(%v, %v, true, false) should be %v but was %v", tree.Describe(), i, j, expected, val)
+			}
+			expected = max(0, min(j, 20)-max(11, i+1))
+			val = tree.SizeBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false)
+			if val != expected {
+				t.Errorf("%v.SizeBetween(%v, %v, false, false) should be %v but was %v", tree.Describe(), i, j, expected, val)
+			}
+		}
+	}
+}
+
 func TestSubTree(t *testing.T) {
 	tree := NewTree()
 	assertSize(t, tree, 0)

@@ -122,6 +122,30 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp i
 	}
 	return
 }
+func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp int) (result int) {
+	prefix = append(prefix, self.segment...)
+	if self.valueHash != nil && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
+		result++
+	}
+	for _, child := range self.children {
+		if child != nil {
+			childKey := make([]Nibble, len(prefix)+len(child.segment))
+			copy(childKey, prefix)
+			copy(childKey[len(prefix):], child.segment)
+			m := len(childKey)
+			if m > len(min) {
+				m = len(min)
+			}
+			if m > len(max) {
+				m = len(max)
+			}
+			if (min == nil || nComp(childKey[:m], min[:m]) > -1) && (max == nil || nComp(childKey[:m], max[:m]) < 1) {
+				result += child.sizeBetween(prefix, min, max, mincmp, maxcmp)
+			}
+		}
+	}
+	return
+}
 func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f TreeIterator) (cont bool) {
 	cont = true
 	prefix = append(prefix, self.segment...)

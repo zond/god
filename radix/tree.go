@@ -99,6 +99,12 @@ func (self *Tree) String() string {
 	fmt.Fprint(buffer, "]")
 	return string(buffer.Bytes())
 }
+func (self *Tree) SizeBetween(min, max []byte, mininc, maxinc bool) int {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	mincmp, maxcmp := cmps(mininc, maxinc)
+	return self.root.sizeBetween(nil, rip(min), rip(max), mincmp, maxcmp)
+}
 func (self *Tree) Size() int {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
