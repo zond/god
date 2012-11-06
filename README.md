@@ -6,7 +6,7 @@ A Go database
 # TODO
 
 * Sub trees
- * Manual testing
+ * SizeBetween
  * Automated tests
 * Node migrations
  * Functionality
