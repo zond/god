@@ -242,6 +242,14 @@ func (self *Tree) SubNext(key, subKey []byte) (nextKey []byte, nextValue Hasher,
 	}
 	return
 }
+func (self *Tree) SubSizeBetween(key, min, max []byte, mininc, maxinc bool) (result int) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		result = subTree.SizeBetween(min, max, mininc, maxinc)
+	}
+	return
+}
 func (self *Tree) SubGet(key, subKey []byte) (value Hasher, version int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
