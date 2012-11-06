@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	syncInterval  = time.Second * 1
-	cleanInterval = time.Second * 1
+	syncInterval    = time.Second * 1
+	cleanInterval   = time.Second * 1
+	migrateInterval = time.Second * 20
+	migrateCutoff   = 8 / 5
 )
 
 const (
@@ -23,11 +25,17 @@ const (
 	stopped
 )
 
+const (
+	cleaning = 1 << iota
+	synchronizing
+)
+
 type DHash struct {
-	state int32
-	node  *discord.Node
-	timer *timenet.Timer
-	tree  *radix.Tree
+	state  int32
+	status int32
+	node   *discord.Node
+	timer  *timenet.Timer
+	tree   *radix.Tree
 }
 
 func NewDHash(addr string) (result *DHash) {
@@ -42,11 +50,28 @@ func NewDHash(addr string) (result *DHash) {
 	result.node.Export("HashTree", (*hashTreeServer)(result.tree))
 	return
 }
+func (self *DHash) delStatus(s int32) {
+	current := atomic.LoadInt32(&self.status)
+	for current&s == s {
+		atomic.CompareAndSwapInt32(&self.status, current, current&^s)
+		current = atomic.LoadInt32(&self.status)
+	}
+}
+func (self *DHash) addStatus(s int32) {
+	current := atomic.LoadInt32(&self.status)
+	for current&s == 0 {
+		atomic.CompareAndSwapInt32(&self.status, current, current&s)
+		current = atomic.LoadInt32(&self.status)
+	}
+}
 func (self *DHash) hasState(s int32) bool {
 	return atomic.LoadInt32(&self.state) == s
 }
 func (self *DHash) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
+}
+func (self *DHash) GetAddr() string {
+	return self.node.GetAddr()
 }
 func (self *DHash) AddChangeListener(f common.RingChangeListener) {
 	self.node.AddChangeListener(f)
@@ -67,6 +92,7 @@ func (self *DHash) Start() (err error) {
 	self.timer.Start()
 	go self.syncPeriodically()
 	go self.cleanPeriodically()
+	go self.migratePeriodically()
 	return
 }
 func (self *DHash) sync() {
@@ -78,8 +104,17 @@ func (self *DHash) sync() {
 		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
 		nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
 	}
-	if fetched != 0 || distributed != 0 {
+	if fetched == 0 || distributed == 0 {
+		self.delStatus(synchronizing)
+	} else {
+		self.addStatus(synchronizing)
 		fmt.Println(self, "fetched", fetched, "keys and distributed", distributed, "keys")
+	}
+}
+func (self *DHash) migratePeriodically() {
+	for self.hasState(started) {
+		self.migrate()
+		time.Sleep(migrateInterval)
 	}
 }
 func (self *DHash) syncPeriodically() {
@@ -93,6 +128,9 @@ func (self *DHash) cleanPeriodically() {
 		self.clean()
 		time.Sleep(cleanInterval)
 	}
+}
+func (self *DHash) migrate() {
+	fmt.Println("Implement migrate!")
 }
 func (self *DHash) circularNext(key []byte) (nextKey []byte, existed bool) {
 	if nextKey, _, _, existed = self.tree.Next(key); existed {
@@ -134,7 +172,10 @@ func (self *DHash) clean() {
 				put += sync.PutCount()
 			}
 		}
-		if deleted != 0 || put != 0 {
+		if deleted == 0 || put == 0 {
+			self.delStatus(cleaning)
+		} else {
+			self.addStatus(cleaning)
 			fmt.Println(self, "relocated", put, "keys while cleaning out", deleted, "keys")
 		}
 	}
@@ -153,7 +194,7 @@ func (self *DHash) Time() time.Time {
 	return time.Unix(0, self.timer.ContinuousTime())
 }
 func (self *DHash) Describe() string {
-	return self.node.Describe()
+	return fmt.Sprintf("%v entries in %v", self.tree.Size(), self.node.Describe())
 }
 func (self *DHash) DescribeTree() string {
 	return self.tree.Describe()
