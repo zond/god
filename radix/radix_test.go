@@ -148,6 +148,20 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 	}
 }
 
+func TestSubTree(t *testing.T) {
+	tree := NewTree()
+	assertSize(t, tree, 0)
+	tree.Put([]byte("a"), StringHasher("a"), 0)
+	assertSize(t, tree, 1)
+	tree.SubPut([]byte("b"), []byte("c"), StringHasher("d"), 1)
+	assertSize(t, tree, 2)
+	tree.SubPut([]byte("b"), []byte("d"), StringHasher("e"), 2)
+	assertSize(t, tree, 3)
+	if v, ver, e := tree.SubGet([]byte("b"), []byte("d")); v != StringHasher("e") || ver != 2 || !e {
+		t.Errorf("wrong result, wanted %v, %v, %v got %v, %v, %v", StringHasher("e"), 2, true, v, ver, e)
+	}
+}
+
 func TestSyncSubTreeVersions(t *testing.T) {
 	tree1 := NewTree()
 	tree3 := NewTree()
@@ -724,7 +738,7 @@ func TestTreeReverseEachBetweenIndex(t *testing.T) {
 	for i := -1; i < 10; i++ {
 		for j := i; j < 10; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetweenIndex(&i, &j, func(key []byte, value Hasher, version int64) bool {
+			tree.ReverseEachBetweenIndex(&i, &j, func(key []byte, value Hasher, version int64, index int) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
@@ -748,7 +762,7 @@ func TestTreeEachBetweenIndex(t *testing.T) {
 	for i := -1; i < 10; i++ {
 		for j := i; j < 10; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetweenIndex(&i, &j, func(key []byte, value Hasher, version int64) bool {
+			tree.EachBetweenIndex(&i, &j, func(key []byte, value Hasher, version int64, index int) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, value)
 				return true
