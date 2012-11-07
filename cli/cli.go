@@ -21,6 +21,7 @@ var actions = map[*regexp.Regexp]action{
 	regexp.MustCompile("^reverseSlice (\\S+) (\\S+) (\\S+)$"):      reverseSlice,
 	regexp.MustCompile("^slice (\\S+) (\\S+) (\\S+)$"):             slice,
 	regexp.MustCompile("^put (\\S+) (\\S+)$"):                      put,
+	regexp.MustCompile("^count (\\S+) (\\S+) (\\S+)$"):             count,
 	regexp.MustCompile("^get (\\S+)$"):                             get,
 	regexp.MustCompile("^del (\\S+)$"):                             del,
 	regexp.MustCompile("^subPut (\\S+) (\\S+) (\\S+)$"):            subPut,
@@ -90,6 +91,10 @@ func prev(conn *client.Conn, args []string) {
 	if key, value, existed := conn.Prev([]byte(args[1])); existed {
 		fmt.Println(string(key), "=>", string(value))
 	}
+}
+
+func count(conn *client.Conn, args []string) {
+	fmt.Println(conn.Count([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false))
 }
 
 func next(conn *client.Conn, args []string) {
