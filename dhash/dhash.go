@@ -225,6 +225,10 @@ func (self *DHash) RingHash(x int, ringHash *[]byte) error {
 	*ringHash = self.node.RingHash()
 	return nil
 }
+func (self *DHash) Count(r common.Range, result *int) error {
+	*result = self.tree.SubSizeBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc)
+	return nil
+}
 func (self *DHash) Next(data common.Item, result *common.Item) error {
 	*result = data
 	if key, value, timestamp, exists := self.tree.Next(data.Key); exists {
