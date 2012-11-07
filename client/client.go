@@ -174,6 +174,21 @@ func (self *Conn) Prev(key []byte) (prevKey, prevValue []byte, existed bool) {
 	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) {
+	r := common.Range{
+		Key:    key,
+		Min:    min,
+		Max:    max,
+		MinInc: mininc,
+		MaxInc: maxinc,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	if err := successor.Call("DHash.Count", r, &result); err != nil {
+		self.removeNode(*successor)
+		return self.Count(key, min, max, mininc, maxinc)
+	}
+	return
+}
 func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
