@@ -64,6 +64,9 @@ func (self *DHash) addStatus(s int32) {
 		current = atomic.LoadInt32(&self.status)
 	}
 }
+func (self *DHash) hasStatus(s int32) bool {
+	return atomic.LoadInt32(&self.status)&s == s
+}
 func (self *DHash) hasState(s int32) bool {
 	return atomic.LoadInt32(&self.state) == s
 }
@@ -130,7 +133,23 @@ func (self *DHash) cleanPeriodically() {
 	}
 }
 func (self *DHash) migrate() {
-	fmt.Println("Implement migrate!")
+	if !self.hasStatus(synchronizing) && !self.hasStatus(cleaning) {
+		successor := self.node.GetSuccessor(self.node.GetPosition())
+		var successorSize int
+		if err := successor.Call("DHash.Size", 0, &successorSize); err != nil {
+			self.node.RemoveNode(successor)
+			return
+		}
+		mySize := self.Size()
+		if float32(mySize)/float32(successorSize) > migrateCutoff {
+
+		} else if float32(successorSize)/float32(mySize) > migrateCutoff {
+		}
+	}
+}
+func (self *DHash) Size() int {
+	predecessor := self.node.GetPredecessor()
+	return self.tree.SizeBetween(predecessor.Pos, self.node.GetPosition(), true, false)
 }
 func (self *DHash) circularNext(key []byte) (nextKey []byte, existed bool) {
 	if nextKey, _, _, existed = self.tree.Next(key); existed {

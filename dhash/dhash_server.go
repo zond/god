@@ -27,6 +27,10 @@ func (self *dhashServer) SubFind(data common.Item, result *common.Item) error {
 func (self *dhashServer) Find(data common.Item, result *common.Item) error {
 	return (*DHash)(self).Find(data, result)
 }
+func (self *dhashServer) Size(x int, result *int) error {
+	*result = (*DHash)(self).Size()
+	return nil
+}
 func (self *dhashServer) Count(r common.Range, result *int) error {
 	return (*DHash)(self).Count(r, result)
 }
