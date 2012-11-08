@@ -224,6 +224,22 @@ func (self *Tree) SubIndexOf(key, subKey []byte) (index int, existed bool) {
 	}
 	return
 }
+func (self *Tree) SubPrevIndex(key []byte, index int) (foundKey []byte, foundValue Hasher, foundVersion int64, foundIndex int, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		foundKey, foundValue, foundVersion, foundIndex, existed = subTree.PrevIndex(index)
+	}
+	return
+}
+func (self *Tree) SubNextIndex(key []byte, index int) (foundKey []byte, foundValue Hasher, foundVersion int64, foundIndex int, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+		foundKey, foundValue, foundVersion, foundIndex, existed = subTree.NextIndex(index)
+	}
+	return
+}
 func (self *Tree) SubFirst(key []byte) (firstKey []byte, firstValue Hasher, firstVersion int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
