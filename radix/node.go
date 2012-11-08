@@ -181,7 +181,7 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, f 
 	prefix = append(prefix, self.segment...)
 	if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
 		cont = f(stitch(prefix), self.value, self.version, count)
-		count++
+		count += self.size
 	}
 	if cont {
 		for _, child := range self.children {
@@ -217,7 +217,7 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 	if cont {
 		if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
 			cont = f(stitch(prefix), self.value, self.version, count)
-			count++
+			count += self.size
 		}
 	}
 	return

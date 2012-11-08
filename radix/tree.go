@@ -154,6 +154,20 @@ func (self *Tree) Next(key []byte) (nextKey []byte, nextValue Hasher, nextVersio
 	})
 	return
 }
+func (self *Tree) NextIndex(index int) (key []byte, value Hasher, version int64, ind int, existed bool) {
+	self.EachBetweenIndex(&index, nil, func(k []byte, v Hasher, ver int64, i int) bool {
+		key, value, version, ind, existed = k, v, ver, i, true
+		return false
+	})
+	return
+}
+func (self *Tree) PrevIndex(index int) (key []byte, value Hasher, version int64, ind int, existed bool) {
+	self.ReverseEachBetweenIndex(&index, nil, func(k []byte, v Hasher, ver int64, i int) bool {
+		key, value, version, ind, existed = k, v, ver, i, true
+		return false
+	})
+	return
+}
 func (self *Tree) First() (key []byte, value Hasher, version int64, existed bool) {
 	self.Each(func(k []byte, v Hasher, ver int64) bool {
 		key, value, version, existed = k, v, ver, true
