@@ -31,6 +31,8 @@ var actions = map[*regexp.Regexp]action{
 	regexp.MustCompile("^describeTree (\\S+)$"):                    describeTree,
 	regexp.MustCompile("^first (\\S+)$"):                           first,
 	regexp.MustCompile("^last (\\S+)$"):                            last,
+	regexp.MustCompile("^prevIndex (\\S+) (\\d+)$"):                prevIndex,
+	regexp.MustCompile("^nextIndex (\\S+) (\\d+)$"):                nextIndex,
 	regexp.MustCompile("^next (\\S+)$"):                            next,
 	regexp.MustCompile("^prev (\\S+)$"):                            prev,
 	regexp.MustCompile("^subNext (\\S+) (\\S+)$"):                  subNext,
@@ -95,6 +97,18 @@ func prev(conn *client.Conn, args []string) {
 
 func count(conn *client.Conn, args []string) {
 	fmt.Println(conn.Count([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false))
+}
+
+func prevIndex(conn *client.Conn, args []string) {
+	if key, value, index, existed := conn.PrevIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
+		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+	}
+}
+
+func nextIndex(conn *client.Conn, args []string) {
+	if key, value, index, existed := conn.NextIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
+		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+	}
 }
 
 func next(conn *client.Conn, args []string) {

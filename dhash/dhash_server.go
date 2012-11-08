@@ -50,6 +50,12 @@ func (self *dhashServer) DescribeTree(x int, result *string) error {
 	*result = (*DHash)(self).DescribeTree()
 	return nil
 }
+func (self *dhashServer) PrevIndex(data common.Item, result *common.Item) error {
+	return (*DHash)(self).PrevIndex(data, result)
+}
+func (self *dhashServer) NextIndex(data common.Item, result *common.Item) error {
+	return (*DHash)(self).NextIndex(data, result)
+}
 func (self *dhashServer) ReverseIndexOf(data common.Item, result *common.Index) error {
 	return (*DHash)(self).ReverseIndexOf(data, result)
 }

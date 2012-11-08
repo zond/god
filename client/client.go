@@ -189,6 +189,34 @@ func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) 
 	}
 	return
 }
+func (self *Conn) PrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
+	data := common.Item{
+		Key:   key,
+		Index: index,
+	}
+	result := &common.Item{}
+	_, _, successor := self.ring.Remotes(key)
+	if err := successor.Call("DHash.PrevIndex", data, result); err != nil {
+		self.removeNode(*successor)
+		return self.NextIndex(key, index)
+	}
+	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
+	return
+}
+func (self *Conn) NextIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
+	data := common.Item{
+		Key:   key,
+		Index: index,
+	}
+	result := &common.Item{}
+	_, _, successor := self.ring.Remotes(key)
+	if err := successor.Call("DHash.NextIndex", data, result); err != nil {
+		self.removeNode(*successor)
+		return self.NextIndex(key, index)
+	}
+	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
+	return
+}
 func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,

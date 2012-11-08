@@ -265,6 +265,22 @@ func (self *DHash) Last(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
+func (self *DHash) PrevIndex(data common.Item, result *common.Item) error {
+	if key, value, timestamp, index, exists := self.tree.SubPrevIndex(data.Key, data.Index); exists {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			result.Key, result.Value, result.Timestamp, result.Index, result.Exists = key, []byte(byteHasher), timestamp, index, exists
+		}
+	}
+	return nil
+}
+func (self *DHash) NextIndex(data common.Item, result *common.Item) error {
+	if key, value, timestamp, index, exists := self.tree.SubNextIndex(data.Key, data.Index); exists {
+		if byteHasher, ok := value.(radix.ByteHasher); ok {
+			result.Key, result.Value, result.Timestamp, result.Index, result.Exists = key, []byte(byteHasher), timestamp, index, exists
+		}
+	}
+	return nil
+}
 func (self *DHash) First(data common.Item, result *common.Item) error {
 	if key, value, timestamp, exists := self.tree.SubFirst(data.Key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
