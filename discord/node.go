@@ -236,10 +236,16 @@ func (self *Node) RemoveNode(remote common.Remote) {
 	self.ring.Remove(remote)
 }
 func (self *Node) GetPredecessor() common.Remote {
+	return self.GetPredecessorFor(self.GetPosition())
+}
+func (self *Node) GetPredecessorFor(key []byte) common.Remote {
 	pred, _, _ := self.ring.Remotes(self.GetPosition())
 	return *pred
 }
-func (self *Node) GetSuccessor(key []byte) common.Remote {
+func (self *Node) GetSuccessor() common.Remote {
+	return self.GetSuccessorFor(self.GetPosition())
+}
+func (self *Node) GetSuccessorFor(key []byte) common.Remote {
 	// Guess according to our route cache
 	predecessor, match, successor := self.ring.Remotes(key)
 	if match != nil {
@@ -250,14 +256,14 @@ func (self *Node) GetSuccessor(key []byte) common.Remote {
 		// Double check by asking the successor we found what predecessor it has
 		if err := successor.Call("Node.GetPredecessor", 0, predecessor); err != nil {
 			self.RemoveNode(*successor)
-			return self.GetSuccessor(key)
+			return self.GetSuccessorFor(key)
 		}
 		// If the key we are looking for is between them, just return the successor
 		if !common.BetweenIE(key, predecessor.Pos, successor.Pos) {
 			// Otherwise, ask the predecessor we actually found about who is the successor of the key
-			if err := predecessor.Call("Node.GetSuccessor", key, successor); err != nil {
+			if err := predecessor.Call("Node.GetSuccessorFor", key, successor); err != nil {
 				self.RemoveNode(*predecessor)
-				return self.GetSuccessor(key)
+				return self.GetSuccessorFor(key)
 			}
 		}
 	}

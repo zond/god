@@ -22,7 +22,7 @@ func (self *nodeServer) GetPredecessor(x int, predecessor *common.Remote) error 
 	*predecessor = (*Node)(self).GetPredecessor()
 	return nil
 }
-func (self *nodeServer) GetSuccessor(key []byte, successor *common.Remote) error {
-	*successor = (*Node)(self).GetSuccessor(key)
+func (self *nodeServer) GetSuccessorFor(key []byte, successor *common.Remote) error {
+	*successor = (*Node)(self).GetSuccessorFor(key)
 	return nil
 }
