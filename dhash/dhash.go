@@ -7,6 +7,7 @@ import (
 	"../murmur"
 	"../radix"
 	"../timenet"
+	"bytes"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -15,8 +16,9 @@ import (
 const (
 	syncInterval    = time.Second * 1
 	cleanInterval   = time.Second * 1
-	migrateInterval = time.Second * 20
-	migrateCutoff   = 8 / 5
+	migrateInterval = time.Second * 1
+	migrateLimit    = 3
+	migrateTarget   = 2
 )
 
 const (
@@ -101,11 +103,11 @@ func (self *DHash) Start() (err error) {
 func (self *DHash) sync() {
 	fetched := 0
 	distributed := 0
-	nextSuccessor := self.node.GetSuccessor(self.node.GetPosition())
+	nextSuccessor := self.node.GetSuccessor()
 	for i := 0; i < self.node.Redundancy()-1; i++ {
 		distributed += radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
 		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
-		nextSuccessor = self.node.GetSuccessor(nextSuccessor.Pos)
+		nextSuccessor = self.node.GetSuccessorFor(nextSuccessor.Pos)
 	}
 	if fetched == 0 || distributed == 0 {
 		self.delStatus(synchronizing)
@@ -132,24 +134,39 @@ func (self *DHash) cleanPeriodically() {
 		time.Sleep(cleanInterval)
 	}
 }
+func (self *DHash) treeSizeBetween(p1, p2 []byte) int {
+	if bytes.Compare(p1, p2) < 1 {
+		return self.tree.SizeBetween(p1, p2, true, false)
+	}
+	return self.tree.SizeBetween(p2, nil, true, false) + self.tree.SizeBetween(nil, p1, true, false)
+}
 func (self *DHash) migrate() {
 	if !self.hasStatus(synchronizing) && !self.hasStatus(cleaning) {
-		successor := self.node.GetSuccessor(self.node.GetPosition())
-		var successorSize int
-		if err := successor.Call("DHash.Size", 0, &successorSize); err != nil {
-			self.node.RemoveNode(successor)
-			return
-		}
-		mySize := self.Size()
-		if float32(mySize)/float32(successorSize) > migrateCutoff {
-
-		} else if float32(successorSize)/float32(mySize) > migrateCutoff {
+		fmt.Println("not syncing or cleaning")
+		// If we are not busy synchronizing or cleaning
+		pred := self.node.GetPredecessor()
+		grandPred := self.node.GetPredecessorFor(pred.Pos)
+		mySize := self.treeSizeBetween(pred.Pos, self.node.GetPosition())
+		predSize := self.treeSizeBetween(grandPred.Pos, pred.Pos)
+		fmt.Println("mysize", mySize, "predsize", predSize)
+		// If we have more keys than our predecessor * migrateLimit
+		if predSize*migrateLimit < mySize {
+			fmt.Println("i am too fat")
+			// We want to have predecessor size * migrateTarget keys
+			goalSize := predSize * migrateTarget
+			fmt.Println("i should have", goalSize)
+			if _, _, _, goalIndexMin, existed := self.tree.PrevIndex(mySize - goalSize); existed {
+				fmt.Println("goalIndexMin", goalIndexMin)
+				// The first key after (mySize - goalSize)  we find in our tree when looking from the end
+				if goalPos, _, _, goalIndexMax, existed := self.tree.NextIndex(mySize - goalIndexMin); existed {
+					fmt.Println("goalIndexMax", goalIndexMax)
+					if predSize*migrateLimit > goalIndexMax && predSize*migrateTarget < goalIndexMax {
+						fmt.Println("Would have migrated", self, "to", goalPos)
+					}
+				}
+			}
 		}
 	}
-}
-func (self *DHash) Size() int {
-	predecessor := self.node.GetPredecessor()
-	return self.tree.SizeBetween(predecessor.Pos, self.node.GetPosition(), true, false)
 }
 func (self *DHash) circularNext(key []byte) (nextKey []byte, existed bool) {
 	if nextKey, _, _, existed = self.tree.Next(key); existed {
@@ -163,12 +180,12 @@ func (self *DHash) circularNext(key []byte) (nextKey []byte, existed bool) {
 	return
 }
 func (self *DHash) owners(key []byte) (owners common.Remotes, isOwner bool) {
-	owners = append(owners, self.node.GetSuccessor(key))
+	owners = append(owners, self.node.GetSuccessorFor(key))
 	if owners[0].Addr == self.node.GetAddr() {
 		isOwner = true
 	}
 	for i := 1; i < self.node.Redundancy(); i++ {
-		owners = append(owners, self.node.GetSuccessor(owners[i-1].Pos))
+		owners = append(owners, self.node.GetSuccessorFor(owners[i-1].Pos))
 		if owners[i].Addr == self.node.GetAddr() {
 			isOwner = true
 		}
@@ -402,7 +419,7 @@ func (self *DHash) SubGet(data common.Item, result *common.Item) error {
 	return nil
 }
 func (self *DHash) SubPut(data common.Item) error {
-	successor := self.node.GetSuccessor(data.Key)
+	successor := self.node.GetSuccessorFor(data.Key)
 	if successor.Addr != self.node.GetAddr() {
 		var x int
 		return successor.Call("DHash.SubPut", data, &x)
@@ -411,7 +428,7 @@ func (self *DHash) SubPut(data common.Item) error {
 	return self.subPut(data)
 }
 func (self *DHash) Put(data common.Item) error {
-	successor := self.node.GetSuccessor(data.Key)
+	successor := self.node.GetSuccessorFor(data.Key)
 	if successor.Addr != self.node.GetAddr() {
 		var x int
 		return successor.Call("DHash.Put", data, &x)
@@ -421,12 +438,12 @@ func (self *DHash) Put(data common.Item) error {
 }
 func (self *DHash) forwardOperation(data common.Item, operation string) {
 	data.TTL--
-	successor := self.node.GetSuccessor(self.node.GetPosition())
+	successor := self.node.GetSuccessorFor(self.node.GetPosition())
 	var x int
 	err := successor.Call(operation, data, &x)
 	for err != nil {
 		self.node.RemoveNode(successor)
-		successor = self.node.GetSuccessor(self.node.GetPosition())
+		successor = self.node.GetSuccessorFor(self.node.GetPosition())
 		err = successor.Call(operation, data, &x)
 	}
 }
