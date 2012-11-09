@@ -22,11 +22,11 @@ func countHaving(t *testing.T, dhashes []*DHash, key, value []byte) (result int)
 func testStartup(t *testing.T, n int) (dhashes []*DHash) {
 	dhashes = make([]*DHash, n)
 	for i := 0; i < n; i++ {
-		dhashes[i] = NewDHash(fmt.Sprintf("127.0.0.1:%v", 9191+i))
+		dhashes[i] = NewDHash(fmt.Sprintf("127.0.0.1:%v", 10191+i))
 		dhashes[i].MustStart()
 	}
 	for i := 1; i < n; i++ {
-		dhashes[i].MustJoin("127.0.0.1:9191")
+		dhashes[i].MustJoin("127.0.0.1:10191")
 	}
 	common.AssertWithin(t, func() (string, bool) {
 		var nodes common.Remotes
