@@ -215,7 +215,7 @@ func (self *Ring) GetSlot() []byte {
 		this := new(big.Int).SetBytes(self.nodes[i].Pos)
 		var next *big.Int
 		if i+1 < len(self.nodes) {
-			next = new(big.Int).SetBytes(self.nodes[i].Pos)
+			next = new(big.Int).SetBytes(self.nodes[i+1].Pos)
 		} else {
 			max := make([]byte, murmur.Size+1)
 			max[0] = 1
