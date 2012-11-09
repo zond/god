@@ -19,6 +19,7 @@ const (
 	migrateInterval = time.Second * 1
 	migrateLimit    = 3
 	migrateTarget   = 2
+	migrateWait     = 10
 )
 
 const (
@@ -27,17 +28,14 @@ const (
 	stopped
 )
 
-const (
-	cleaning = 1 << iota
-	synchronizing
-)
-
 type DHash struct {
-	state  int32
-	status int32
-	node   *discord.Node
-	timer  *timenet.Timer
-	tree   *radix.Tree
+	state       int32
+	lastClean   int64
+	lastSync    int64
+	lastMigrate int64
+	node        *discord.Node
+	timer       *timenet.Timer
+	tree        *radix.Tree
 }
 
 func NewDHash(addr string) (result *DHash) {
@@ -51,23 +49,6 @@ func NewDHash(addr string) (result *DHash) {
 	result.node.Export("DHash", (*dhashServer)(result))
 	result.node.Export("HashTree", (*hashTreeServer)(result.tree))
 	return
-}
-func (self *DHash) delStatus(s int32) {
-	current := atomic.LoadInt32(&self.status)
-	for current&s == s {
-		atomic.CompareAndSwapInt32(&self.status, current, current&^s)
-		current = atomic.LoadInt32(&self.status)
-	}
-}
-func (self *DHash) addStatus(s int32) {
-	current := atomic.LoadInt32(&self.status)
-	for current&s == 0 {
-		atomic.CompareAndSwapInt32(&self.status, current, current&s)
-		current = atomic.LoadInt32(&self.status)
-	}
-}
-func (self *DHash) hasStatus(s int32) bool {
-	return atomic.LoadInt32(&self.status)&s == s
 }
 func (self *DHash) hasState(s int32) bool {
 	return atomic.LoadInt32(&self.state) == s
@@ -97,7 +78,7 @@ func (self *DHash) Start() (err error) {
 	self.timer.Start()
 	go self.syncPeriodically()
 	go self.cleanPeriodically()
-	go self.migratePeriodically()
+	//go self.migratePeriodically()
 	return
 }
 func (self *DHash) sync() {
@@ -109,10 +90,8 @@ func (self *DHash) sync() {
 		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
 		nextSuccessor = self.node.GetSuccessorFor(nextSuccessor.Pos)
 	}
-	if fetched == 0 || distributed == 0 {
-		self.delStatus(synchronizing)
-	} else {
-		self.addStatus(synchronizing)
+	if fetched != 0 || distributed != 0 {
+		atomic.StoreInt64(&self.lastSync, time.Now().UnixNano())
 		fmt.Println(self, "fetched", fetched, "keys and distributed", distributed, "keys")
 	}
 }
@@ -140,28 +119,41 @@ func (self *DHash) treeSizeBetween(p1, p2 []byte) int {
 	}
 	return self.tree.SizeBetween(p2, nil, true, false) + self.tree.SizeBetween(nil, p1, true, false)
 }
+func (self *DHash) changePosition(newPos []byte) {
+	for len(newPos) < murmur.Size {
+		newPos = append(newPos, 0)
+	}
+	fmt.Println("changing pos from", self.node.GetPosition(), "to", newPos)
+	self.node.SetPosition(newPos)
+	atomic.StoreInt64(&self.lastMigrate, time.Now().UnixNano())
+}
 func (self *DHash) migrate() {
-	if !self.hasStatus(synchronizing) && !self.hasStatus(cleaning) {
-		fmt.Println("not syncing or cleaning")
+	lastAllowedChange := time.Now().Add(-1 * migrateWait * time.Second).UnixNano()
+	if lastAllowedChange > atomic.LoadInt64(&self.lastSync) && lastAllowedChange > atomic.LoadInt64(&self.lastClean) {
 		// If we are not busy synchronizing or cleaning
 		pred := self.node.GetPredecessor()
 		grandPred := self.node.GetPredecessorFor(pred.Pos)
 		mySize := self.treeSizeBetween(pred.Pos, self.node.GetPosition())
-		predSize := self.treeSizeBetween(grandPred.Pos, pred.Pos)
-		fmt.Println("mysize", mySize, "predsize", predSize)
+		predSize := common.Max(1, self.treeSizeBetween(grandPred.Pos, pred.Pos))
 		// If we have more keys than our predecessor * migrateLimit
-		if predSize*migrateLimit < mySize {
-			fmt.Println("i am too fat")
+		if mySize > predSize*migrateLimit {
+			fmt.Println("i am too fat", mySize)
 			// We want to have predecessor size * migrateTarget keys
 			goalSize := predSize * migrateTarget
 			fmt.Println("i should have", goalSize)
-			if _, _, _, goalIndexMin, existed := self.tree.PrevIndex(mySize - goalSize); existed {
-				fmt.Println("goalIndexMin", goalIndexMin)
-				// The first key after (mySize - goalSize)  we find in our tree when looking from the end
-				if goalPos, _, _, goalIndexMax, existed := self.tree.NextIndex(mySize - goalIndexMin); existed {
-					fmt.Println("goalIndexMax", goalIndexMax)
-					if predSize*migrateLimit > goalIndexMax && predSize*migrateTarget < goalIndexMax {
-						fmt.Println("Would have migrated", self, "to", goalPos)
+			if bytes.Compare(pred.Pos, self.node.GetPosition()) < 1 {
+				if newPos, _, _, _, existed := self.tree.NextIndex(self.tree.SizeBetween(nil, pred.Pos, true, false) + goalSize); existed {
+					self.changePosition(newPos)
+				}
+			} else {
+				sizeBetweenPredAndZero := self.tree.SizeBetween(pred.Pos, nil, true, false)
+				if sizeBetweenPredAndZero < goalSize {
+					if newPos, _, _, _, existed := self.tree.NextIndex(goalSize - sizeBetweenPredAndZero); existed {
+						self.changePosition(newPos)
+					}
+				} else {
+					if newPos, _, _, _, existed := self.tree.NextIndex(self.tree.SizeBetween(self.node.GetPosition(), pred.Pos, true, false) + goalSize); existed {
+						self.changePosition(newPos)
 					}
 				}
 			}
@@ -208,10 +200,8 @@ func (self *DHash) clean() {
 				put += sync.PutCount()
 			}
 		}
-		if deleted == 0 || put == 0 {
-			self.delStatus(cleaning)
-		} else {
-			self.addStatus(cleaning)
+		if deleted != 0 || put != 0 {
+			atomic.StoreInt64(&self.lastClean, time.Now().UnixNano())
 			fmt.Println(self, "relocated", put, "keys while cleaning out", deleted, "keys")
 		}
 	}
@@ -230,7 +220,7 @@ func (self *DHash) Time() time.Time {
 	return time.Unix(0, self.timer.ContinuousTime())
 }
 func (self *DHash) Describe() string {
-	return fmt.Sprintf("%v entries in %v", self.tree.Size(), self.node.Describe())
+	return fmt.Sprintf("%v/%v entries in %v", self.tree.SizeBetween(self.node.GetPredecessor().Pos, self.node.GetPosition(), true, false), self.tree.Size(), self.node.Describe())
 }
 func (self *DHash) DescribeTree() string {
 	return self.tree.Describe()
