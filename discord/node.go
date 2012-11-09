@@ -174,14 +174,19 @@ func (self *Node) pingPeriodically() {
 func (self *Node) RingHash() []byte {
 	return self.ring.Hash()
 }
-func (self *Node) Ping() {
+func (self *Node) Ping(x int, position *[]byte) error {
+	*position = self.GetPosition()
+	return nil
 }
 func (self *Node) pingPredecessor() {
 	predecessor := self.GetPredecessor()
-	var x int
-	if err := predecessor.Call("Node.Ping", 0, &x); err != nil {
+	var newPredPos []byte
+	if err := predecessor.Call("Node.Ping", 0, &newPredPos); err != nil {
 		self.RemoveNode(predecessor)
 		self.pingPredecessor()
+	} else if bytes.Compare(newPredPos, predecessor.Pos) != 0 {
+		predecessor.Pos = newPredPos
+		self.ring.Add(predecessor)
 	}
 }
 func (self *Node) Nodes() common.Remotes {

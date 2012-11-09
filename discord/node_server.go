@@ -14,9 +14,8 @@ func (self *nodeServer) Nodes(x int, nodes *common.Remotes) error {
 	*nodes = (*Node)(self).GetNodes()
 	return nil
 }
-func (self *nodeServer) Ping(x int, y *int) error {
-	(*Node)(self).Ping()
-	return nil
+func (self *nodeServer) Ping(x int, pos *[]byte) error {
+	return (*Node)(self).Ping(x, pos)
 }
 func (self *nodeServer) GetPredecessor(x int, predecessor *common.Remote) error {
 	*predecessor = (*Node)(self).GetPredecessor()
