@@ -14,6 +14,25 @@ const (
 	PingInterval = time.Second
 )
 
+func Max64(i ...int64) (result int64) {
+	for _, x := range i {
+		if x > result {
+			result = x
+		}
+	}
+	return
+}
+
+func Min64(i ...int64) (result int64) {
+	result = i[0]
+	for _, x := range i {
+		if x < result {
+			result = x
+		}
+	}
+	return
+}
+
 func Max(i ...int) (result int) {
 	for _, x := range i {
 		if x > result {
