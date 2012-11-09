@@ -6,11 +6,9 @@ A Go database
 # TODO
 
 * Sub trees
- * SizeBetween
  * Automated tests
 * Node migrations
  * Functionality
-  * Nodes regularly moving to balance out the keyload on successor and predecessor
 	* Simplify creating prefixed keys for servers and data
  * Manual tests
  * Automated tests
