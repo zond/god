@@ -78,7 +78,7 @@ func (self *DHash) Start() (err error) {
 	self.timer.Start()
 	go self.syncPeriodically()
 	go self.cleanPeriodically()
-	//go self.migratePeriodically()
+	go self.migratePeriodically()
 	return
 }
 func (self *DHash) sync() {
@@ -117,19 +117,18 @@ func (self *DHash) treeSizeBetween(p1, p2 []byte) int {
 	if bytes.Compare(p1, p2) < 1 {
 		return self.tree.SizeBetween(p1, p2, true, false)
 	}
-	return self.tree.SizeBetween(p2, nil, true, false) + self.tree.SizeBetween(nil, p1, true, false)
+	return self.tree.SizeBetween(p1, nil, true, false) + self.tree.SizeBetween(nil, p2, true, false)
 }
 func (self *DHash) changePosition(newPos []byte) {
 	for len(newPos) < murmur.Size {
 		newPos = append(newPos, 0)
 	}
-	fmt.Println("changing pos from", self.node.GetPosition(), "to", newPos)
 	self.node.SetPosition(newPos)
 	atomic.StoreInt64(&self.lastMigrate, time.Now().UnixNano())
 }
 func (self *DHash) migrate() {
 	lastAllowedChange := time.Now().Add(-1 * migrateWait * time.Second).UnixNano()
-	if lastAllowedChange > atomic.LoadInt64(&self.lastSync) && lastAllowedChange > atomic.LoadInt64(&self.lastClean) {
+	if lastAllowedChange > common.Max64(atomic.LoadInt64(&self.lastSync), atomic.LoadInt64(&self.lastClean), atomic.LoadInt64(&self.lastMigrate)) {
 		// If we are not busy synchronizing or cleaning
 		pred := self.node.GetPredecessor()
 		grandPred := self.node.GetPredecessorFor(pred.Pos)
@@ -137,10 +136,8 @@ func (self *DHash) migrate() {
 		predSize := common.Max(1, self.treeSizeBetween(grandPred.Pos, pred.Pos))
 		// If we have more keys than our predecessor * migrateLimit
 		if mySize > predSize*migrateLimit {
-			fmt.Println("i am too fat", mySize)
 			// We want to have predecessor size * migrateTarget keys
 			goalSize := predSize * migrateTarget
-			fmt.Println("i should have", goalSize)
 			if bytes.Compare(pred.Pos, self.node.GetPosition()) < 1 {
 				if newPos, _, _, _, existed := self.tree.NextIndex(self.tree.SizeBetween(nil, pred.Pos, true, false) + goalSize); existed {
 					self.changePosition(newPos)
