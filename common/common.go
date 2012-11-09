@@ -14,6 +14,25 @@ const (
 	PingInterval = time.Second
 )
 
+func Max(i ...int) (result int) {
+	for _, x := range i {
+		if x > result {
+			result = x
+		}
+	}
+	return
+}
+
+func Min(i ...int) (result int) {
+	result = i[0]
+	for _, x := range i {
+		if x < result {
+			result = x
+		}
+	}
+	return
+}
+
 func AssertWithin(t *testing.T, f func() (string, bool), d time.Duration) {
 	deadline := time.Now().Add(d)
 	var ok bool
