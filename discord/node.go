@@ -52,8 +52,9 @@ func (self *Node) AddChangeListener(f common.RingChangeListener) {
 }
 func (self *Node) SetPosition(position []byte) *Node {
 	self.lock.Lock()
-	defer self.lock.Unlock()
 	self.position = position
+	self.lock.Unlock()
+	self.ring.Add(self.remote())
 	return self
 }
 func (self *Node) GetNodes() (result []common.Remote) {
