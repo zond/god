@@ -146,7 +146,7 @@ func (self *Node) Start() (err error) {
 	}
 	self.setListener(listener)
 	server := rpc.NewServer()
-	if err = server.RegisterName("Node", (*nodeServer)(self)); err != nil {
+	if err = server.RegisterName("Discord", (*nodeServer)(self)); err != nil {
 		return
 	}
 	for name, api := range self.exports {
@@ -182,7 +182,7 @@ func (self *Node) Ping(x int, position *[]byte) error {
 func (self *Node) pingPredecessor() {
 	predecessor := self.GetPredecessor()
 	var newPredPos []byte
-	if err := predecessor.Call("Node.Ping", 0, &newPredPos); err != nil {
+	if err := predecessor.Call("Discord.Ping", 0, &newPredPos); err != nil {
 		self.RemoveNode(predecessor)
 		self.pingPredecessor()
 	} else if bytes.Compare(newPredPos, predecessor.Pos) != 0 {
@@ -201,12 +201,12 @@ func (self *Node) notifySuccessor() {
 	_, _, successor := self.ring.Remotes(self.GetPosition())
 	myRingHash := self.ring.Hash()
 	var otherRingHash []byte
-	if err := successor.Call("Node.Notify", self.remote(), &otherRingHash); err != nil {
+	if err := successor.Call("Discord.Notify", self.remote(), &otherRingHash); err != nil {
 		self.RemoveNode(*successor)
 	} else {
 		if bytes.Compare(myRingHash, otherRingHash) != 0 {
 			var newNodes common.Remotes
-			if err := successor.Call("Node.Nodes", 0, &newNodes); err != nil {
+			if err := successor.Call("Discord.Nodes", 0, &newNodes); err != nil {
 				self.RemoveNode(*successor)
 			} else {
 				predecessor := self.GetPredecessor()
@@ -226,7 +226,7 @@ func (self *Node) MustJoin(addr string) {
 }
 func (self *Node) Join(addr string) (err error) {
 	var newNodes common.Remotes
-	if err = common.Switch.Call(addr, "Node.Nodes", 0, &newNodes); err != nil {
+	if err = common.Switch.Call(addr, "Discord.Nodes", 0, &newNodes); err != nil {
 		return
 	}
 	if bytes.Compare(self.GetPosition(), make([]byte, murmur.Size)) == 0 {
@@ -261,14 +261,14 @@ func (self *Node) GetSuccessorFor(key []byte) common.Remote {
 	// If we consider ourselves successors, just return us
 	if successor.Addr != self.GetAddr() {
 		// Double check by asking the successor we found what predecessor it has
-		if err := successor.Call("Node.GetPredecessor", 0, predecessor); err != nil {
+		if err := successor.Call("Discord.GetPredecessor", 0, predecessor); err != nil {
 			self.RemoveNode(*successor)
 			return self.GetSuccessorFor(key)
 		}
 		// If the key we are looking for is between them, just return the successor
 		if !common.BetweenIE(key, predecessor.Pos, successor.Pos) {
 			// Otherwise, ask the predecessor we actually found about who is the successor of the key
-			if err := predecessor.Call("Node.GetSuccessorFor", key, successor); err != nil {
+			if err := predecessor.Call("Discord.GetSuccessorFor", key, successor); err != nil {
 				self.RemoveNode(*predecessor)
 				return self.GetSuccessorFor(key)
 			}
