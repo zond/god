@@ -425,6 +425,15 @@ func (self *Conn) DescribeTree(key []byte) (result string, err error) {
 	err = match.Call("DHash.DescribeTree", 0, &result)
 	return
 }
+func (self *Conn) DescribeNode(key []byte) (result common.DHashDescription, err error) {
+	_, match, _ := self.ring.Remotes(key)
+	if match == nil {
+		err = fmt.Errorf("No node with position %v found", common.HexEncode(key))
+		return
+	}
+	err = match.Call("DHash.Describe", 0, &result)
+	return
+}
 func (self *Conn) Describe() string {
 	return self.ring.Describe()
 }
