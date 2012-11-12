@@ -9,9 +9,14 @@ import (
 	"../timenet"
 	"bytes"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 )
+
+type SyncListener func(dhash *DHash, fetched, distributed int)
+type CleanListener func(dhash *DHash, cleaned, redistributed int)
+type MigrateListener func(dhash *DHash, source, destination []byte)
 
 const (
 	syncInterval    = time.Second * 1
@@ -29,18 +34,23 @@ const (
 )
 
 type DHash struct {
-	state       int32
-	lastClean   int64
-	lastSync    int64
-	lastMigrate int64
-	node        *discord.Node
-	timer       *timenet.Timer
-	tree        *radix.Tree
+	state            int32
+	lastClean        int64
+	lastSync         int64
+	lastMigrate      int64
+	lock             *sync.RWMutex
+	syncListeners    []SyncListener
+	cleanListeners   []CleanListener
+	migrateListeners []MigrateListener
+	node             *discord.Node
+	timer            *timenet.Timer
+	tree             *radix.Tree
 }
 
 func NewDHash(addr string) (result *DHash) {
 	result = &DHash{
 		node:  discord.NewNode(addr),
+		lock:  new(sync.RWMutex),
 		state: created,
 		tree:  radix.NewTree(),
 	}
@@ -49,6 +59,21 @@ func NewDHash(addr string) (result *DHash) {
 	result.node.Export("DHash", (*dhashServer)(result))
 	result.node.Export("HashTree", (*hashTreeServer)(result.tree))
 	return
+}
+func (self *DHash) AddCleanListener(l CleanListener) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.cleanListeners = append(self.cleanListeners, l)
+}
+func (self *DHash) AddMigrateListener(l MigrateListener) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.migrateListeners = append(self.migrateListeners, l)
+}
+func (self *DHash) AddSyncListener(l SyncListener) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.syncListeners = append(self.syncListeners, l)
 }
 func (self *DHash) hasState(s int32) bool {
 	return atomic.LoadInt32(&self.state) == s
@@ -92,7 +117,11 @@ func (self *DHash) sync() {
 	}
 	if fetched != 0 || distributed != 0 {
 		atomic.StoreInt64(&self.lastSync, time.Now().UnixNano())
-		fmt.Println(self, "fetched", fetched, "keys and distributed", distributed, "keys")
+		self.lock.RLock()
+		defer self.lock.RUnlock()
+		for _, l := range self.syncListeners {
+			l(self, fetched, distributed)
+		}
 	}
 }
 func (self *DHash) migratePeriodically() {
@@ -123,8 +152,14 @@ func (self *DHash) changePosition(newPos []byte) {
 	for len(newPos) < murmur.Size {
 		newPos = append(newPos, 0)
 	}
+	oldPos := self.node.GetPosition()
 	self.node.SetPosition(newPos)
 	atomic.StoreInt64(&self.lastMigrate, time.Now().UnixNano())
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	for _, l := range self.migrateListeners {
+		l(self, oldPos, newPos)
+	}
 }
 func (self *DHash) migrate() {
 	lastAllowedChange := time.Now().Add(-1 * migrateWait * time.Second).UnixNano()
@@ -199,7 +234,11 @@ func (self *DHash) clean() {
 		}
 		if deleted != 0 || put != 0 {
 			atomic.StoreInt64(&self.lastClean, time.Now().UnixNano())
-			fmt.Println(self, "relocated", put, "keys while cleaning out", deleted, "keys")
+			self.lock.RLock()
+			defer self.lock.RUnlock()
+			for _, l := range self.cleanListeners {
+				l(self, deleted, put)
+			}
 		}
 	}
 }
