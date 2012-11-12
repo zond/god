@@ -5,12 +5,7 @@ A Go database
 
 # TODO
 
-* Sub trees
- * Automated tests
 * Node migrations
- * Functionality
-	* Simplify creating prefixed keys for servers and data
- * Manual tests
  * Automated tests
 * Persistence
  * Functionality
