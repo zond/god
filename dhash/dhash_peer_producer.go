@@ -4,11 +4,11 @@ import (
 	"../timenet"
 )
 
-type dhashPeerProducer DHash
+type dhashPeerProducer Node
 
 func (self *dhashPeerProducer) Peers() (result map[string]timenet.Peer) {
 	result = make(map[string]timenet.Peer)
-	for _, node := range (*DHash)(self).node.GetNodes() {
+	for _, node := range (*Node)(self).node.GetNodes() {
 		result[node.Addr] = (remotePeer)(node)
 	}
 	return

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func countHaving(t *testing.T, dhashes []*DHash, key, value []byte) (result int) {
+func countHaving(t *testing.T, dhashes []*Node, key, value []byte) (result int) {
 	for _, d := range dhashes {
 		if foundValue, _, existed := d.tree.Get(key); existed && bytes.Compare([]byte(foundValue.(radix.ByteHasher)), value) == 0 {
 			result++
@@ -19,10 +19,10 @@ func countHaving(t *testing.T, dhashes []*DHash, key, value []byte) (result int)
 	return
 }
 
-func testStartup(t *testing.T, n, port int) (dhashes []*DHash) {
-	dhashes = make([]*DHash, n)
+func testStartup(t *testing.T, n, port int) (dhashes []*Node) {
+	dhashes = make([]*Node, n)
 	for i := 0; i < n; i++ {
-		dhashes[i] = NewDHash(fmt.Sprintf("127.0.0.1:%v", port+i))
+		dhashes[i] = NewNode(fmt.Sprintf("127.0.0.1:%v", port+i))
 		dhashes[i].MustStart()
 	}
 	for i := 1; i < n; i++ {
@@ -38,7 +38,7 @@ func testStartup(t *testing.T, n, port int) (dhashes []*DHash) {
 	return
 }
 
-func testSync(t *testing.T, dhashes []*DHash) {
+func testSync(t *testing.T, dhashes []*Node) {
 	dhashes[0].tree.Put([]byte{0}, radix.ByteHasher([]byte{0}), 0)
 	common.AssertWithin(t, func() (string, bool) {
 		having := countHaving(t, dhashes, []byte{0}, radix.ByteHasher([]byte{0}))
@@ -46,7 +46,7 @@ func testSync(t *testing.T, dhashes []*DHash) {
 	}, time.Second*10)
 }
 
-func testClean(t *testing.T, dhashes []*DHash) {
+func testClean(t *testing.T, dhashes []*Node) {
 	for _, n := range dhashes {
 		n.tree.Put([]byte{1}, radix.ByteHasher([]byte{1}), 0)
 	}
@@ -56,7 +56,7 @@ func testClean(t *testing.T, dhashes []*DHash) {
 	}, time.Second*10)
 }
 
-func testPut(t *testing.T, dhashes []*DHash) {
+func testPut(t *testing.T, dhashes []*Node) {
 	for index, n := range dhashes {
 		n.Put(common.Item{Key: []byte{byte(index + 100)}, Value: radix.ByteHasher([]byte{byte(index + 100)})})
 	}
@@ -70,7 +70,7 @@ func testPut(t *testing.T, dhashes []*DHash) {
 	}, time.Second*10)
 }
 
-func testFind(t *testing.T, dhashes []*DHash) {
+func testFind(t *testing.T, dhashes []*Node) {
 	dhashes[0].tree.Put([]byte{2}, radix.ByteHasher([]byte{2}), 0)
 	common.AssertWithin(t, func() (string, bool) {
 		having := make(map[bool]bool)
@@ -83,7 +83,7 @@ func testFind(t *testing.T, dhashes []*DHash) {
 	}, time.Second*10)
 }
 
-func stopServers(servers []*DHash) {
+func stopServers(servers []*Node) {
 	for _, d := range servers {
 		d.Stop()
 	}

@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-type SyncListener func(dhash *DHash, fetched, distributed int)
-type CleanListener func(dhash *DHash, cleaned, redistributed int)
-type MigrateListener func(dhash *DHash, source, destination []byte)
+type SyncListener func(dhash *Node, fetched, distributed int)
+type CleanListener func(dhash *Node, cleaned, redistributed int)
+type MigrateListener func(dhash *Node, source, destination []byte)
 
 const (
 	syncInterval    = time.Second * 1
@@ -33,7 +33,16 @@ const (
 	stopped
 )
 
-type DHash struct {
+type Description struct {
+	LastClean    time.Time
+	LastSync     time.Time
+	LastMigrate  time.Time
+	OwnedEntries int
+	HeldEntries  int
+	Ring         *common.Ring
+}
+
+type Node struct {
 	state            int32
 	lastClean        int64
 	lastSync         int64
@@ -47,53 +56,53 @@ type DHash struct {
 	tree             *radix.Tree
 }
 
-func NewDHash(addr string) (result *DHash) {
-	result = &DHash{
+func NewNode(addr string) (result *Node) {
+	result = &Node{
 		node:  discord.NewNode(addr),
 		lock:  new(sync.RWMutex),
 		state: created,
 		tree:  radix.NewTree(),
 	}
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
-	result.node.Export("Timer", (*timerServer)(result.timer))
+	result.node.Export("Timenet", (*timerServer)(result.timer))
 	result.node.Export("DHash", (*dhashServer)(result))
 	result.node.Export("HashTree", (*hashTreeServer)(result.tree))
 	return
 }
-func (self *DHash) AddCleanListener(l CleanListener) {
+func (self *Node) AddCleanListener(l CleanListener) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.cleanListeners = append(self.cleanListeners, l)
 }
-func (self *DHash) AddMigrateListener(l MigrateListener) {
+func (self *Node) AddMigrateListener(l MigrateListener) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.migrateListeners = append(self.migrateListeners, l)
 }
-func (self *DHash) AddSyncListener(l SyncListener) {
+func (self *Node) AddSyncListener(l SyncListener) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.syncListeners = append(self.syncListeners, l)
 }
-func (self *DHash) hasState(s int32) bool {
+func (self *Node) hasState(s int32) bool {
 	return atomic.LoadInt32(&self.state) == s
 }
-func (self *DHash) changeState(old, neu int32) bool {
+func (self *Node) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
-func (self *DHash) GetAddr() string {
+func (self *Node) GetAddr() string {
 	return self.node.GetAddr()
 }
-func (self *DHash) AddChangeListener(f common.RingChangeListener) {
+func (self *Node) AddChangeListener(f common.RingChangeListener) {
 	self.node.AddChangeListener(f)
 }
-func (self *DHash) Stop() {
+func (self *Node) Stop() {
 	if self.changeState(started, stopped) {
 		self.node.Stop()
 		self.timer.Stop()
 	}
 }
-func (self *DHash) Start() (err error) {
+func (self *Node) Start() (err error) {
 	if !self.changeState(created, started) {
 		return fmt.Errorf("%v can only be started when in state 'created'", self)
 	}
@@ -106,7 +115,7 @@ func (self *DHash) Start() (err error) {
 	go self.migratePeriodically()
 	return
 }
-func (self *DHash) sync() {
+func (self *Node) sync() {
 	fetched := 0
 	distributed := 0
 	nextSuccessor := self.node.GetSuccessor()
@@ -124,31 +133,31 @@ func (self *DHash) sync() {
 		}
 	}
 }
-func (self *DHash) migratePeriodically() {
+func (self *Node) migratePeriodically() {
 	for self.hasState(started) {
 		self.migrate()
 		time.Sleep(migrateInterval)
 	}
 }
-func (self *DHash) syncPeriodically() {
+func (self *Node) syncPeriodically() {
 	for self.hasState(started) {
 		self.sync()
 		time.Sleep(syncInterval)
 	}
 }
-func (self *DHash) cleanPeriodically() {
+func (self *Node) cleanPeriodically() {
 	for self.hasState(started) {
 		self.clean()
 		time.Sleep(cleanInterval)
 	}
 }
-func (self *DHash) treeSizeBetween(p1, p2 []byte) int {
+func (self *Node) treeSizeBetween(p1, p2 []byte) int {
 	if bytes.Compare(p1, p2) < 1 {
 		return self.tree.SizeBetween(p1, p2, true, false)
 	}
 	return self.tree.SizeBetween(p1, nil, true, false) + self.tree.SizeBetween(nil, p2, true, false)
 }
-func (self *DHash) changePosition(newPos []byte) {
+func (self *Node) changePosition(newPos []byte) {
 	for len(newPos) < murmur.Size {
 		newPos = append(newPos, 0)
 	}
@@ -161,7 +170,7 @@ func (self *DHash) changePosition(newPos []byte) {
 		l(self, oldPos, newPos)
 	}
 }
-func (self *DHash) migrate() {
+func (self *Node) migrate() {
 	lastAllowedChange := time.Now().Add(-1 * migrateWait * time.Second).UnixNano()
 	if lastAllowedChange > common.Max64(atomic.LoadInt64(&self.lastSync), atomic.LoadInt64(&self.lastClean), atomic.LoadInt64(&self.lastMigrate)) {
 		// If we are not busy synchronizing or cleaning
@@ -192,7 +201,7 @@ func (self *DHash) migrate() {
 		}
 	}
 }
-func (self *DHash) circularNext(key []byte) (nextKey []byte, existed bool) {
+func (self *Node) circularNext(key []byte) (nextKey []byte, existed bool) {
 	if nextKey, _, _, existed = self.tree.Next(key); existed {
 		return
 	}
@@ -203,7 +212,7 @@ func (self *DHash) circularNext(key []byte) (nextKey []byte, existed bool) {
 	nextKey, _, _, existed = self.tree.Next(nextKey)
 	return
 }
-func (self *DHash) owners(key []byte) (owners common.Remotes, isOwner bool) {
+func (self *Node) owners(key []byte) (owners common.Remotes, isOwner bool) {
 	owners = append(owners, self.node.GetSuccessorFor(key))
 	if owners[0].Addr == self.node.GetAddr() {
 		isOwner = true
@@ -216,7 +225,7 @@ func (self *DHash) owners(key []byte) (owners common.Remotes, isOwner bool) {
 	}
 	return
 }
-func (self *DHash) clean() {
+func (self *Node) clean() {
 	deleted := 0
 	put := 0
 	if nextKey, existed := self.circularNext(self.node.GetPosition()); existed {
@@ -242,39 +251,39 @@ func (self *DHash) clean() {
 		}
 	}
 }
-func (self *DHash) MustStart() *DHash {
+func (self *Node) MustStart() *Node {
 	if err := self.Start(); err != nil {
 		panic(err)
 	}
 	return self
 }
-func (self *DHash) MustJoin(addr string) {
+func (self *Node) MustJoin(addr string) {
 	self.timer.Conform(remotePeer(common.Remote{Addr: addr}))
 	self.node.MustJoin(addr)
 }
-func (self *DHash) Time() time.Time {
+func (self *Node) Time() time.Time {
 	return time.Unix(0, self.timer.ContinuousTime())
 }
-func (self *DHash) Describe() string {
+func (self *Node) Describe() string {
 	return fmt.Sprintf("%v/%v entries in %v", self.tree.SizeBetween(self.node.GetPredecessor().Pos, self.node.GetPosition(), true, false), self.tree.Size(), self.node.Describe())
 }
-func (self *DHash) DescribeTree() string {
+func (self *Node) DescribeTree() string {
 	return self.tree.Describe()
 }
-func (self *DHash) client() *client.Conn {
+func (self *Node) client() *client.Conn {
 	return client.NewConnRing(common.NewRingNodes(self.node.Nodes()))
 }
-func (self *DHash) SubFind(data common.Item, result *common.Item) error {
+func (self *Node) SubFind(data common.Item, result *common.Item) error {
 	*result = data
 	result.Value, result.Exists = self.client().Get(data.Key)
 	return nil
 }
-func (self *DHash) Find(data common.Item, result *common.Item) error {
+func (self *Node) Find(data common.Item, result *common.Item) error {
 	*result = data
 	result.Value, result.Exists = self.client().Get(data.Key)
 	return nil
 }
-func (self *DHash) Prev(data common.Item, result *common.Item) error {
+func (self *Node) Prev(data common.Item, result *common.Item) error {
 	*result = data
 	if key, value, timestamp, exists := self.tree.Prev(data.Key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
@@ -283,15 +292,15 @@ func (self *DHash) Prev(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) RingHash(x int, ringHash *[]byte) error {
+func (self *Node) RingHash(x int, ringHash *[]byte) error {
 	*ringHash = self.node.RingHash()
 	return nil
 }
-func (self *DHash) Count(r common.Range, result *int) error {
+func (self *Node) Count(r common.Range, result *int) error {
 	*result = self.tree.SubSizeBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc)
 	return nil
 }
-func (self *DHash) Next(data common.Item, result *common.Item) error {
+func (self *Node) Next(data common.Item, result *common.Item) error {
 	*result = data
 	if key, value, timestamp, exists := self.tree.Next(data.Key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
@@ -300,7 +309,7 @@ func (self *DHash) Next(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) Last(data common.Item, result *common.Item) error {
+func (self *Node) Last(data common.Item, result *common.Item) error {
 	if key, value, timestamp, exists := self.tree.SubLast(data.Key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Key, result.Value, result.Timestamp, result.Exists = key, []byte(byteHasher), timestamp, exists
@@ -308,7 +317,7 @@ func (self *DHash) Last(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) PrevIndex(data common.Item, result *common.Item) error {
+func (self *Node) PrevIndex(data common.Item, result *common.Item) error {
 	if key, value, timestamp, index, exists := self.tree.SubPrevIndex(data.Key, data.Index); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Key, result.Value, result.Timestamp, result.Index, result.Exists = key, []byte(byteHasher), timestamp, index, exists
@@ -316,7 +325,7 @@ func (self *DHash) PrevIndex(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) NextIndex(data common.Item, result *common.Item) error {
+func (self *Node) NextIndex(data common.Item, result *common.Item) error {
 	if key, value, timestamp, index, exists := self.tree.SubNextIndex(data.Key, data.Index); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Key, result.Value, result.Timestamp, result.Index, result.Exists = key, []byte(byteHasher), timestamp, index, exists
@@ -324,7 +333,7 @@ func (self *DHash) NextIndex(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) First(data common.Item, result *common.Item) error {
+func (self *Node) First(data common.Item, result *common.Item) error {
 	if key, value, timestamp, exists := self.tree.SubFirst(data.Key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Key, result.Value, result.Timestamp, result.Exists = key, []byte(byteHasher), timestamp, exists
@@ -332,7 +341,7 @@ func (self *DHash) First(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) SubPrev(data common.Item, result *common.Item) error {
+func (self *Node) SubPrev(data common.Item, result *common.Item) error {
 	if key, value, timestamp, exists := self.tree.SubPrev(data.Key, data.SubKey); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Key, result.Value, result.Timestamp, result.Exists = key, []byte(byteHasher), timestamp, exists
@@ -340,7 +349,7 @@ func (self *DHash) SubPrev(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) SubNext(data common.Item, result *common.Item) error {
+func (self *Node) SubNext(data common.Item, result *common.Item) error {
 	if key, value, timestamp, exists := self.tree.SubNext(data.Key, data.SubKey); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Key, result.Value, result.Timestamp, result.Exists = key, []byte(byteHasher), timestamp, exists
@@ -348,7 +357,7 @@ func (self *DHash) SubNext(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) Get(data common.Item, result *common.Item) error {
+func (self *Node) Get(data common.Item, result *common.Item) error {
 	*result = data
 	if value, timestamp, exists := self.tree.Get(data.Key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
@@ -357,7 +366,7 @@ func (self *DHash) Get(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) SliceIndex(r common.Range, items *[]common.Item) error {
+func (self *Node) SliceIndex(r common.Range, items *[]common.Item) error {
 	min := &r.MinIndex
 	max := &r.MaxIndex
 	if !r.MinInc {
@@ -379,7 +388,7 @@ func (self *DHash) SliceIndex(r common.Range, items *[]common.Item) error {
 	})
 	return nil
 }
-func (self *DHash) ReverseSliceIndex(r common.Range, items *[]common.Item) error {
+func (self *Node) ReverseSliceIndex(r common.Range, items *[]common.Item) error {
 	min := &r.MinIndex
 	max := &r.MaxIndex
 	if !r.MinInc {
@@ -401,7 +410,7 @@ func (self *DHash) ReverseSliceIndex(r common.Range, items *[]common.Item) error
 	})
 	return nil
 }
-func (self *DHash) ReverseSlice(r common.Range, items *[]common.Item) error {
+func (self *Node) ReverseSlice(r common.Range, items *[]common.Item) error {
 	self.tree.SubReverseEachBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc, func(key []byte, value radix.Hasher, version int64) bool {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			*items = append(*items, common.Item{
@@ -414,7 +423,7 @@ func (self *DHash) ReverseSlice(r common.Range, items *[]common.Item) error {
 	})
 	return nil
 }
-func (self *DHash) Slice(r common.Range, items *[]common.Item) error {
+func (self *Node) Slice(r common.Range, items *[]common.Item) error {
 	self.tree.SubEachBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc, func(key []byte, value radix.Hasher, version int64) bool {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			*items = append(*items, common.Item{
@@ -427,15 +436,15 @@ func (self *DHash) Slice(r common.Range, items *[]common.Item) error {
 	})
 	return nil
 }
-func (self *DHash) ReverseIndexOf(data common.Item, result *common.Index) error {
+func (self *Node) ReverseIndexOf(data common.Item, result *common.Index) error {
 	result.N, result.Existed = self.tree.SubReverseIndexOf(data.Key, data.SubKey)
 	return nil
 }
-func (self *DHash) IndexOf(data common.Item, result *common.Index) error {
+func (self *Node) IndexOf(data common.Item, result *common.Index) error {
 	result.N, result.Existed = self.tree.SubIndexOf(data.Key, data.SubKey)
 	return nil
 }
-func (self *DHash) SubGet(data common.Item, result *common.Item) error {
+func (self *Node) SubGet(data common.Item, result *common.Item) error {
 	*result = data
 	if value, timestamp, exists := self.tree.SubGet(data.Key, data.SubKey); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
@@ -444,7 +453,7 @@ func (self *DHash) SubGet(data common.Item, result *common.Item) error {
 	}
 	return nil
 }
-func (self *DHash) SubPut(data common.Item) error {
+func (self *Node) SubPut(data common.Item) error {
 	successor := self.node.GetSuccessorFor(data.Key)
 	if successor.Addr != self.node.GetAddr() {
 		var x int
@@ -453,7 +462,7 @@ func (self *DHash) SubPut(data common.Item) error {
 	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.subPut(data)
 }
-func (self *DHash) Put(data common.Item) error {
+func (self *Node) Put(data common.Item) error {
 	successor := self.node.GetSuccessorFor(data.Key)
 	if successor.Addr != self.node.GetAddr() {
 		var x int
@@ -462,7 +471,7 @@ func (self *DHash) Put(data common.Item) error {
 	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.put(data)
 }
-func (self *DHash) forwardOperation(data common.Item, operation string) {
+func (self *Node) forwardOperation(data common.Item, operation string) {
 	data.TTL--
 	successor := self.node.GetSuccessorFor(self.node.GetPosition())
 	var x int
@@ -473,14 +482,14 @@ func (self *DHash) forwardOperation(data common.Item, operation string) {
 		err = successor.Call(operation, data, &x)
 	}
 }
-func (self *DHash) subPut(data common.Item) error {
+func (self *Node) subPut(data common.Item) error {
 	if data.TTL > 1 {
 		go self.forwardOperation(data, "DHash.SlaveSubPut")
 	}
 	self.tree.SubPut(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Timestamp)
 	return nil
 }
-func (self *DHash) put(data common.Item) error {
+func (self *Node) put(data common.Item) error {
 	if data.TTL > 1 {
 		go self.forwardOperation(data, "DHash.SlavePut")
 	}
