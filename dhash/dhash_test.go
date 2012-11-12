@@ -19,21 +19,19 @@ func countHaving(t *testing.T, dhashes []*DHash, key, value []byte) (result int)
 	return
 }
 
-func testStartup(t *testing.T, n int) (dhashes []*DHash) {
+func testStartup(t *testing.T, n, port int) (dhashes []*DHash) {
 	dhashes = make([]*DHash, n)
 	for i := 0; i < n; i++ {
-		dhashes[i] = NewDHash(fmt.Sprintf("127.0.0.1:%v", 10191+i))
+		dhashes[i] = NewDHash(fmt.Sprintf("127.0.0.1:%v", port+i))
 		dhashes[i].MustStart()
 	}
 	for i := 1; i < n; i++ {
-		dhashes[i].MustJoin("127.0.0.1:10191")
+		dhashes[i].MustJoin(fmt.Sprintf("127.0.0.1:%v", port))
 	}
 	common.AssertWithin(t, func() (string, bool) {
-		var nodes common.Remotes
 		routes := make(map[string]bool)
 		for _, dhash := range dhashes {
-			common.Switch.Call(dhash.node.GetAddr(), "Node.Nodes", 0, &nodes)
-			routes[nodes.Describe()] = true
+			routes[dhash.node.GetNodes().Describe()] = true
 		}
 		return fmt.Sprint(routes), len(routes) == 1
 	}, time.Second*10)
@@ -93,15 +91,9 @@ func stopServers(servers []*DHash) {
 
 func TestAll(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	fmt.Println("starting up dhash_test")
-	dhashes := testStartup(t, 6)
-	fmt.Println("testSync")
+	dhashes := testStartup(t, 6, 10191)
 	testSync(t, dhashes)
-	fmt.Println("testClean")
 	testClean(t, dhashes)
-	fmt.Println("testPut")
 	testPut(t, dhashes)
-	fmt.Println("testFind")
 	testFind(t, dhashes)
-	fmt.Println("dhash_test done")
 }
