@@ -134,3 +134,33 @@ func MergeItems(arys []*[]Item, up bool) (result []Item) {
 	}
 	return
 }
+
+type DHashDescription struct {
+	LastClean    time.Time
+	LastSync     time.Time
+	LastMigrate  time.Time
+	Timer        time.Time
+	OwnedEntries int
+	HeldEntries  int
+	Nodes        Remotes
+}
+
+func (self DHashDescription) Describe() string {
+	return fmt.Sprintf("%+v", struct {
+		LastClean    time.Time
+		LastSync     time.Time
+		LastMigrate  time.Time
+		Timer        time.Time
+		OwnedEntries int
+		HeldEntries  int
+		Nodes        string
+	}{
+		LastClean:    self.LastClean,
+		LastSync:     self.LastSync,
+		LastMigrate:  self.LastMigrate,
+		Timer:        self.Timer,
+		OwnedEntries: self.OwnedEntries,
+		HeldEntries:  self.HeldEntries,
+		Nodes:        fmt.Sprintf("\n%v", self.Nodes.Describe()),
+	})
+}
