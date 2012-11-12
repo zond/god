@@ -33,15 +33,6 @@ const (
 	stopped
 )
 
-type Description struct {
-	LastClean    time.Time
-	LastSync     time.Time
-	LastMigrate  time.Time
-	OwnedEntries int
-	HeldEntries  int
-	Ring         *common.Ring
-}
-
 type Node struct {
 	state            int32
 	lastClean        int64
@@ -264,8 +255,19 @@ func (self *Node) MustJoin(addr string) {
 func (self *Node) Time() time.Time {
 	return time.Unix(0, self.timer.ContinuousTime())
 }
+func (self *Node) Description() common.DHashDescription {
+	return common.DHashDescription{
+		LastClean:    time.Unix(0, atomic.LoadInt64(&self.lastClean)),
+		LastSync:     time.Unix(0, atomic.LoadInt64(&self.lastSync)),
+		LastMigrate:  time.Unix(0, atomic.LoadInt64(&self.lastMigrate)),
+		Timer:        self.timer.ActualTime(),
+		OwnedEntries: self.tree.SizeBetween(self.node.GetPredecessor().Pos, self.node.GetPosition(), true, false),
+		HeldEntries:  self.tree.Size(),
+		Nodes:        self.node.GetNodes(),
+	}
+}
 func (self *Node) Describe() string {
-	return fmt.Sprintf("%v/%v entries in %v", self.tree.SizeBetween(self.node.GetPredecessor().Pos, self.node.GetPosition(), true, false), self.tree.Size(), self.node.Describe())
+	return self.Description().Describe()
 }
 func (self *Node) DescribeTree() string {
 	return self.tree.Describe()

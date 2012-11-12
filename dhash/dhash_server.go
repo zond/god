@@ -42,6 +42,10 @@ func (self *dhashServer) SubGet(data common.Item, result *common.Item) error {
 func (self *dhashServer) Get(data common.Item, result *common.Item) error {
 	return (*Node)(self).Get(data, result)
 }
+func (self *dhashServer) Describe(x int, result *common.DHashDescription) error {
+	*result = (*Node)(self).Description()
+	return nil
+}
 func (self *dhashServer) DescribeTree(x int, result *string) error {
 	*result = (*Node)(self).DescribeTree()
 	return nil
