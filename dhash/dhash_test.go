@@ -53,7 +53,7 @@ func testClean(t *testing.T, dhashes []*Node) {
 	common.AssertWithin(t, func() (string, bool) {
 		having := countHaving(t, dhashes, []byte{1}, []byte{1})
 		return fmt.Sprint(having), having == common.Redundancy
-	}, time.Second*10)
+	}, time.Second*20)
 }
 
 func testPut(t *testing.T, dhashes []*Node) {

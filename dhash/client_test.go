@@ -29,11 +29,11 @@ func testSubGetPutDel(t *testing.T, c *client.Conn) {
 			if v, e := c.SubGet(key, subKey); v != nil || e {
 				t.Errorf("shouldn't exist")
 			}
-			c.SubPut(key, subKey, value)
+			c.SSubPut(key, subKey, value)
 			if v, e := c.SubGet(key, subKey); bytes.Compare(value, v) != 0 || !e {
 				t.Errorf("should exist, but got %v => %v, %v", key, v, e)
 			}
-			c.SubDel(key, subKey)
+			c.SSubDel(key, subKey)
 			if v, e := c.SubGet(key, subKey); v != nil || e {
 				t.Errorf("shouldn't exist, but got %v => %v, %v", key, v, e)
 			}
@@ -50,11 +50,11 @@ func testGetPutDel(t *testing.T, c *client.Conn) {
 		if v, e := c.Get(key); v != nil || e {
 			t.Errorf("shouldn't exist")
 		}
-		c.Put(key, value)
+		c.SPut(key, value)
 		if v, e := c.Get(key); bytes.Compare(value, v) != 0 || !e {
 			t.Errorf("should exist, but got %v => %v, %v", key, v, e)
 		}
-		c.Del(key)
+		c.SDel(key)
 		if v, e := c.Get(key); v != nil || e {
 			t.Errorf("shouldn't exist, but got %v => %v, %v", key, v, e)
 		}

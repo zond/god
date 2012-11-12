@@ -484,14 +484,22 @@ func (self *Node) forwardOperation(data common.Item, operation string) {
 }
 func (self *Node) subPut(data common.Item) error {
 	if data.TTL > 1 {
-		go self.forwardOperation(data, "DHash.SlaveSubPut")
+		if data.Sync {
+			self.forwardOperation(data, "DHash.SlaveSubPut")
+		} else {
+			go self.forwardOperation(data, "DHash.SlaveSubPut")
+		}
 	}
 	self.tree.SubPut(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Timestamp)
 	return nil
 }
 func (self *Node) put(data common.Item) error {
 	if data.TTL > 1 {
-		go self.forwardOperation(data, "DHash.SlavePut")
+		if data.Sync {
+			self.forwardOperation(data, "DHash.SlavePut")
+		} else {
+			go self.forwardOperation(data, "DHash.SlavePut")
+		}
 	}
 	self.tree.Put(data.Key, radix.ByteHasher(data.Value), data.Timestamp)
 	return nil

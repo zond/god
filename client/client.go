@@ -26,7 +26,7 @@ func NewConnRing(ring *common.Ring) *Conn {
 func NewConn(addr string) (result *Conn, err error) {
 	result = &Conn{ring: common.NewRing()}
 	var newNodes common.Remotes
-	err = common.Switch.Call(addr, "Node.Nodes", 0, &newNodes)
+	err = common.Switch.Call(addr, "Discord.Nodes", 0, &newNodes)
 	result.ring.SetNodes(newNodes)
 	return
 }
@@ -57,7 +57,7 @@ func (self *Conn) update() {
 	}
 	if bytes.Compare(myRingHash, otherRingHash) != 0 {
 		var newNodes common.Remotes
-		if err := node.Call("Node.Nodes", 0, &newNodes); err != nil {
+		if err := node.Call("Discord.Nodes", 0, &newNodes); err != nil {
 			self.removeNode(node)
 			return
 		}
@@ -80,7 +80,7 @@ func (self *Conn) Reconnect() {
 	var err error
 	for {
 		var newNodes common.Remotes
-		if err = node.Call("Node.Nodes", 0, &newNodes); err == nil {
+		if err = node.Call("Discord.Nodes", 0, &newNodes); err == nil {
 			self.ring.SetNodes(newNodes)
 			return
 		}
@@ -94,14 +94,27 @@ func (self *Conn) Reconnect() {
 func (self *Conn) SubDel(key, subKey []byte) {
 	self.SubPut(key, subKey, nil)
 }
+func (self *Conn) SSubDel(key, subKey []byte) {
+	self.SSubPut(key, subKey, nil)
+}
+func (self *Conn) SDel(key []byte) {
+	self.SPut(key, nil)
+}
 func (self *Conn) Del(key []byte) {
 	self.Put(key, nil)
 }
+func (self *Conn) SSubPut(key, subKey, value []byte) {
+	self.subPut(key, subKey, value, true)
+}
 func (self *Conn) SubPut(key, subKey, value []byte) {
+	self.subPut(key, subKey, value, false)
+}
+func (self *Conn) subPut(key, subKey, value []byte, sync bool) {
 	data := common.Item{
 		Key:    key,
 		SubKey: subKey,
 		Value:  value,
+		Sync:   sync,
 	}
 	_, _, successor := self.ring.Remotes(key)
 	var x int
@@ -110,10 +123,11 @@ func (self *Conn) SubPut(key, subKey, value []byte) {
 		self.SubPut(key, subKey, value)
 	}
 }
-func (self *Conn) Put(key, value []byte) {
+func (self *Conn) put(key, value []byte, sync bool) {
 	data := common.Item{
 		Key:   key,
 		Value: value,
+		Sync:  sync,
 	}
 	_, _, successor := self.ring.Remotes(key)
 	var x int
@@ -121,6 +135,12 @@ func (self *Conn) Put(key, value []byte) {
 		self.removeNode(*successor)
 		self.Put(key, value)
 	}
+}
+func (self *Conn) SPut(key, value []byte) {
+	self.put(key, value, true)
+}
+func (self *Conn) Put(key, value []byte) {
+	self.put(key, value, false)
 }
 func (self *Conn) ReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	data := common.Item{
