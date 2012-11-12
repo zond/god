@@ -377,7 +377,11 @@ func (self *Conn) SubGet(key, subKey []byte) (value []byte, existed bool) {
 		SubKey: subKey,
 	}
 	result := self.findRecent("DHash.SubGet", data)
-	value, existed = result.Value, result.Exists
+	if result.Value != nil {
+		value, existed = result.Value, result.Exists
+	} else {
+		value, existed = nil, false
+	}
 	return
 }
 func (self *Conn) Get(key []byte) (value []byte, existed bool) {
@@ -385,7 +389,11 @@ func (self *Conn) Get(key []byte) (value []byte, existed bool) {
 		Key: key,
 	}
 	result := self.findRecent("DHash.Get", data)
-	value, existed = result.Value, result.Exists
+	if result.Value != nil {
+		value, existed = result.Value, result.Exists
+	} else {
+		value, existed = nil, false
+	}
 	return
 }
 func (self *Conn) DescribeTree(key []byte) (result string, err error) {
