@@ -8,4 +8,5 @@ type Item struct {
 	Timestamp int64
 	TTL       int
 	Index     int
+	Sync      bool
 }
