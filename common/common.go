@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"runtime"
 	"sort"
 	"testing"
 	"time"
@@ -62,7 +63,10 @@ func AssertWithin(t *testing.T, f func() (string, bool), d time.Duration) {
 		}
 		time.Sleep(time.Second)
 	}
-	t.Errorf("wanted %v to be true within %v, but it never happened: %v", f, d, msg)
+	var file string
+	var line int
+	_, file, line, _ = runtime.Caller(1)
+	t.Errorf("%v:%v: Wanted %v to be true within %v, but it never happened: %v", file, line, f, d, msg)
 }
 
 func HexEncode(b []byte) (result string) {
