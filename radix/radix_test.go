@@ -177,6 +177,12 @@ func TestTreeSizeBetween(t *testing.T) {
 			}
 		}
 	}
+	for i := 0; i < 10; i++ {
+		tree.SubPut([]byte{50}, []byte{byte(i)}, ByteHasher([]byte{byte(i)}), 0)
+	}
+	if tree.SizeBetween([]byte{50}, []byte{50}, true, true) != 10 {
+		t.Errorf("wrong size calculated")
+	}
 }
 
 func TestSubTree(t *testing.T) {
