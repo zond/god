@@ -126,7 +126,11 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp i
 func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp int) (result int) {
 	prefix = append(prefix, self.segment...)
 	if self.valueHash != nil && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-		result += self.size
+		if _, ok := self.value.(*Tree); ok {
+			result += self.size
+		} else {
+			result++
+		}
 	}
 	for _, child := range self.children {
 		if child != nil {
@@ -182,7 +186,11 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, f 
 	prefix = append(prefix, self.segment...)
 	if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
 		cont = f(stitch(prefix), self.value, self.version, count)
-		count += self.size
+		if _, ok := self.value.(*Tree); ok {
+			count += self.size
+		} else {
+			count++
+		}
 	}
 	if cont {
 		for _, child := range self.children {
@@ -218,7 +226,11 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 	if cont {
 		if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
 			cont = f(stitch(prefix), self.value, self.version, count)
-			count += self.size
+			if _, ok := self.value.(*Tree); ok {
+				count += self.size
+			} else {
+				count++
+			}
 		}
 	}
 	return
@@ -282,7 +294,11 @@ func (self *node) indexOf(count int, segment []Nibble, up bool) (index int, exis
 			return
 		} else if beyond_self {
 			if self.valueHash != nil {
-				count += self.size
+				if _, ok := self.value.(*Tree); ok {
+					count += self.size
+				} else {
+					count++
+				}
 			}
 			start, step, stop := 0, 1, len(self.children)
 			if !up {
