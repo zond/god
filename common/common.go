@@ -136,6 +136,8 @@ func MergeItems(arys []*[]Item, up bool) (result []Item) {
 }
 
 type DHashDescription struct {
+	Addr         string
+	Pos          []byte
 	LastClean    time.Time
 	LastSync     time.Time
 	LastMigrate  time.Time
@@ -147,6 +149,8 @@ type DHashDescription struct {
 
 func (self DHashDescription) Describe() string {
 	return fmt.Sprintf("%+v", struct {
+		Addr         string
+		Pos          string
 		LastClean    time.Time
 		LastSync     time.Time
 		LastMigrate  time.Time
@@ -155,6 +159,8 @@ func (self DHashDescription) Describe() string {
 		HeldEntries  int
 		Nodes        string
 	}{
+		Addr:         self.Addr,
+		Pos:          HexEncode(self.Pos),
 		LastClean:    self.LastClean,
 		LastSync:     self.LastSync,
 		LastMigrate:  self.LastMigrate,
