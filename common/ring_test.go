@@ -91,3 +91,44 @@ func TestRingClean(t *testing.T) {
 		t.Error(r.nodes, "should ==", cmp)
 	}
 }
+
+func TestRingEqualPositions(t *testing.T) {
+	r := NewRing()
+	ra := Remote{[]byte{0}, "a"}
+	r.Add(ra)
+	rb := Remote{[]byte{2}, "b"}
+	r.Add(rb)
+	rc := Remote{[]byte{2}, "c"}
+	r.Add(rc)
+	rd := Remote{[]byte{4}, "d"}
+	r.Add(rd)
+	re := Remote{[]byte{5}, "e"}
+	r.Add(re)
+	if s := r.Successor(ra); !s.Equal(rb) {
+		t.Errorf("wrong successor, wanted %v but got %v", rb, s)
+	}
+	if s := r.Successor(rb); !s.Equal(rc) {
+		t.Errorf("wrong successor, wanted %v but got %v", rc, s)
+	}
+	if s := r.Successor(rc); !s.Equal(rd) {
+		t.Errorf("wrong successor, wanted %v but got %v", rd, s)
+	}
+	if s := r.Successor(rd); !s.Equal(re) {
+		t.Errorf("wrong successor, wanted %v but got %v", re, s)
+	}
+	if s := r.Successor(re); !s.Equal(ra) {
+		t.Errorf("wrong successor, wanted %v but got %v", ra, s)
+	}
+	if b, m, a := r.indices([]byte{1}); b != 0 || m != -1 || a != 1 {
+		t.Errorf("wrong indices")
+	}
+	if b, m, a := r.indices([]byte{2}); b != 0 || m != 1 || a != 3 {
+		t.Errorf("wrong indices, wanted 0, 1, 2 but got %v, %v, %v", b, m, a)
+	}
+	if b, m, a := r.indices([]byte{3}); b != 2 || m != -1 || a != 3 {
+		t.Errorf("wrong indices")
+	}
+	if b, m, a := r.indices([]byte{4}); b != 2 || m != 3 || a != 4 {
+		t.Errorf("wrong indices")
+	}
+}
