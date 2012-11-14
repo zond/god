@@ -212,9 +212,6 @@ func (self *Node) notifySuccessor() {
 				predecessor := self.GetPredecessor()
 				self.ring.SetNodes(newNodes)
 				self.ring.Add(predecessor)
-				if predecessor.Addr != self.GetAddr() {
-					self.ring.Clean(predecessor, self.remote())
-				}
 			}
 		}
 	}
