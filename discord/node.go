@@ -20,6 +20,7 @@ const (
 
 type Node struct {
 	ring     *common.Ring
+	pred     *common.Remote
 	position []byte
 	addr     string
 	listener *net.TCPListener
@@ -180,20 +181,26 @@ func (self *Node) Ping(x int, position *[]byte) error {
 	return nil
 }
 func (self *Node) pingPredecessor() {
-	predecessor := self.GetPredecessor()
 	var newPredPos []byte
-	if err := predecessor.Call("Discord.Ping", 0, &newPredPos); err != nil {
-		self.RemoveNode(predecessor)
-		self.pingPredecessor()
-	} else if bytes.Compare(newPredPos, predecessor.Pos) != 0 {
-		predecessor.Pos = newPredPos
-		self.ring.Add(predecessor)
+	if self.pred != nil {
+		if err := self.pred.Call("Discord.Ping", 0, &newPredPos); err != nil {
+			self.RemoveNode(*self.pred)
+			newPred := self.ring.Predecessor(self.remote())
+			self.pred = &newPred
+			self.pingPredecessor()
+		} else if bytes.Compare(newPredPos, self.pred.Pos) != 0 {
+			self.pred.Pos = newPredPos
+			self.ring.Add(*self.pred)
+		}
 	}
 }
 func (self *Node) Nodes() common.Remotes {
 	return self.ring.Nodes()
 }
 func (self *Node) Notify(caller common.Remote) []byte {
+	if self.pred == nil || caller.Between(*self.pred, self.remote()) {
+		self.pred = &caller
+	}
 	self.ring.Add(caller)
 	return self.ring.Hash()
 }
@@ -209,9 +216,13 @@ func (self *Node) notifySuccessor() {
 			if err := successor.Call("Discord.Nodes", 0, &newNodes); err != nil {
 				self.RemoveNode(*successor)
 			} else {
-				predecessor := self.GetPredecessor()
 				self.ring.SetNodes(newNodes)
-				self.ring.Add(predecessor)
+				if self.pred != nil {
+					self.ring.Add(*self.pred)
+					if self.pred.Addr != self.GetAddr() {
+						self.ring.Clean(*self.pred, self.remote())
+					}
+				}
 			}
 		}
 	}
@@ -243,13 +254,16 @@ func (self *Node) RemoveNode(remote common.Remote) {
 	self.ring.Remove(remote)
 }
 func (self *Node) GetPredecessor() common.Remote {
+	if self.pred != nil {
+		return *self.pred
+	}
 	return self.GetPredecessorForRemote(self.remote())
 }
 func (self *Node) GetPredecessorForRemote(r common.Remote) common.Remote {
 	return self.ring.Predecessor(r)
 }
 func (self *Node) GetPredecessorFor(key []byte) common.Remote {
-	pred, _, _ := self.ring.Remotes(self.GetPosition())
+	pred, _, _ := self.ring.Remotes(key)
 	return *pred
 }
 func (self *Node) GetSuccessor() common.Remote {
