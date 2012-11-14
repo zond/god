@@ -6,16 +6,17 @@ import (
 
 type nodeServer Node
 
-func (self *nodeServer) Notify(caller common.Remote, ringHash *[]byte) error {
-	*ringHash = (*Node)(self).Notify(caller)
+func (self *nodeServer) Notify(caller common.Remote, predecessor *common.Remote) error {
+	*predecessor = (*Node)(self).Notify(caller)
 	return nil
 }
 func (self *nodeServer) Nodes(x int, nodes *common.Remotes) error {
 	*nodes = (*Node)(self).GetNodes()
 	return nil
 }
-func (self *nodeServer) Ping(x int, pos *[]byte) error {
-	return (*Node)(self).Ping(x, pos)
+func (self *nodeServer) Ping(ping PingPack, remote *common.Remote) error {
+	*remote = (*Node)(self).Ping(ping)
+	return nil
 }
 func (self *nodeServer) GetPredecessor(x int, predecessor *common.Remote) error {
 	*predecessor = (*Node)(self).GetPredecessor()
