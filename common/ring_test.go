@@ -8,13 +8,13 @@ import (
 func assertIndices(t *testing.T, r *Ring, pos, before, at, after byte) {
 	a, b, c := r.Remotes([]byte{pos})
 	if (a == nil && before != 255) || (a != nil && a.Pos[0] != before) {
-		t.Errorf("%v.indices([]byte{%v}) should be %v,%v,%v but was %v,%v,%v", r, pos, before, at, after, a, b, c)
+		t.Errorf("%v.byteIndices([]byte{%v}) should be %v,%v,%v but was %v,%v,%v", r, pos, before, at, after, a, b, c)
 	}
 	if (b == nil && at != 255) || (b != nil && b.Pos[0] != at) {
-		t.Errorf("%v.indices([]byte{%v}) should be %v,%v,%v but was %v,%v,%v", r, pos, before, at, after, a, b, c)
+		t.Errorf("%v.byteIndices([]byte{%v}) should be %v,%v,%v but was %v,%v,%v", r, pos, before, at, after, a, b, c)
 	}
 	if (c == nil && after != 255) || (c != nil && c.Pos[0] != after) {
-		t.Errorf("%v.indices([]byte{%v}) should be %v,%v,%v but was %v,%v,%v", r, pos, before, at, after, a, b, c)
+		t.Errorf("%v.byteIndices([]byte{%v}) should be %v,%v,%v but was %v,%v,%v", r, pos, before, at, after, a, b, c)
 	}
 }
 
@@ -52,40 +52,40 @@ func buildRing() (*Ring, Remotes) {
 
 func TestRingClean(t *testing.T) {
 	r, cmp := buildRing()
-	r.Clean([]byte{0}, []byte{2})
+	r.Clean(Remote{[]byte{0}, "a"}, Remote{[]byte{2}, "c"})
 	cmp = append(cmp[:1], cmp[2:]...)
 	if !reflect.DeepEqual(r.nodes, cmp) {
 		t.Error(r.nodes, "should ==", cmp)
 	}
 	r, cmp = buildRing()
-	r.Clean([]byte{0}, []byte{1})
+	r.Clean(Remote{[]byte{0}, "a"}, Remote{[]byte{1}, "b"})
 	if !reflect.DeepEqual(r.nodes, cmp) {
 		t.Error(r.nodes, "should ==", cmp)
 	}
 	r, cmp = buildRing()
-	r.Clean([]byte{4}, []byte{6})
+	r.Clean(Remote{[]byte{4}, "e"}, Remote{[]byte{6}, "f"})
 	if !reflect.DeepEqual(r.nodes, cmp) {
 		t.Error(r.nodes, "should ==", cmp)
 	}
 	r, cmp = buildRing()
-	r.Clean([]byte{7}, []byte{0})
+	r.Clean(Remote{[]byte{7}, "g"}, Remote{[]byte{0}, "a"})
 	if !reflect.DeepEqual(r.nodes, cmp) {
 		t.Error(r.nodes, "should ==", cmp)
 	}
 	r, cmp = buildRing()
-	r.Clean([]byte{7}, []byte{1})
+	r.Clean(Remote{[]byte{7}, "g"}, Remote{[]byte{1}, "b"})
 	cmp = cmp[1:]
 	if !reflect.DeepEqual(r.nodes, cmp) {
 		t.Error(r.nodes, "should ==", cmp)
 	}
 	r, cmp = buildRing()
-	r.Clean([]byte{6}, []byte{0})
+	r.Clean(Remote{[]byte{6}, "f"}, Remote{[]byte{0}, "a"})
 	cmp = cmp[:6]
 	if !reflect.DeepEqual(r.nodes, cmp) {
 		t.Error(r.nodes, "should ==", cmp)
 	}
 	r, cmp = buildRing()
-	r.Clean([]byte{3}, []byte{3})
+	r.Clean(Remote{[]byte{3}, "d"}, Remote{[]byte{3}, "d"})
 	cmp = cmp[3:4]
 	if !reflect.DeepEqual(r.nodes, cmp) {
 		t.Error(r.nodes, "should ==", cmp)
@@ -146,16 +146,16 @@ func TestRingEqualPositions(t *testing.T) {
 	if s := r.Successor(re); !s.Equal(ra) {
 		t.Errorf("wrong successor, wanted %v but got %v", ra, s)
 	}
-	if b, m, a := r.indices([]byte{1}); b != 0 || m != -1 || a != 1 {
-		t.Errorf("wrong indices")
+	if b, m, a := r.byteIndices([]byte{1}); b != 0 || m != -1 || a != 1 {
+		t.Errorf("wrong byteIndices")
 	}
-	if b, m, a := r.indices([]byte{2}); b != 0 || m != 1 || a != 3 {
-		t.Errorf("wrong indices, wanted 0, 1, 2 but got %v, %v, %v", b, m, a)
+	if b, m, a := r.byteIndices([]byte{2}); b != 0 || m != 1 || a != 3 {
+		t.Errorf("wrong byteIndices, wanted 0, 1, 2 but got %v, %v, %v", b, m, a)
 	}
-	if b, m, a := r.indices([]byte{3}); b != 2 || m != -1 || a != 3 {
-		t.Errorf("wrong indices")
+	if b, m, a := r.byteIndices([]byte{3}); b != 2 || m != -1 || a != 3 {
+		t.Errorf("wrong byteIndices")
 	}
-	if b, m, a := r.indices([]byte{4}); b != 2 || m != 3 || a != 4 {
-		t.Errorf("wrong indices")
+	if b, m, a := r.byteIndices([]byte{4}); b != 2 || m != 3 || a != 4 {
+		t.Errorf("wrong byteIndices")
 	}
 }

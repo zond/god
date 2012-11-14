@@ -168,7 +168,7 @@ func (self *Ring) Redundancy() int {
 func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	beforeIndex, atIndex, afterIndex := self.indices(pos)
+	beforeIndex, atIndex, afterIndex := self.byteIndices(pos)
 	if beforeIndex != -1 {
 		tmp := self.nodes[beforeIndex].Clone()
 		before = &tmp
@@ -185,10 +185,10 @@ func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 }
 
 /*
-indices searches the Ring for a position, and returns the last index before the position,
+byteIndices searches the Ring for a position, and returns the last index before the position,
 the index where the positon can be found (or -1) and the first index after the position.
 */
-func (self *Ring) indices(pos []byte) (before, at, after int) {
+func (self *Ring) byteIndices(pos []byte) (before, at, after int) {
 	if len(self.nodes) == 0 {
 		return -1, -1, -1
 	}
@@ -216,11 +216,60 @@ func (self *Ring) indices(pos []byte) (before, at, after int) {
 	// than the searched for position.
 	// If we did not find a position that is equal, then we know that the found
 	// position is greater than.
-	cmp := bytes.Compare(pos, self.nodes[i].Pos)
-	if cmp == 0 {
+	if bytes.Compare(pos, self.nodes[i].Pos) == 0 {
 		at = i
 		j := sort.Search(len(self.nodes)-i, func(k int) bool {
 			return bytes.Compare(pos, self.nodes[k+i].Pos) < 0
+		})
+		j += i
+		if j < len(self.nodes) {
+			after = j
+		} else {
+			after = 0
+		}
+	} else {
+		at = -1
+		after = i
+	}
+	return
+}
+
+/*
+indices searches the Ring for a Remote, and returns the last index before the position,
+the index where the positon can be found (or -1) and the first index after the position.
+*/
+func (self *Ring) indices(pos Remote) (before, at, after int) {
+	if len(self.nodes) == 0 {
+		return -1, -1, -1
+	}
+	// Find the first position in self.nodes where the position 
+	// is greather than or equal to the searched for position.
+	i := sort.Search(len(self.nodes), func(i int) bool {
+		return !self.nodes[i].Less(pos)
+	})
+	// If we didn't find any position like that
+	if i == len(self.nodes) {
+		after = 0
+		before = len(self.nodes) - 1
+		at = -1
+		return
+	}
+	// If we did, then we know that the position before (or the last position) 
+	// is the one that is before the searched for position.
+	if i == 0 {
+		before = len(self.nodes) - 1
+	} else {
+		before = i - 1
+	}
+	// If we found a position that is equal to the searched for position 
+	// just keep searching for a position that is guaranteed to be greater 
+	// than the searched for position.
+	// If we did not find a position that is equal, then we know that the found
+	// position is greater than.
+	if pos.Equal(self.nodes[i]) {
+		at = i
+		j := sort.Search(len(self.nodes)-i, func(k int) bool {
+			return pos.Less(self.nodes[k+i])
 		})
 		j += i
 		if j < len(self.nodes) {
@@ -271,7 +320,7 @@ func (self *Ring) Remove(remote Remote) {
 	}
 	self.sendChanges(oldHash)
 }
-func (self *Ring) Clean(predecessor, successor []byte) {
+func (self *Ring) Clean(predecessor, successor Remote) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	oldHash := self.hash()
