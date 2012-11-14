@@ -111,8 +111,9 @@ func (self *Node) sync() {
 	distributed := 0
 	nextSuccessor := self.node.GetSuccessor()
 	for i := 0; i < self.node.Redundancy()-1; i++ {
-		distributed += radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
-		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
+		myPos := self.node.GetPosition()
+		distributed += radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
+		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
 		nextSuccessor = self.node.GetSuccessorForRemote(nextSuccessor)
 	}
 	if fetched != 0 || distributed != 0 {
@@ -141,21 +142,12 @@ func (self *Node) cleanPeriodically() {
 		time.Sleep(syncInterval)
 	}
 }
-func (self *Node) treeSizeBetween(p1, p2 []byte) int {
-	cmp := bytes.Compare(p1, p2)
-	if cmp < 0 {
-		return self.tree.SizeBetween(p1, p2, true, false)
-	} else if cmp > 0 {
-		return self.tree.SizeBetween(p1, nil, true, false) + self.tree.SizeBetween(nil, p2, true, false)
-	}
-	return self.tree.Size()
-}
 func (self *Node) changePosition(newPos []byte) {
 	for len(newPos) < murmur.Size {
 		newPos = append(newPos, 0)
 	}
-	if bytes.Compare(newPos, self.node.GetPosition()) != 0 {
-		oldPos := self.node.GetPosition()
+	oldPos := self.node.GetPosition()
+	if bytes.Compare(newPos, oldPos) != 0 {
 		self.node.SetPosition(newPos)
 		atomic.StoreInt64(&self.lastMigrate, time.Now().UnixNano())
 		self.lock.RLock()
@@ -280,7 +272,18 @@ func (self *Node) Time() time.Time {
 	return time.Unix(0, self.timer.ContinuousTime())
 }
 func (self *Node) Owned() int {
-	return self.treeSizeBetween(self.node.GetPredecessor().Pos, self.node.GetPosition())
+	pred := self.node.GetPredecessor()
+	me := self.node.Remote()
+	cmp := bytes.Compare(pred.Pos, me.Pos)
+	if cmp < 0 {
+		return self.tree.SizeBetween(pred.Pos, me.Pos, true, false)
+	} else if cmp > 0 {
+		return self.tree.SizeBetween(pred.Pos, nil, true, false) + self.tree.SizeBetween(nil, me.Pos, true, false)
+	}
+	if pred.Less(me) {
+		return 0
+	}
+	return self.tree.Size()
 }
 func (self *Node) Description() common.DHashDescription {
 	return common.DHashDescription{
