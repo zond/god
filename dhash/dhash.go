@@ -19,12 +19,9 @@ type CleanListener func(dhash *Node, cleaned, redistributed int)
 type MigrateListener func(dhash *Node, source, destination []byte)
 
 const (
-	syncInterval    = time.Second * 1
-	cleanInterval   = time.Second * 1
-	migrateInterval = time.Second * 1
-	migrateLimit    = 3
-	migrateTarget   = 2
-	migrateWait     = 10
+	syncInterval      = time.Second
+	migrateHysteresis = 2
+	migrateWaitFactor = 2
 )
 
 const (
@@ -35,9 +32,9 @@ const (
 
 type Node struct {
 	state            int32
-	lastClean        int64
 	lastSync         int64
 	lastMigrate      int64
+	lastReroute      int64
 	lock             *sync.RWMutex
 	syncListeners    []SyncListener
 	cleanListeners   []CleanListener
@@ -54,10 +51,13 @@ func NewNode(addr string) (result *Node) {
 		state: created,
 		tree:  radix.NewTree(),
 	}
+	result.AddChangeListener(func(r *common.Ring) {
+		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
+	})
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
 	result.node.Export("Timenet", (*timerServer)(result.timer))
 	result.node.Export("DHash", (*dhashServer)(result))
-	result.node.Export("HashTree", (*hashTreeServer)(result.tree))
+	result.node.Export("HashTree", (*hashTreeServer)(result))
 	return
 }
 func (self *Node) AddCleanListener(l CleanListener) {
@@ -113,10 +113,9 @@ func (self *Node) sync() {
 	for i := 0; i < self.node.Redundancy()-1; i++ {
 		distributed += radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
 		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(self.node.GetPosition()).Run().PutCount()
-		nextSuccessor = self.node.GetSuccessorFor(nextSuccessor.Pos)
+		nextSuccessor = self.node.GetSuccessorForRemote(nextSuccessor)
 	}
 	if fetched != 0 || distributed != 0 {
-		atomic.StoreInt64(&self.lastSync, time.Now().UnixNano())
 		self.lock.RLock()
 		defer self.lock.RUnlock()
 		for _, l := range self.syncListeners {
@@ -127,7 +126,7 @@ func (self *Node) sync() {
 func (self *Node) migratePeriodically() {
 	for self.hasState(started) {
 		self.migrate()
-		time.Sleep(migrateInterval)
+		time.Sleep(syncInterval)
 	}
 }
 func (self *Node) syncPeriodically() {
@@ -139,58 +138,84 @@ func (self *Node) syncPeriodically() {
 func (self *Node) cleanPeriodically() {
 	for self.hasState(started) {
 		self.clean()
-		time.Sleep(cleanInterval)
+		time.Sleep(syncInterval)
 	}
 }
 func (self *Node) treeSizeBetween(p1, p2 []byte) int {
-	if bytes.Compare(p1, p2) < 1 {
+	cmp := bytes.Compare(p1, p2)
+	if cmp < 0 {
 		return self.tree.SizeBetween(p1, p2, true, false)
+	} else if cmp > 0 {
+		return self.tree.SizeBetween(p1, nil, true, false) + self.tree.SizeBetween(nil, p2, true, false)
 	}
-	return self.tree.SizeBetween(p1, nil, true, false) + self.tree.SizeBetween(nil, p2, true, false)
+	return self.tree.Size()
 }
 func (self *Node) changePosition(newPos []byte) {
 	for len(newPos) < murmur.Size {
 		newPos = append(newPos, 0)
 	}
-	oldPos := self.node.GetPosition()
-	self.node.SetPosition(newPos)
-	atomic.StoreInt64(&self.lastMigrate, time.Now().UnixNano())
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	for _, l := range self.migrateListeners {
-		l(self, oldPos, newPos)
+	if bytes.Compare(newPos, self.node.GetPosition()) != 0 {
+		oldPos := self.node.GetPosition()
+		self.node.SetPosition(newPos)
+		atomic.StoreInt64(&self.lastMigrate, time.Now().UnixNano())
+		self.lock.RLock()
+		defer self.lock.RUnlock()
+		for _, l := range self.migrateListeners {
+			l(self, oldPos, newPos)
+		}
 	}
 }
 func (self *Node) migrate() {
-	lastAllowedChange := time.Now().Add(-1 * migrateWait * time.Second).UnixNano()
-	if lastAllowedChange > common.Max64(atomic.LoadInt64(&self.lastSync), atomic.LoadInt64(&self.lastClean), atomic.LoadInt64(&self.lastMigrate)) {
-		// If we are not busy synchronizing or cleaning
-		pred := self.node.GetPredecessor()
-		grandPred := self.node.GetPredecessorFor(pred.Pos)
-		mySize := self.treeSizeBetween(pred.Pos, self.node.GetPosition())
-		predSize := common.Max(1, self.treeSizeBetween(grandPred.Pos, pred.Pos))
-		// If we have more keys than our predecessor * migrateLimit
-		if mySize > predSize*migrateLimit {
-			// We want to have predecessor size * migrateTarget keys
-			goalSize := predSize * migrateTarget
-			if bytes.Compare(pred.Pos, self.node.GetPosition()) < 1 {
-				if newPos, _, _, _, existed := self.tree.NextIndex(self.tree.SizeBetween(nil, pred.Pos, true, false) + goalSize); existed {
-					self.changePosition(newPos)
-				}
-			} else {
-				sizeBetweenPredAndZero := self.tree.SizeBetween(pred.Pos, nil, true, false)
-				if sizeBetweenPredAndZero < goalSize {
-					if newPos, _, _, _, existed := self.tree.NextIndex(goalSize - sizeBetweenPredAndZero); existed {
-						self.changePosition(newPos)
+	lastAllowedChange := time.Now().Add(-1 * migrateWaitFactor * syncInterval).UnixNano()
+	if lastAllowedChange > common.Max64(atomic.LoadInt64(&self.lastSync), atomic.LoadInt64(&self.lastReroute), atomic.LoadInt64(&self.lastMigrate)) {
+		var succSize int
+		succ := self.node.GetSuccessor()
+		if err := succ.Call("DHash.Owned", 0, &succSize); err != nil {
+			self.node.RemoveNode(succ)
+		} else {
+			mySize := self.Owned()
+			if mySize > migrateHysteresis && mySize > succSize*migrateHysteresis {
+				wantedDelta := (mySize - succSize) / 2
+				if bytes.Compare(self.node.GetPosition(), succ.Pos) < 1 {
+					if wantedPos, _, _, _, existed := self.tree.NextIndex(self.Owned() - wantedDelta); existed {
+						self.changePosition(wantedPos)
 					}
 				} else {
-					if newPos, _, _, _, existed := self.tree.NextIndex(self.tree.SizeBetween(self.node.GetPosition(), pred.Pos, true, false) + goalSize); existed {
-						self.changePosition(newPos)
+					if wantedPos, _, _, _, existed := self.tree.NextIndex(self.Owned() - self.tree.SizeBetween(self.node.GetPosition(), nil, true, false) - wantedDelta); existed {
+						self.changePosition(wantedPos)
 					}
+				}
+			} else if succSize > migrateHysteresis && succSize > mySize*migrateHysteresis {
+				wantedDelta := (succSize - mySize) / 2
+				var succPos common.Item
+				if err := succ.Call("DHash.KeyForIndex", wantedDelta, &succPos); err != nil {
+					self.node.RemoveNode(succ)
+				} else if succPos.Exists {
+					self.changePosition(succPos.Key)
 				}
 			}
 		}
 	}
+}
+func (self *Node) KeyForIndex(i int, result *common.Item) error {
+	pred := self.node.GetPredecessor()
+	var k []byte
+	var e bool
+	if bytes.Compare(pred.Pos, self.node.GetPosition()) < 1 {
+		k, _, _, _, e = self.tree.NextIndex(self.tree.SizeBetween(nil, pred.Pos, true, false) + i)
+	} else {
+		betweenPredAndZero := self.tree.SizeBetween(pred.Pos, nil, true, false)
+		if i < betweenPredAndZero {
+			k, _, _, _, e = self.tree.NextIndex(self.tree.SizeBetween(nil, pred.Pos, true, false) + i)
+		} else {
+			k, _, _, _, e = self.tree.NextIndex(i - betweenPredAndZero)
+		}
+	}
+	*result = common.Item{
+		Key:    k,
+		Exists: e,
+	}
+	return nil
 }
 func (self *Node) circularNext(key []byte) (nextKey []byte, existed bool) {
 	if nextKey, _, _, existed = self.tree.Next(key); existed {
@@ -209,7 +234,7 @@ func (self *Node) owners(key []byte) (owners common.Remotes, isOwner bool) {
 		isOwner = true
 	}
 	for i := 1; i < self.node.Redundancy(); i++ {
-		owners = append(owners, self.node.GetSuccessorFor(owners[i-1].Pos))
+		owners = append(owners, self.node.GetSuccessorForRemote(owners[i-1]))
 		if owners[i].Addr == self.node.GetAddr() {
 			isOwner = true
 		}
@@ -233,7 +258,6 @@ func (self *Node) clean() {
 			}
 		}
 		if deleted != 0 || put != 0 {
-			atomic.StoreInt64(&self.lastClean, time.Now().UnixNano())
 			self.lock.RLock()
 			defer self.lock.RUnlock()
 			for _, l := range self.cleanListeners {
@@ -255,13 +279,18 @@ func (self *Node) MustJoin(addr string) {
 func (self *Node) Time() time.Time {
 	return time.Unix(0, self.timer.ContinuousTime())
 }
+func (self *Node) Owned() int {
+	return self.treeSizeBetween(self.node.GetPredecessor().Pos, self.node.GetPosition())
+}
 func (self *Node) Description() common.DHashDescription {
 	return common.DHashDescription{
-		LastClean:    time.Unix(0, atomic.LoadInt64(&self.lastClean)),
+		Addr:         self.GetAddr(),
+		Pos:          self.node.GetPosition(),
+		LastReroute:  time.Unix(0, atomic.LoadInt64(&self.lastReroute)),
 		LastSync:     time.Unix(0, atomic.LoadInt64(&self.lastSync)),
 		LastMigrate:  time.Unix(0, atomic.LoadInt64(&self.lastMigrate)),
 		Timer:        self.timer.ActualTime(),
-		OwnedEntries: self.tree.SizeBetween(self.node.GetPredecessor().Pos, self.node.GetPosition(), true, false),
+		OwnedEntries: self.Owned(),
 		HeldEntries:  self.tree.Size(),
 		Nodes:        self.node.GetNodes(),
 	}
@@ -475,12 +504,12 @@ func (self *Node) Put(data common.Item) error {
 }
 func (self *Node) forwardOperation(data common.Item, operation string) {
 	data.TTL--
-	successor := self.node.GetSuccessorFor(self.node.GetPosition())
+	successor := self.node.GetSuccessor()
 	var x int
 	err := successor.Call(operation, data, &x)
 	for err != nil {
 		self.node.RemoveNode(successor)
-		successor = self.node.GetSuccessorFor(self.node.GetPosition())
+		successor = self.node.GetSuccessor()
 		err = successor.Call(operation, data, &x)
 	}
 }
