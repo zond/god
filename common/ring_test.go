@@ -104,13 +104,40 @@ func TestRingEqualPositions(t *testing.T) {
 	r.Add(rd)
 	re := Remote{[]byte{5}, "e"}
 	r.Add(re)
+	if s := r.Predecessor(ra); !s.Equal(re) {
+		t.Errorf("wrong predecessor, wanted %v but got %v", re, s)
+	}
+	if s := r.Predecessor(Remote{[]byte{1}, "aa"}); !s.Equal(ra) {
+		t.Errorf("wrong predecessor, wanted %v but got %v", ra, s)
+	}
+	if s := r.Predecessor(rb); !s.Equal(ra) {
+		t.Errorf("wrong predecessor, wanted %v but got %v", ra, s)
+	}
+	if s := r.Predecessor(rc); !s.Equal(rb) {
+		t.Errorf("wrong predecessor, wanted %v but got %v", rb, s)
+	}
+	if s := r.Predecessor(Remote{[]byte{3}, "ca"}); !s.Equal(rc) {
+		t.Errorf("wrong predecessor, wanted %v but got %v", rc, s)
+	}
+	if s := r.Predecessor(rd); !s.Equal(rc) {
+		t.Errorf("wrong predecessor, wanted %v but got %v", rc, s)
+	}
+	if s := r.Predecessor(re); !s.Equal(rd) {
+		t.Errorf("wrong predecessor, wanted %v but got %v", rd, s)
+	}
 	if s := r.Successor(ra); !s.Equal(rb) {
+		t.Errorf("wrong successor, wanted %v but got %v", rb, s)
+	}
+	if s := r.Successor(Remote{[]byte{1}, "aa"}); !s.Equal(rb) {
 		t.Errorf("wrong successor, wanted %v but got %v", rb, s)
 	}
 	if s := r.Successor(rb); !s.Equal(rc) {
 		t.Errorf("wrong successor, wanted %v but got %v", rc, s)
 	}
 	if s := r.Successor(rc); !s.Equal(rd) {
+		t.Errorf("wrong successor, wanted %v but got %v", rd, s)
+	}
+	if s := r.Successor(Remote{[]byte{3}, "ca"}); !s.Equal(rd) {
 		t.Errorf("wrong successor, wanted %v but got %v", rd, s)
 	}
 	if s := r.Successor(rd); !s.Equal(re) {
