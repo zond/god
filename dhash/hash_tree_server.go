@@ -2,6 +2,8 @@ package dhash
 
 import (
 	"../radix"
+	"sync/atomic"
+	"time"
 )
 
 type HashTreeItem struct {
@@ -15,19 +17,19 @@ type HashTreeItem struct {
 	Exists      bool
 }
 
-type hashTreeServer radix.Tree
+type hashTreeServer Node
 
 func (self *hashTreeServer) Hash(x int, result *[]byte) error {
-	*result = (*radix.Tree)(self).Hash()
+	*result = (*Node)(self).tree.Hash()
 	return nil
 }
 func (self *hashTreeServer) Finger(key []radix.Nibble, result *radix.Print) error {
-	*result = *((*radix.Tree)(self).Finger(key))
+	*result = *((*Node)(self).tree.Finger(key))
 	return nil
 }
 func (self *hashTreeServer) GetVersion(key []radix.Nibble, result *HashTreeItem) error {
 	*result = HashTreeItem{Key: key}
-	if value, version, exists := (*radix.Tree)(self).GetVersion(key); exists {
+	if value, version, exists := (*Node)(self).tree.GetVersion(key); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Value, result.Version, result.Exists = []byte(byteHasher), version, exists
 		}
@@ -35,20 +37,22 @@ func (self *hashTreeServer) GetVersion(key []radix.Nibble, result *HashTreeItem)
 	return nil
 }
 func (self *hashTreeServer) PutVersion(data HashTreeItem, changed *bool) error {
-	*changed = (*radix.Tree)(self).PutVersion(data.Key, radix.ByteHasher(data.Value), data.Expected, data.Version)
+	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
+	*changed = (*Node)(self).tree.PutVersion(data.Key, radix.ByteHasher(data.Value), data.Expected, data.Version)
 	return nil
 }
 func (self *hashTreeServer) DelVersion(data HashTreeItem, changed *bool) error {
-	*changed = (*radix.Tree)(self).DelVersion(data.Key, data.Expected)
+	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
+	*changed = (*Node)(self).tree.DelVersion(data.Key, data.Expected)
 	return nil
 }
 func (self *hashTreeServer) SubFinger(data HashTreeItem, result *radix.Print) error {
-	*result = *((*radix.Tree)(self).SubFinger(data.Key, data.SubKey, data.Expected))
+	*result = *((*Node)(self).tree.SubFinger(data.Key, data.SubKey, data.Expected))
 	return nil
 }
 func (self *hashTreeServer) SubGetVersion(data HashTreeItem, result *HashTreeItem) error {
 	*result = data
-	if value, version, exists := (*radix.Tree)(self).SubGetVersion(data.Key, data.SubKey, data.Expected); exists {
+	if value, version, exists := (*Node)(self).tree.SubGetVersion(data.Key, data.SubKey, data.Expected); exists {
 		if byteHasher, ok := value.(radix.ByteHasher); ok {
 			result.Value, result.SubVersion, result.Exists = []byte(byteHasher), version, exists
 		}
@@ -56,10 +60,12 @@ func (self *hashTreeServer) SubGetVersion(data HashTreeItem, result *HashTreeIte
 	return nil
 }
 func (self *hashTreeServer) SubPutVersion(data HashTreeItem, changed *bool) error {
-	*changed = (*radix.Tree)(self).SubPutVersion(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Expected, data.SubExpected, data.SubVersion)
+	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
+	*changed = (*Node)(self).tree.SubPutVersion(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Expected, data.SubExpected, data.SubVersion)
 	return nil
 }
 func (self *hashTreeServer) SubDelVersion(data HashTreeItem, changed *bool) error {
-	*changed = (*radix.Tree)(self).SubDelVersion(data.Key, data.SubKey, data.Expected, data.SubExpected)
+	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
+	*changed = (*Node)(self).tree.SubDelVersion(data.Key, data.SubKey, data.Expected, data.SubExpected)
 	return nil
 }

@@ -70,6 +70,23 @@ func testPut(t *testing.T, dhashes []*Node) {
 	}, time.Second*10)
 }
 
+func testMigrate(t *testing.T, dhashes []*Node) {
+	var item common.Item
+	for i := 0; i < 1000; i++ {
+		item.Key = []byte(fmt.Sprint(i))
+		item.Value = []byte(fmt.Sprint(i))
+		item.Timestamp = 0
+		dhashes[0].Put(item)
+	}
+	common.AssertWithin(t, func() (string, bool) {
+		for _, d := range dhashes {
+			fmt.Println(d.GetAddr(), common.HexEncode(d.node.GetPosition()), d.Owned())
+		}
+		fmt.Println("/////")
+		return "", false
+	}, time.Second*100)
+}
+
 func testFind(t *testing.T, dhashes []*Node) {
 	dhashes[0].tree.Put([]byte{2}, radix.ByteHasher([]byte{2}), 0)
 	common.AssertWithin(t, func() (string, bool) {
@@ -89,11 +106,12 @@ func stopServers(servers []*Node) {
 	}
 }
 
-func TestAll(t *testing.T) {
+func TestDHash(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	dhashes := testStartup(t, 6, 10191)
-	testSync(t, dhashes)
-	testClean(t, dhashes)
-	testPut(t, dhashes)
-	testFind(t, dhashes)
+	//	testSync(t, dhashes)
+	//	testClean(t, dhashes)
+	//	testPut(t, dhashes)
+	//	testFind(t, dhashes)
+	testMigrate(t, dhashes)
 }

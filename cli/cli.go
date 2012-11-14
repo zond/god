@@ -2,6 +2,7 @@ package main
 
 import (
 	"../client"
+	"../common"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -28,8 +29,9 @@ var actions = map[*regexp.Regexp]action{
 	regexp.MustCompile("^subGet (\\S+) (\\S+)$"):                   subGet,
 	regexp.MustCompile("^subDel (\\S+) (\\S+)$"):                   subDel,
 	regexp.MustCompile("^$"):                                       show,
+	regexp.MustCompile("^describeAll$"):                            describeAll,
 	regexp.MustCompile("^describe (\\S+)$"):                        describe,
-	regexp.MustCompile("^describeTree (\\S+)$"):                    describeTree,
+	regexp.MustCompile("^describeAllTrees$"):                       describeAllTrees,
 	regexp.MustCompile("^first (\\S+)$"):                           first,
 	regexp.MustCompile("^last (\\S+)$"):                            last,
 	regexp.MustCompile("^prevIndex (\\S+) (\\d+)$"):                prevIndex,
@@ -139,6 +141,29 @@ func subNext(conn *client.Conn, args []string) {
 func subPrev(conn *client.Conn, args []string) {
 	if key, value, existed := conn.SubPrev([]byte(args[1]), []byte(args[2])); existed {
 		fmt.Println(string(key), "=>", string(value))
+	}
+}
+
+func describeAll(conn *client.Conn, args []string) {
+	var result common.DHashDescription
+	for ind, r := range conn.Nodes() {
+		if err := r.Call("DHash.Describe", 0, &result); err != nil {
+			fmt.Printf("%v: %v: %v\n", ind, r, err)
+		} else {
+			fmt.Println(result.Describe())
+		}
+	}
+}
+
+func describeAllTrees(conn *client.Conn, args []string) {
+	var result string
+	for ind, r := range conn.Nodes() {
+		if err := r.Call("DHash.DescribeTree", 0, &result); err != nil {
+			fmt.Printf("%v: %v: %v\n", ind, r, err)
+		} else {
+			fmt.Println(r)
+			fmt.Println(result)
+		}
 	}
 }
 

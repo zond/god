@@ -47,6 +47,9 @@ func (self *Conn) removeNode(node common.Remote) {
 	self.ring.Remove(node)
 	self.Reconnect()
 }
+func (self *Conn) Nodes() common.Remotes {
+	return self.ring.Nodes()
+}
 func (self *Conn) update() {
 	myRingHash := self.ring.Hash()
 	var otherRingHash []byte
