@@ -138,7 +138,7 @@ func MergeItems(arys []*[]Item, up bool) (result []Item) {
 type DHashDescription struct {
 	Addr         string
 	Pos          []byte
-	LastClean    time.Time
+	LastReroute  time.Time
 	LastSync     time.Time
 	LastMigrate  time.Time
 	Timer        time.Time
@@ -151,7 +151,7 @@ func (self DHashDescription) Describe() string {
 	return fmt.Sprintf("%+v", struct {
 		Addr         string
 		Pos          string
-		LastClean    time.Time
+		LastReroute  time.Time
 		LastSync     time.Time
 		LastMigrate  time.Time
 		Timer        time.Time
@@ -161,7 +161,7 @@ func (self DHashDescription) Describe() string {
 	}{
 		Addr:         self.Addr,
 		Pos:          HexEncode(self.Pos),
-		LastClean:    self.LastClean,
+		LastReroute:  self.LastReroute,
 		LastSync:     self.LastSync,
 		LastMigrate:  self.LastMigrate,
 		Timer:        self.Timer,
