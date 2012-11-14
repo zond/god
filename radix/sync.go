@@ -66,6 +66,10 @@ func (self *Sync) DelCount() int {
 	return self.delCount
 }
 func (self *Sync) Run() *Sync {
+	// If we have from and to, and they are equal, that means this sync is over an empty set... just ignore it
+	if self.from != nil && self.to != nil && nComp(self.from, self.to) == 0 {
+		return self
+	}
 	if self.destructive || bytes.Compare(self.source.Hash(), self.destination.Hash()) != 0 {
 		self.synchronize(self.source.Finger(nil), self.destination.Finger(nil))
 	}
