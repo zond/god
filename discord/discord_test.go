@@ -26,5 +26,5 @@ func TestStartup(t *testing.T) {
 			routes[nodes[i].Nodes().Describe()] = true
 		}
 		return fmt.Sprint(routes), len(routes) == 1 && nodes[0].ring.Size() > 0
-	}, time.Second*10)
+	}, time.Second*30)
 }

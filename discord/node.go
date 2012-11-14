@@ -56,7 +56,7 @@ func (self *Node) SetPosition(position []byte) *Node {
 	self.position = make([]byte, len(position))
 	copy(self.position, position)
 	self.lock.Unlock()
-	self.ring.Add(self.remote())
+	self.ring.Add(self.Remote())
 	return self
 }
 func (self *Node) GetNodes() (result common.Remotes) {
@@ -112,7 +112,7 @@ func (self *Node) setAddr(addr string) {
 	defer self.lock.Unlock()
 	self.addr = addr
 }
-func (self *Node) remote() common.Remote {
+func (self *Node) Remote() common.Remote {
 	return common.Remote{self.GetPosition(), self.GetAddr()}
 }
 
@@ -155,7 +155,7 @@ func (self *Node) Start() (err error) {
 			return
 		}
 	}
-	self.ring.Add(self.remote())
+	self.ring.Add(self.Remote())
 	go server.Accept(self.getListener())
 	go self.notifyPeriodically()
 	go self.pingPeriodically()
@@ -185,7 +185,7 @@ func (self *Node) pingPredecessor() {
 	if self.pred != nil {
 		if err := self.pred.Call("Discord.Ping", 0, &newPredPos); err != nil {
 			self.RemoveNode(*self.pred)
-			newPred := self.ring.Predecessor(self.remote())
+			newPred := self.ring.Predecessor(self.Remote())
 			self.pred = &newPred
 			self.pingPredecessor()
 		} else if bytes.Compare(newPredPos, self.pred.Pos) != 0 {
@@ -198,7 +198,7 @@ func (self *Node) Nodes() common.Remotes {
 	return self.ring.Nodes()
 }
 func (self *Node) Notify(caller common.Remote) []byte {
-	if self.pred == nil || caller.Between(*self.pred, self.remote()) {
+	if self.pred == nil || caller.Between(*self.pred, self.Remote()) {
 		self.pred = &caller
 	}
 	self.ring.Add(caller)
@@ -208,7 +208,7 @@ func (self *Node) notifySuccessor() {
 	_, _, successor := self.ring.Remotes(self.GetPosition())
 	myRingHash := self.ring.Hash()
 	var otherRingHash []byte
-	if err := successor.Call("Discord.Notify", self.remote(), &otherRingHash); err != nil {
+	if err := successor.Call("Discord.Notify", self.Remote(), &otherRingHash); err != nil {
 		self.RemoveNode(*successor)
 	} else {
 		if bytes.Compare(myRingHash, otherRingHash) != 0 {
@@ -220,7 +220,7 @@ func (self *Node) notifySuccessor() {
 				if self.pred != nil {
 					self.ring.Add(*self.pred)
 					if self.pred.Addr != self.GetAddr() {
-						self.ring.Clean(*self.pred, self.remote())
+						self.ring.Clean(*self.pred, self.Remote())
 					}
 				}
 			}
@@ -242,7 +242,7 @@ func (self *Node) Join(addr string) (err error) {
 	}
 	self.ring.SetNodes(newNodes)
 	var x []byte
-	if err = common.Switch.Call(addr, "Discord.Notify", self.remote(), &x); err != nil {
+	if err = common.Switch.Call(addr, "Discord.Notify", self.Remote(), &x); err != nil {
 		return
 	}
 	return
@@ -257,7 +257,7 @@ func (self *Node) GetPredecessor() common.Remote {
 	if self.pred != nil {
 		return *self.pred
 	}
-	return self.GetPredecessorForRemote(self.remote())
+	return self.GetPredecessorForRemote(self.Remote())
 }
 func (self *Node) GetPredecessorForRemote(r common.Remote) common.Remote {
 	return self.ring.Predecessor(r)
@@ -267,7 +267,7 @@ func (self *Node) GetPredecessorFor(key []byte) common.Remote {
 	return *pred
 }
 func (self *Node) GetSuccessor() common.Remote {
-	return self.GetSuccessorForRemote(self.remote())
+	return self.GetSuccessorForRemote(self.Remote())
 }
 func (self *Node) GetSuccessorForRemote(r common.Remote) common.Remote {
 	return self.ring.Successor(r)
