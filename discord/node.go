@@ -233,7 +233,10 @@ func (self *Node) Join(addr string) (err error) {
 		self.SetPosition(common.NewRingNodes(newNodes).GetSlot())
 	}
 	self.ring.SetNodes(newNodes)
-	self.notifySuccessor()
+	var x []byte
+	if err = common.Switch.Call(addr, "Discord.Notify", self.remote(), &x); err != nil {
+		return
+	}
 	return
 }
 func (self *Node) RemoveNode(remote common.Remote) {
@@ -243,14 +246,14 @@ func (self *Node) RemoveNode(remote common.Remote) {
 	self.ring.Remove(remote)
 }
 func (self *Node) GetPredecessor() common.Remote {
-	return self.GetPredecessorFor(self.GetPosition())
+	return self.ring.Predecessor(self.remote())
 }
 func (self *Node) GetPredecessorFor(key []byte) common.Remote {
 	pred, _, _ := self.ring.Remotes(self.GetPosition())
 	return *pred
 }
 func (self *Node) GetSuccessor() common.Remote {
-	return self.GetSuccessorFor(self.GetPosition())
+	return self.ring.Successor(self.remote())
 }
 func (self *Node) GetSuccessorFor(key []byte) common.Remote {
 	// Guess according to our route cache
