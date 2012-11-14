@@ -106,30 +106,33 @@ func (self *Ring) Size() int {
 func (self *Ring) Equal(other *Ring) bool {
 	return self.Nodes().Equal(other.Nodes())
 }
-func (self *Ring) Predecessor(r Remote) Remote {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+func (self *Ring) predecessorIndex(r Remote) int {
 	i := sort.Search(len(self.nodes), func(i int) bool {
 		return !self.nodes[i].Less(r)
 	})
-	if i == len(self.nodes) {
-		return self.nodes[len(self.nodes)-1].Clone()
+	if i < len(self.nodes) && i > 0 {
+		return i - 1
 	}
-	if i > 0 {
-		return self.nodes[i-1].Clone()
-	}
-	return self.nodes[len(self.nodes)-1].Clone()
+	return len(self.nodes) - 1
 }
-func (self *Ring) Successor(r Remote) Remote {
+func (self *Ring) Predecessor(r Remote) Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
+	return self.nodes[self.predecessorIndex(r)]
+}
+func (self *Ring) successorIndex(r Remote) int {
 	i := sort.Search(len(self.nodes), func(i int) bool {
 		return r.Less(self.nodes[i])
 	})
 	if i < len(self.nodes) {
-		return self.nodes[i].Clone()
+		return i
 	}
-	return self.nodes[0].Clone()
+	return 0
+}
+func (self *Ring) Successor(r Remote) Remote {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.nodes[self.successorIndex(r)].Clone()
 }
 func (self *Ring) Add(r Remote) {
 	self.lock.Lock()
