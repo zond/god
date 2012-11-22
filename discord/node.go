@@ -259,6 +259,12 @@ func (self *Node) GetPredecessorFor(key []byte) common.Remote {
 	pred, _, _ := self.ring.Remotes(key)
 	return *pred
 }
+func (self *Node) HasNode(pos []byte) bool {
+	if _, match, _ := self.ring.Remotes(pos); match != nil {
+		return true
+	}
+	return false
+}
 func (self *Node) GetSuccessor() common.Remote {
 	return self.GetSuccessorForRemote(self.Remote())
 }

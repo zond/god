@@ -9,6 +9,7 @@ import (
 	"../timenet"
 	"bytes"
 	"fmt"
+	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -148,6 +149,9 @@ func (self *Node) changePosition(newPos []byte) {
 	}
 	oldPos := self.node.GetPosition()
 	if bytes.Compare(newPos, oldPos) != 0 {
+		for self.node.HasNode(newPos) {
+			newPos = new(big.Int).Add(new(big.Int).SetBytes(newPos), big.NewInt(1)).Bytes()
+		}
 		self.node.SetPosition(newPos)
 		atomic.StoreInt64(&self.lastMigrate, time.Now().UnixNano())
 		self.lock.RLock()
@@ -166,7 +170,7 @@ func (self *Node) migrate() {
 			self.node.RemoveNode(succ)
 		} else {
 			mySize := self.Owned()
-			if mySize > migrateHysteresis && mySize > succSize*migrateHysteresis {
+			if mySize > migrateHysteresis*migrateHysteresis && mySize > succSize*migrateHysteresis {
 				wantedDelta := (mySize - succSize) / 2
 				if bytes.Compare(self.node.GetPosition(), succ.Pos) < 1 {
 					if wantedPos, _, _, _, existed := self.tree.NextIndex(self.Owned() - wantedDelta); existed {
