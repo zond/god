@@ -5,6 +5,7 @@ A Go database
 
 # TODO
 
+* Make the CLI use the shell arg splitting instead of a stupid " " split.
 * Node migrations
  * Automated tests
 * Persistence

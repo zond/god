@@ -1077,6 +1077,10 @@ func BenchmarkTreeGet10000(b *testing.B) {
 	benchTree(b, 10000, false, true)
 }
 
+func BenchmarkTreeGet100000(b *testing.B) {
+	benchTree(b, 100000, false, true)
+}
+
 func BenchmarkTreePut100000(b *testing.B) {
 	benchTree(b, 100000, true, false)
 }
