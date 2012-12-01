@@ -16,32 +16,46 @@ type action func(conn *client.Conn, args []string)
 var ip = flag.String("ip", "127.0.0.1", "IP address to connect to")
 var port = flag.Int("port", 9191, "Port to connect to")
 
-var actions = map[*regexp.Regexp]action{
-	regexp.MustCompile("^reverseSliceIndex (\\S+) (\\d+) (\\d+)$"): reverseSliceIndex,
-	regexp.MustCompile("^sliceIndex (\\S+) (\\d+) (\\d+)$"):        sliceIndex,
-	regexp.MustCompile("^reverseSlice (\\S+) (\\S+) (\\S+)$"):      reverseSlice,
-	regexp.MustCompile("^slice (\\S+) (\\S+) (\\S+)$"):             slice,
-	regexp.MustCompile("^put (\\S+) (\\S+)$"):                      put,
-	regexp.MustCompile("^count (\\S+) (\\S+) (\\S+)$"):             count,
-	regexp.MustCompile("^get (\\S+)$"):                             get,
-	regexp.MustCompile("^del (\\S+)$"):                             del,
-	regexp.MustCompile("^subPut (\\S+) (\\S+) (\\S+)$"):            subPut,
-	regexp.MustCompile("^subGet (\\S+) (\\S+)$"):                   subGet,
-	regexp.MustCompile("^subDel (\\S+) (\\S+)$"):                   subDel,
-	regexp.MustCompile("^$"):                                       show,
-	regexp.MustCompile("^describeAll$"):                            describeAll,
-	regexp.MustCompile("^describe (\\S+)$"):                        describe,
-	regexp.MustCompile("^describeAllTrees$"):                       describeAllTrees,
-	regexp.MustCompile("^first (\\S+)$"):                           first,
-	regexp.MustCompile("^last (\\S+)$"):                            last,
-	regexp.MustCompile("^prevIndex (\\S+) (\\d+)$"):                prevIndex,
-	regexp.MustCompile("^nextIndex (\\S+) (\\d+)$"):                nextIndex,
-	regexp.MustCompile("^next (\\S+)$"):                            next,
-	regexp.MustCompile("^prev (\\S+)$"):                            prev,
-	regexp.MustCompile("^subNext (\\S+) (\\S+)$"):                  subNext,
-	regexp.MustCompile("^subPrev (\\S+) (\\S+)$"):                  subPrev,
-	regexp.MustCompile("^indexOf (\\S+) (\\S+)$"):                  indexOf,
-	regexp.MustCompile("^reverseIndexOf (\\S+) (\\S+)$"):           reverseIndexOf,
+type actionSpec struct {
+	cmd  string
+	args []*regexp.Regexp
+}
+
+func newActionSpec(pattern string) (result *actionSpec) {
+	result = &actionSpec{}
+	parts := strings.Split(pattern, " ")
+	result.cmd = parts[0]
+	for _, r := range parts[1:] {
+		result.args = append(result.args, regexp.MustCompile(r))
+	}
+	return
+}
+
+var actions = map[*actionSpec]action{
+	newActionSpec("reverseSliceIndex \\S+ \\d+ \\d+"): reverseSliceIndex,
+	newActionSpec("sliceIndex \\S+ \\d+ \\d+"):        sliceIndex,
+	newActionSpec("reverseSlice \\S+ \\S+ \\S+"):      reverseSlice,
+	newActionSpec("slice \\S+ \\S+ \\S+"):             slice,
+	newActionSpec("put \\S+ \\S+"):                    put,
+	newActionSpec("count \\S+ \\S+ \\S+"):             count,
+	newActionSpec("get \\S+"):                         get,
+	newActionSpec("del \\S+"):                         del,
+	newActionSpec("subPut \\S+ \\S+ \\S+"):            subPut,
+	newActionSpec("subGet \\S+ \\S+"):                 subGet,
+	newActionSpec("subDel \\S+ \\S+"):                 subDel,
+	newActionSpec("describeAll"):                      describeAll,
+	newActionSpec("describe \\S+"):                    describe,
+	newActionSpec("describeAllTrees"):                 describeAllTrees,
+	newActionSpec("first \\S+"):                       first,
+	newActionSpec("last \\S+"):                        last,
+	newActionSpec("prevIndex \\S+ \\d+"):              prevIndex,
+	newActionSpec("nextIndex \\S+ \\d+"):              nextIndex,
+	newActionSpec("next \\S+"):                        next,
+	newActionSpec("prev \\S+"):                        prev,
+	newActionSpec("subNext \\S+ \\S+"):                subNext,
+	newActionSpec("subPrev \\S+ \\S+"):                subPrev,
+	newActionSpec("indexOf \\S+ \\S+"):                indexOf,
+	newActionSpec("reverseIndexOf \\S+ \\S+"):         reverseIndexOf,
 }
 
 func mustAtoi(s string) *int {
@@ -88,7 +102,7 @@ func indexOf(conn *client.Conn, args []string) {
 	}
 }
 
-func show(conn *client.Conn, args []string) {
+func show(conn *client.Conn) {
 	fmt.Println(conn.Describe())
 }
 
@@ -222,12 +236,24 @@ func del(conn *client.Conn, args []string) {
 func main() {
 	flag.Parse()
 	conn := client.MustConn(fmt.Sprintf("%v:%v", *ip, *port))
-	args := strings.Join(flag.Args(), " ")
-	for reg, fun := range actions {
-		if matches := reg.FindStringSubmatch(args); matches != nil {
-			fun(conn, matches)
-			return
+	if len(flag.Args()) == 0 {
+		show(conn)
+	} else {
+		for spec, fun := range actions {
+			if spec.cmd == flag.Args()[0] {
+				matchingParts := true
+				for index, reg := range spec.args {
+					if !reg.MatchString(flag.Args()[index+1]) {
+						matchingParts = false
+						break
+					}
+				}
+				if matchingParts {
+					fun(conn, flag.Args())
+					return
+				}
+			}
 		}
+		fmt.Println("No command given?")
 	}
-	fmt.Println("No command given?")
 }

@@ -79,10 +79,12 @@ func testMigrate(t *testing.T, dhashes []*Node) {
 		dhashes[0].Put(item)
 	}
 	common.AssertWithin(t, func() (string, bool) {
+		sum := 0
 		for _, d := range dhashes {
+			sum += d.Owned()
 			fmt.Println(d.GetAddr(), common.HexEncode(d.node.GetPosition()), d.Owned())
 		}
-		fmt.Println("/////")
+		fmt.Println("/////", sum)
 		return "", false
 	}, time.Second*100)
 }

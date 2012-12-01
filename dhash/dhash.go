@@ -171,7 +171,7 @@ func (self *Node) migrate() {
 		} else {
 			mySize := self.Owned()
 			if mySize > migrateHysteresis*migrateHysteresis && mySize > succSize*migrateHysteresis {
-				wantedDelta := (mySize - succSize) / 2
+				wantedDelta := (mySize-succSize)/2 - 1
 				if bytes.Compare(self.node.GetPosition(), succ.Pos) < 1 {
 					if wantedPos, _, _, _, existed := self.tree.NextIndex(self.Owned() - wantedDelta); existed {
 						self.changePosition(wantedPos)
@@ -181,8 +181,8 @@ func (self *Node) migrate() {
 						self.changePosition(wantedPos)
 					}
 				}
-			} else if succSize > migrateHysteresis && succSize > mySize*migrateHysteresis {
-				wantedDelta := (succSize - mySize) / 2
+			} else if succSize > migrateHysteresis*migrateHysteresis && succSize > mySize*migrateHysteresis {
+				wantedDelta := (succSize-mySize)/2 - 1
 				var succPos common.Item
 				if err := succ.Call("DHash.KeyForIndex", wantedDelta, &succPos); err != nil {
 					self.node.RemoveNode(succ)
