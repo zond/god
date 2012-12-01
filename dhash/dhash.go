@@ -22,7 +22,6 @@ type MigrateListener func(dhash *Node, source, destination []byte)
 const (
 	syncInterval      = time.Second
 	migrateHysteresis = 2
-	migrateWaitFactor = 2
 )
 
 const (
@@ -104,7 +103,6 @@ func (self *Node) Start() (err error) {
 	self.timer.Start()
 	go self.syncPeriodically()
 	go self.cleanPeriodically()
-	go self.migratePeriodically()
 	return
 }
 func (self *Node) sync() {
@@ -123,12 +121,6 @@ func (self *Node) sync() {
 		for _, l := range self.syncListeners {
 			l(self, fetched, distributed)
 		}
-	}
-}
-func (self *Node) migratePeriodically() {
-	for self.hasState(started) {
-		self.migrate()
-		time.Sleep(syncInterval)
 	}
 }
 func (self *Node) syncPeriodically() {
@@ -161,34 +153,31 @@ func (self *Node) changePosition(newPos []byte) {
 		}
 	}
 }
-func (self *Node) migrate() {
-	lastAllowedChange := time.Now().Add(-1 * migrateWaitFactor * syncInterval).UnixNano()
-	if lastAllowedChange > common.Max64(atomic.LoadInt64(&self.lastSync), atomic.LoadInt64(&self.lastReroute), atomic.LoadInt64(&self.lastMigrate)) {
-		var succSize int
-		succ := self.node.GetSuccessor()
-		if err := succ.Call("DHash.Owned", 0, &succSize); err != nil {
-			self.node.RemoveNode(succ)
-		} else {
-			mySize := self.Owned()
-			if mySize > migrateHysteresis*migrateHysteresis && mySize > succSize*migrateHysteresis {
-				wantedDelta := (mySize-succSize)/2 - 1
-				if bytes.Compare(self.node.GetPosition(), succ.Pos) < 1 {
-					if wantedPos, _, _, _, existed := self.tree.NextIndex(self.Owned() - wantedDelta); existed {
-						self.changePosition(wantedPos)
-					}
-				} else {
-					if wantedPos, _, _, _, existed := self.tree.NextIndex(self.Owned() - self.tree.SizeBetween(self.node.GetPosition(), nil, true, false) - wantedDelta); existed {
-						self.changePosition(wantedPos)
-					}
+func (self *Node) Migrate() {
+	var succSize int
+	succ := self.node.GetSuccessor()
+	if err := succ.Call("DHash.Owned", 0, &succSize); err != nil {
+		self.node.RemoveNode(succ)
+	} else {
+		mySize := self.Owned()
+		if mySize > migrateHysteresis && mySize > succSize*migrateHysteresis {
+			wantedDelta := (mySize - succSize) / 2
+			if bytes.Compare(self.node.GetPosition(), succ.Pos) < 1 {
+				if wantedPos, _, _, _, existed := self.tree.NextIndex(self.Owned() - wantedDelta); existed {
+					self.changePosition(wantedPos)
 				}
-			} else if succSize > migrateHysteresis*migrateHysteresis && succSize > mySize*migrateHysteresis {
-				wantedDelta := (succSize-mySize)/2 - 1
-				var succPos common.Item
-				if err := succ.Call("DHash.KeyForIndex", wantedDelta, &succPos); err != nil {
-					self.node.RemoveNode(succ)
-				} else if succPos.Exists {
-					self.changePosition(succPos.Key)
+			} else {
+				if wantedPos, _, _, _, existed := self.tree.NextIndex(self.Owned() - self.tree.SizeBetween(self.node.GetPosition(), nil, true, false) - wantedDelta); existed {
+					self.changePosition(wantedPos)
 				}
+			}
+		} else if succSize > migrateHysteresis && succSize > mySize*migrateHysteresis {
+			wantedDelta := (succSize - mySize) / 2
+			var succPos common.Item
+			if err := succ.Call("DHash.KeyForIndex", wantedDelta, &succPos); err != nil {
+				self.node.RemoveNode(succ)
+			} else if succPos.Exists {
+				self.changePosition(succPos.Key)
 			}
 		}
 	}
@@ -280,8 +269,10 @@ func (self *Node) Owned() int {
 	me := self.node.Remote()
 	cmp := bytes.Compare(pred.Pos, me.Pos)
 	if cmp < 0 {
+		fmt.Println("1")
 		return self.tree.SizeBetween(pred.Pos, me.Pos, true, false)
 	} else if cmp > 0 {
+		fmt.Println("2")
 		return self.tree.SizeBetween(pred.Pos, nil, true, false) + self.tree.SizeBetween(nil, me.Pos, true, false)
 	}
 	if pred.Less(me) {

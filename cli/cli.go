@@ -48,6 +48,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("describeAllTrees"):                 describeAllTrees,
 	newActionSpec("first \\S+"):                       first,
 	newActionSpec("last \\S+"):                        last,
+	newActionSpec("migrate \\S+"):                     migrate,
 	newActionSpec("prevIndex \\S+ \\d+"):              prevIndex,
 	newActionSpec("nextIndex \\S+ \\d+"):              nextIndex,
 	newActionSpec("next \\S+"):                        next,
@@ -159,8 +160,8 @@ func subPrev(conn *client.Conn, args []string) {
 }
 
 func describeAll(conn *client.Conn, args []string) {
-	var result common.DHashDescription
 	for ind, r := range conn.Nodes() {
+		var result common.DHashDescription
 		if err := r.Call("DHash.Describe", 0, &result); err != nil {
 			fmt.Printf("%v: %v: %v\n", ind, r, err)
 		} else {
@@ -170,13 +171,25 @@ func describeAll(conn *client.Conn, args []string) {
 }
 
 func describeAllTrees(conn *client.Conn, args []string) {
-	var result string
 	for ind, r := range conn.Nodes() {
+		var result string
 		if err := r.Call("DHash.DescribeTree", 0, &result); err != nil {
 			fmt.Printf("%v: %v: %v\n", ind, r, err)
 		} else {
 			fmt.Println(r)
 			fmt.Println(result)
+		}
+	}
+}
+
+func migrate(conn *client.Conn, args []string) {
+	if bytes, err := hex.DecodeString(args[1]); err != nil {
+		fmt.Println(err)
+	} else {
+		if err := conn.Migrate(bytes); err != nil {
+			fmt.Println(err)
+		} else {
+			describe(conn, args)
 		}
 	}
 }
