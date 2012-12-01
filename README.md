@@ -5,9 +5,6 @@ A Go database
 
 # TODO
 
-* Node migrations
- * Make them converge...
- * Automated tests
 * Persistence
  * Functionality
 	* In radix.Tree or in dhash.DHash?
