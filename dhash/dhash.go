@@ -269,10 +269,8 @@ func (self *Node) Owned() int {
 	me := self.node.Remote()
 	cmp := bytes.Compare(pred.Pos, me.Pos)
 	if cmp < 0 {
-		fmt.Println("1")
 		return self.tree.SizeBetween(pred.Pos, me.Pos, true, false)
 	} else if cmp > 0 {
-		fmt.Println("2")
 		return self.tree.SizeBetween(pred.Pos, nil, true, false) + self.tree.SizeBetween(nil, me.Pos, true, false)
 	}
 	if pred.Less(me) {
