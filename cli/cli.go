@@ -45,6 +45,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("subDel \\S+ \\S+"):                 subDel,
 	newActionSpec("describeAll"):                      describeAll,
 	newActionSpec("describe \\S+"):                    describe,
+	newActionSpec("describeTree \\S+"):                describeTree,
 	newActionSpec("describeAllTrees"):                 describeAllTrees,
 	newActionSpec("first \\S+"):                       first,
 	newActionSpec("last \\S+"):                        last,

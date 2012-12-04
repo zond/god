@@ -20,7 +20,7 @@ type MigrateListener func(dhash *Node, source, destination []byte)
 
 const (
 	syncInterval      = time.Second
-	migrateHysteresis = 2
+	migrateHysteresis = 1.5
 	migrateWaitFactor = 2
 )
 
@@ -156,34 +156,43 @@ func (self *Node) isLeader() bool {
 }
 func (self *Node) migratePeriodically() {
 	for self.hasState(started) {
-		if self.isLeader() {
-			fmt.Printf("checking for migration needs")
-		}
+		self.migrate()
 		time.Sleep(syncInterval)
 	}
 }
 func (self *Node) migrate() {
-	var succSize int
-	succ := self.node.GetSuccessor()
-	if err := succ.Call("DHash.Owned", 0, &succSize); err != nil {
-		self.node.RemoveNode(succ)
-	} else {
-		mySize := self.Owned()
-		if mySize > migrateHysteresis && mySize > succSize {
-			wantedDelta := (mySize - succSize) / 2
-			var existed bool
-			var wantedPos []byte
-			if bytes.Compare(self.node.GetPosition(), succ.Pos) < 1 {
-				if wantedPos, _, _, _, existed = self.tree.NextIndex(self.Owned() - wantedDelta); !existed {
-					return
+	lastAllowedChange := time.Now().Add(-1 * migrateWaitFactor * syncInterval).UnixNano()
+	if lastAllowedChange > common.Max64(atomic.LoadInt64(&self.lastSync), atomic.LoadInt64(&self.lastReroute), atomic.LoadInt64(&self.lastMigrate)) {
+		var succSize int
+		succ := self.node.GetSuccessor()
+		if err := succ.Call("DHash.Owned", 0, &succSize); err != nil {
+			self.node.RemoveNode(succ)
+		} else {
+			mySize := self.Owned()
+			if mySize > 10 && float64(mySize) > float64(succSize)*migrateHysteresis {
+				wantedDelta := (mySize - succSize) / 2
+				var existed bool
+				var wantedPos []byte
+				pred := self.node.GetPredecessor()
+				if bytes.Compare(pred.Pos, self.node.GetPosition()) < 1 {
+					if wantedPos, _, _, _, existed = self.tree.NextIndex(self.tree.SizeBetween(nil, self.node.GetPosition(), true, false) - wantedDelta); !existed {
+						return
+					}
+				} else {
+					ownedAfterNil := self.tree.SizeBetween(nil, succ.Pos, true, false)
+					if ownedAfterNil > wantedDelta {
+						if wantedPos, _, _, _, existed = self.tree.NextIndex(ownedAfterNil - wantedDelta); !existed {
+							return
+						}
+					} else {
+						if wantedPos, _, _, _, existed = self.tree.NextIndex(self.tree.Size() + ownedAfterNil - wantedDelta); !existed {
+							return
+						}
+					}
 				}
-			} else {
-				if wantedPos, _, _, _, existed = self.tree.NextIndex(self.Owned() - self.tree.SizeBetween(self.node.GetPosition(), nil, true, false) - wantedDelta); !existed {
-					return
+				if common.BetweenIE(wantedPos, self.node.GetPredecessor().Pos, self.node.GetPosition()) {
+					self.changePosition(wantedPos)
 				}
-			}
-			if common.BetweenIE(wantedPos, self.node.GetPredecessor().Pos, self.node.GetPosition()) {
-				self.changePosition(wantedPos)
 			}
 		}
 	}
