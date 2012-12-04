@@ -187,9 +187,11 @@ func (self *Node) Ping(ping PingPack) common.Remote {
 			self.RemoveNode(ping.Caller)
 		} else {
 			pred := self.GetPredecessor()
+			me := self.Remote()
 			self.ring.SetNodes(newNodes)
-			self.ring.Add(self.Remote())
+			self.ring.Add(me)
 			self.ring.Add(pred)
+			self.ring.Clean(pred, me)
 		}
 	}
 	return self.Remote()

@@ -42,13 +42,6 @@ func (self *dhashServer) SubGet(data common.Item, result *common.Item) error {
 func (self *dhashServer) Get(data common.Item, result *common.Item) error {
 	return (*Node)(self).Get(data, result)
 }
-func (self *dhashServer) KeyForIndex(i int, result *common.Item) error {
-	return (*Node)(self).KeyForIndex(i, result)
-}
-func (self *dhashServer) Migrate(x int, y *int) error {
-	(*Node)(self).Migrate()
-	return nil
-}
 func (self *dhashServer) Owned(x int, result *int) error {
 	*result = (*Node)(self).Owned()
 	return nil

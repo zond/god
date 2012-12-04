@@ -419,16 +419,6 @@ func (self *Conn) Get(key []byte) (value []byte, existed bool) {
 	}
 	return
 }
-func (self *Conn) Migrate(key []byte) (err error) {
-	_, match, _ := self.ring.Remotes(key)
-	if match == nil {
-		err = fmt.Errorf("No node with position %v foudn", common.HexEncode(key))
-		return
-	}
-	var x int
-	err = match.Call("DHash.Migrate", 0, &x)
-	return
-}
 func (self *Conn) DescribeTree(key []byte) (result string, err error) {
 	_, match, _ := self.ring.Remotes(key)
 	if match == nil {
