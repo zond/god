@@ -186,8 +186,10 @@ func (self *Node) Ping(ping PingPack) common.Remote {
 		if err := ping.Caller.Call("Discord.Nodes", 0, &newNodes); err != nil {
 			self.RemoveNode(ping.Caller)
 		} else {
+			pred := self.GetPredecessor()
 			self.ring.SetNodes(newNodes)
 			self.ring.Add(self.Remote())
+			self.ring.Add(pred)
 		}
 	}
 	return self.Remote()
