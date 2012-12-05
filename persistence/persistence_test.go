@@ -11,13 +11,13 @@ import (
 type testmap struct {
 	l *sync.RWMutex
 	m map[string]string
-	p *Persistence
+	p *Logger
 }
 
 func newTestmap() (rval testmap) {
 	rval.m = make(map[string]string)
 	rval.l = new(sync.RWMutex)
-	rval.p = NewPersistence("test3")
+	rval.p = NewLogger("test3")
 	return
 }
 
@@ -51,7 +51,7 @@ func (self testmap) operator() Operate {
 	}
 }
 func (self testmap) snapshotter() Snapshot {
-	return func(p *Persistence) {
+	return func(p *Logger) {
 		op := Op{Put: true}
 		self.l.RLock()
 		defer self.l.RUnlock()
@@ -71,7 +71,7 @@ func operator(ary *[]Op) Operate {
 
 func TestRecordPlay(t *testing.T) {
 	os.RemoveAll("test1")
-	p := NewPersistence("test1")
+	p := NewLogger("test1")
 	p.Record()
 	op := Op{
 		Key:     []byte("a"),
@@ -116,7 +116,7 @@ func TestSwap(t *testing.T) {
 func BenchmarkRecord(b *testing.B) {
 	b.StopTimer()
 	os.RemoveAll("test2")
-	p := NewPersistence("test2")
+	p := NewLogger("test2")
 	p.Record()
 	op := Op{
 		Key:     []byte("a"),

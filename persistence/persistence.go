@@ -100,9 +100,9 @@ func (self logfiles) Swap(i, j int) {
 
 type Operate func(o Op)
 
-type Snapshot func(p *Persistence)
+type Snapshot func(p *Logger)
 
-type Persistence struct {
+type Logger struct {
 	ops      chan Op
 	stops    chan chan bool
 	dir      string
@@ -113,11 +113,11 @@ type Persistence struct {
 	suffix   string
 }
 
-func NewPersistence(dir string) *Persistence {
+func NewLogger(dir string) *Logger {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		panic(err)
 	}
-	return &Persistence{
+	return &Logger{
 		ops:    make(chan Op),
 		stops:  make(chan chan bool),
 		dir:    dir,
@@ -125,24 +125,24 @@ func NewPersistence(dir string) *Persistence {
 	}
 }
 
-func (self *Persistence) hasState(s int32) bool {
+func (self *Logger) hasState(s int32) bool {
 	return atomic.LoadInt32(&self.state) == s
 }
-func (self *Persistence) changeState(old, neu int32) bool {
+func (self *Logger) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
 
-func (self *Persistence) setSuffix(s string) *Persistence {
+func (self *Logger) setSuffix(s string) *Logger {
 	self.suffix = s
 	return self
 }
 
-func (self *Persistence) Limit(maxSize int64, snapshot Snapshot) *Persistence {
+func (self *Logger) Limit(maxSize int64, snapshot Snapshot) *Logger {
 	self.maxSize, self.snapshot = maxSize, snapshot
 	return self
 }
 
-func (self *Persistence) play(log *logfile, operate Operate) {
+func (self *Logger) play(log *logfile, operate Operate) {
 	log.read()
 	var op Op
 	var err error
@@ -156,7 +156,7 @@ func (self *Persistence) play(log *logfile, operate Operate) {
 	}
 }
 
-func (self *Persistence) latest() (latestSnapshot *logfile, logs logfiles) {
+func (self *Logger) latest() (latestSnapshot *logfile, logs logfiles) {
 	dir, err := os.Open(self.dir)
 	if err != nil {
 		panic(err)
@@ -192,7 +192,7 @@ func (self *Persistence) latest() (latestSnapshot *logfile, logs logfiles) {
 	return
 }
 
-func (self *Persistence) Play(operate Operate) {
+func (self *Logger) Play(operate Operate) {
 	if self.changeState(stopped, playing) {
 		defer self.changeState(playing, stopped)
 		snapshot, logs := self.latest()
@@ -205,7 +205,7 @@ func (self *Persistence) Play(operate Operate) {
 	}
 }
 
-func (self *Persistence) Stop() *Persistence {
+func (self *Logger) Stop() *Logger {
 	if self.hasState(recording) {
 		stop := make(chan bool)
 		self.stops <- stop
@@ -216,7 +216,7 @@ func (self *Persistence) Stop() *Persistence {
 	return self
 }
 
-func (self *Persistence) clearOlderThan(t time.Time) {
+func (self *Logger) clearOlderThan(t time.Time) {
 	dir, err := os.Open(self.dir)
 	if err != nil {
 		panic(err)
@@ -236,9 +236,9 @@ func (self *Persistence) clearOlderThan(t time.Time) {
 	}
 }
 
-func (self *Persistence) snapshotAndDelete(oldrec *logfile, p chan *logfile, snapping *int32) {
+func (self *Logger) snapshotAndDelete(oldrec *logfile, p chan *logfile, snapping *int32) {
 	defer atomic.StoreInt32(snapping, 0)
-	snapshotter := NewPersistence(self.dir).setSuffix(".unfinished")
+	snapshotter := NewLogger(self.dir).setSuffix(".unfinished")
 	newlogfile := <-snapshotter.Record()
 	p <- newlogfile
 	self.snapshot(snapshotter)
@@ -249,7 +249,7 @@ func (self *Persistence) snapshotAndDelete(oldrec *logfile, p chan *logfile, sna
 	self.clearOlderThan(newlogfile.timestamp)
 }
 
-func (self *Persistence) swap(fi *os.FileInfo, err *error, rec *logfile) *logfile {
+func (self *Logger) swap(fi *os.FileInfo, err *error, rec *logfile) *logfile {
 	if atomic.LoadInt32(&self.snapping) == 0 {
 		if *fi, *err = os.Stat(rec.filename); *err != nil {
 			panic(*err)
@@ -267,7 +267,7 @@ func (self *Persistence) swap(fi *os.FileInfo, err *error, rec *logfile) *logfil
 	return rec
 }
 
-func (self *Persistence) Record() (rval chan *logfile) {
+func (self *Logger) Record() (rval chan *logfile) {
 	if !self.changeState(stopped, recording) {
 		panic(fmt.Errorf("%v unable to change state from stopped to recording", self))
 	}
@@ -276,7 +276,7 @@ func (self *Persistence) Record() (rval chan *logfile) {
 	return
 }
 
-func (self *Persistence) record(p chan *logfile) {
+func (self *Logger) record(p chan *logfile) {
 	var err error
 	var op Op
 	var fi os.FileInfo
@@ -316,7 +316,7 @@ func (self *Persistence) record(p chan *logfile) {
 	}
 }
 
-func (self *Persistence) Dump(o Op) {
+func (self *Logger) Dump(o Op) {
 	if !self.hasState(recording) {
 		panic(fmt.Errorf("%v is not recording", self))
 	}
