@@ -95,6 +95,17 @@ func TestSwap(t *testing.T) {
 		tm.put(fmt.Sprint(i), fmt.Sprint(i))
 	}
 	tm.p.Stop()
+	dir, err := os.Open("test3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := dir.Readdirnames(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 2 {
+		t.Errorf("logging should never produce more than 2 files")
+	}
 	tm2 := newTestmap()
 	tm2.playback()
 	if !reflect.DeepEqual(tm.m, tm2.m) {
