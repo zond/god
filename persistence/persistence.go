@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -23,12 +24,10 @@ const (
 )
 
 type Op struct {
-	Key        []byte
-	SubKey     []byte
-	Value      []byte
-	Version    int64
-	SubVersion int64
-	Put        bool
+	Key     []byte
+	SubKey  []byte
+	Value   []byte
+	Version int64
 }
 
 type logfile struct {
@@ -111,17 +110,22 @@ type Logger struct {
 	maxSize  int64
 	snapshot Snapshot
 	suffix   string
+	cond     *sync.Cond
+	lock     *sync.Mutex
 }
 
 func NewLogger(dir string) *Logger {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		panic(err)
 	}
+	lock := new(sync.Mutex)
 	return &Logger{
 		ops:    make(chan Op),
 		stops:  make(chan chan bool),
 		dir:    dir,
 		suffix: ".log",
+		lock:   lock,
+		cond:   sync.NewCond(lock),
 	}
 }
 
@@ -210,6 +214,11 @@ func (self *Logger) Stop() *Logger {
 		stop := make(chan bool)
 		self.stops <- stop
 		<-stop
+		for atomic.LoadInt32(&self.snapping) == 1 {
+			self.lock.Lock()
+			self.cond.Wait()
+			self.lock.Unlock()
+		}
 	} else {
 		panic(fmt.Errorf("%v is not in state recording", self))
 	}
@@ -238,6 +247,7 @@ func (self *Logger) clearOlderThan(t time.Time) {
 
 func (self *Logger) snapshotAndDelete(oldrec *logfile, p chan *logfile, snapping *int32) {
 	defer atomic.StoreInt32(snapping, 0)
+	defer self.cond.Broadcast()
 	snapshotter := NewLogger(self.dir).setSuffix(".unfinished")
 	newlogfile := <-snapshotter.Record()
 	p <- newlogfile
