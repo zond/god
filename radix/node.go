@@ -45,7 +45,7 @@ func (self *node) rehash(key []Nibble) {
 			self.size++
 		}
 	}
-	h := murmur.NewBytes(toBytes(key))
+	h := murmur.NewBytes(ToBytes(key))
 	h.Write(self.valueHash)
 	for _, child := range self.children {
 		if child != nil {
@@ -240,7 +240,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	for i := 0; i < indent; i++ {
 		fmt.Fprint(indentation, " ")
 	}
-	encodedSegment := stringEncode(toBytes(self.segment))
+	encodedSegment := stringEncode(ToBytes(self.segment))
 	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), encodedSegment)
 	if self.valueHash != nil {
 		if subTree, ok := self.value.(*Tree); ok {

@@ -79,9 +79,9 @@ func (self *Sync) potentiallyWithinLimits(key []Nibble) bool {
 	if self.from == nil || self.to == nil {
 		return true
 	}
-	cmpKey := toBytes(key)
-	cmpFrom := toBytes(self.from)
-	cmpTo := toBytes(self.to)
+	cmpKey := ToBytes(key)
+	cmpFrom := ToBytes(self.from)
+	cmpTo := ToBytes(self.to)
 	m := len(cmpKey)
 	if m > len(cmpFrom) {
 		m = len(cmpFrom)
@@ -95,7 +95,7 @@ func (self *Sync) withinLimits(key []Nibble) bool {
 	if self.from == nil || self.to == nil {
 		return true
 	}
-	return common.BetweenIE(toBytes(key), toBytes(self.from), toBytes(self.to))
+	return common.BetweenIE(ToBytes(key), ToBytes(self.from), ToBytes(self.to))
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint.Exists {
