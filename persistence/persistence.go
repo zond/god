@@ -107,6 +107,7 @@ type Persistence struct {
 	stops    chan chan bool
 	dir      string
 	state    int32
+	snapping int32
 	maxSize  int64
 	snapshot Snapshot
 	suffix   string
@@ -235,7 +236,8 @@ func (self *Persistence) clearOlderThan(t time.Time) {
 	}
 }
 
-func (self *Persistence) snapshotAndDelete(oldrec *logfile, p chan *logfile) {
+func (self *Persistence) snapshotAndDelete(oldrec *logfile, p chan *logfile, snapping *int32) {
+	defer atomic.StoreInt32(snapping, 0)
 	snapshotter := NewPersistence(self.dir).setSuffix(".unfinished")
 	newlogfile := <-snapshotter.Record()
 	p <- newlogfile
@@ -248,16 +250,19 @@ func (self *Persistence) snapshotAndDelete(oldrec *logfile, p chan *logfile) {
 }
 
 func (self *Persistence) swap(fi *os.FileInfo, err *error, rec *logfile) *logfile {
-	if *fi, *err = os.Stat(rec.filename); *err != nil {
-		panic(*err)
-	}
-	if (*fi).Size() > self.maxSize {
-		rec.close()
-		started := make(chan *logfile)
-		go self.snapshotAndDelete(rec, started)
-		<-started
-		rec = createLogfile(self.dir, self.suffix)
-		rec.write()
+	if atomic.LoadInt32(&self.snapping) == 0 {
+		if *fi, *err = os.Stat(rec.filename); *err != nil {
+			panic(*err)
+		}
+		if (*fi).Size() > self.maxSize {
+			rec.close()
+			started := make(chan *logfile)
+			atomic.StoreInt32(&self.snapping, 1)
+			go self.snapshotAndDelete(rec, started, &self.snapping)
+			<-started
+			rec = createLogfile(self.dir, self.suffix)
+			rec.write()
+		}
 	}
 	return rec
 }
