@@ -28,6 +28,7 @@ type Op struct {
 	SubKey  []byte
 	Value   []byte
 	Version int64
+	Put     bool
 }
 
 type logfile struct {
