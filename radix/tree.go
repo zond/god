@@ -49,23 +49,23 @@ func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f Tre
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	mincmp, maxcmp := cmps(mininc, maxinc)
-	self.root.reverseEachBetween(nil, rip(min), rip(max), mincmp, maxcmp, f)
+	self.root.reverseEachBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, f)
 }
 func (self *Tree) ReverseIndexOf(key []byte) (index int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.root.indexOf(0, rip(key), false)
+	return self.root.indexOf(0, Rip(key), false)
 }
 func (self *Tree) IndexOf(key []byte) (index int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.root.indexOf(0, rip(key), true)
+	return self.root.indexOf(0, Rip(key), true)
 }
 func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	mincmp, maxcmp := cmps(mininc, maxinc)
-	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, f)
+	self.root.eachBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, f)
 }
 func (self *Tree) ReverseEachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	self.lock.RLock()
@@ -103,7 +103,7 @@ func (self *Tree) SizeBetween(min, max []byte, mininc, maxinc bool) int {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	mincmp, maxcmp := cmps(mininc, maxinc)
-	return self.root.sizeBetween(nil, rip(min), rip(max), mincmp, maxcmp)
+	return self.root.sizeBetween(nil, Rip(min), Rip(max), mincmp, maxcmp)
 }
 func (self *Tree) Size() int {
 	self.lock.RLock()
@@ -132,12 +132,12 @@ func (self *Tree) put(key []Nibble, value Hasher, version int64) (old Hasher, ex
 func (self *Tree) Put(key []byte, value Hasher, version int64) (old Hasher, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	return self.put(rip(key), value, version)
+	return self.put(Rip(key), value, version)
 }
 func (self *Tree) Get(key []byte) (value Hasher, version int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	value, version, existed = self.root.get(rip(key))
+	value, version, existed = self.root.get(Rip(key))
 	return
 }
 func (self *Tree) Prev(key []byte) (prevKey []byte, prevValue Hasher, prevVersion int64, existed bool) {
@@ -192,7 +192,7 @@ func (self *Tree) Index(n int) (key []byte, value Hasher, version int64, existed
 func (self *Tree) Del(key []byte) (old Hasher, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	return self.del(rip(key))
+	return self.del(Rip(key))
 }
 func (self *Tree) del(key []Nibble) (old Hasher, existed bool) {
 	self.root, old, existed = self.root.del(nil, key)
@@ -211,7 +211,7 @@ func (self *Tree) getSubTree(key []Nibble) (subTree *Tree, version int64) {
 func (self *Tree) SubReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		index, existed = subTree.ReverseIndexOf(subKey)
 	}
 	return
@@ -219,7 +219,7 @@ func (self *Tree) SubReverseIndexOf(key, subKey []byte) (index int, existed bool
 func (self *Tree) SubIndexOf(key, subKey []byte) (index int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		index, existed = subTree.IndexOf(subKey)
 	}
 	return
@@ -227,7 +227,7 @@ func (self *Tree) SubIndexOf(key, subKey []byte) (index int, existed bool) {
 func (self *Tree) SubPrevIndex(key []byte, index int) (foundKey []byte, foundValue Hasher, foundVersion int64, foundIndex int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		foundKey, foundValue, foundVersion, foundIndex, existed = subTree.PrevIndex(index)
 	}
 	return
@@ -235,7 +235,7 @@ func (self *Tree) SubPrevIndex(key []byte, index int) (foundKey []byte, foundVal
 func (self *Tree) SubNextIndex(key []byte, index int) (foundKey []byte, foundValue Hasher, foundVersion int64, foundIndex int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		foundKey, foundValue, foundVersion, foundIndex, existed = subTree.NextIndex(index)
 	}
 	return
@@ -243,7 +243,7 @@ func (self *Tree) SubNextIndex(key []byte, index int) (foundKey []byte, foundVal
 func (self *Tree) SubFirst(key []byte) (firstKey []byte, firstValue Hasher, firstVersion int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		firstKey, firstValue, firstVersion, existed = subTree.First()
 	}
 	return
@@ -251,7 +251,7 @@ func (self *Tree) SubFirst(key []byte) (firstKey []byte, firstValue Hasher, firs
 func (self *Tree) SubLast(key []byte) (lastKey []byte, lastValue Hasher, lastVersion int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		lastKey, lastValue, lastVersion, existed = subTree.Last()
 	}
 	return
@@ -259,7 +259,7 @@ func (self *Tree) SubLast(key []byte) (lastKey []byte, lastValue Hasher, lastVer
 func (self *Tree) SubPrev(key, subKey []byte) (prevKey []byte, prevValue Hasher, prevVersion int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		prevKey, prevValue, prevVersion, existed = subTree.Prev(subKey)
 	}
 	return
@@ -267,7 +267,7 @@ func (self *Tree) SubPrev(key, subKey []byte) (prevKey []byte, prevValue Hasher,
 func (self *Tree) SubNext(key, subKey []byte) (nextKey []byte, nextValue Hasher, nextVersion int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		nextKey, nextValue, nextVersion, existed = subTree.Next(subKey)
 	}
 	return
@@ -275,7 +275,7 @@ func (self *Tree) SubNext(key, subKey []byte) (nextKey []byte, nextValue Hasher,
 func (self *Tree) SubSizeBetween(key, min, max []byte, mininc, maxinc bool) (result int) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		result = subTree.SizeBetween(min, max, mininc, maxinc)
 	}
 	return
@@ -283,7 +283,7 @@ func (self *Tree) SubSizeBetween(key, min, max []byte, mininc, maxinc bool) (res
 func (self *Tree) SubGet(key, subKey []byte) (value Hasher, version int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		value, version, existed = subTree.Get(subKey)
 	}
 	return
@@ -291,38 +291,38 @@ func (self *Tree) SubGet(key, subKey []byte) (value Hasher, version int64, exist
 func (self *Tree) SubReverseEachBetween(key, min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		subTree.ReverseEachBetween(min, max, mininc, maxinc, f)
 	}
 }
 func (self *Tree) SubEachBetween(key, min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		subTree.EachBetween(min, max, mininc, maxinc, f)
 	}
 }
 func (self *Tree) SubReverseEachBetweenIndex(key []byte, min, max *int, f TreeIndexIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		subTree.ReverseEachBetweenIndex(min, max, f)
 	}
 }
 func (self *Tree) SubEachBetweenIndex(key []byte, min, max *int, f TreeIndexIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	if subTree, _ := self.getSubTree(rip(key)); subTree != nil {
+	if subTree, _ := self.getSubTree(Rip(key)); subTree != nil {
 		subTree.EachBetweenIndex(min, max, f)
 	}
 }
 func (self *Tree) SubPut(key, subKey []byte, value Hasher, version int64) (old Hasher, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	ripped := rip(key)
+	ripped := Rip(key)
 	subTree, subTreeVersion := self.getSubTree(ripped)
 	if subTree == nil {
-		subTree = newTreeWith(rip(subKey), value, version)
+		subTree = newTreeWith(Rip(subKey), value, version)
 	} else {
 		old, existed = subTree.Put(subKey, value, version)
 	}
@@ -332,7 +332,7 @@ func (self *Tree) SubPut(key, subKey []byte, value Hasher, version int64) (old H
 func (self *Tree) SubDel(key, subKey []byte) (old Hasher, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	ripped := rip(key)
+	ripped := Rip(key)
 	subTree, subTreeVersion := self.getSubTree(ripped)
 	if subTree != nil {
 		old, existed = subTree.Del(key)

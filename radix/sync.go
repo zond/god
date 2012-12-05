@@ -44,7 +44,7 @@ func NewSync(source, destination HashTree) *Sync {
 Inclusive
 */
 func (self *Sync) From(from []byte) *Sync {
-	self.from = rip(from)
+	self.from = Rip(from)
 	return self
 }
 
@@ -52,7 +52,7 @@ func (self *Sync) From(from []byte) *Sync {
 Exclusive
 */
 func (self *Sync) To(to []byte) *Sync {
-	self.to = rip(to)
+	self.to = Rip(to)
 	return self
 }
 func (self *Sync) Destroy() *Sync {
@@ -79,9 +79,9 @@ func (self *Sync) potentiallyWithinLimits(key []Nibble) bool {
 	if self.from == nil || self.to == nil {
 		return true
 	}
-	cmpKey := ToBytes(key)
-	cmpFrom := ToBytes(self.from)
-	cmpTo := ToBytes(self.to)
+	cmpKey := toBytes(key)
+	cmpFrom := toBytes(self.from)
+	cmpTo := toBytes(self.to)
 	m := len(cmpKey)
 	if m > len(cmpFrom) {
 		m = len(cmpFrom)
@@ -95,7 +95,7 @@ func (self *Sync) withinLimits(key []Nibble) bool {
 	if self.from == nil || self.to == nil {
 		return true
 	}
-	return common.BetweenIE(ToBytes(key), ToBytes(self.from), ToBytes(self.to))
+	return common.BetweenIE(toBytes(key), toBytes(self.from), toBytes(self.to))
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint.Exists {

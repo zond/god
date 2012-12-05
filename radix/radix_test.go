@@ -105,8 +105,8 @@ func TestRipStitch(t *testing.T) {
 		for j := 0; j < len(b); j++ {
 			b[j] = byte(rand.Int())
 		}
-		if bytes.Compare(stitch(rip(b)), b) != 0 {
-			t.Errorf("%v != %v", stitch(rip(b)), b)
+		if bytes.Compare(Stitch(Rip(b)), b) != 0 {
+			t.Errorf("%v != %v", Stitch(Rip(b)), b)
 		}
 	}
 }
@@ -458,8 +458,8 @@ func TestTreeHash(t *testing.T) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
 	tree1.Each(func(key []byte, value Hasher, version int64) bool {
-		f1 := tree1.Finger(rip(key))
-		f2 := tree2.Finger(rip(key))
+		f1 := tree1.Finger(Rip(key))
+		f2 := tree2.Finger(Rip(key))
 		if f1 == nil || f2 == nil {
 			t.Errorf("should not be nil!")
 		}
@@ -490,8 +490,8 @@ func TestTreeHash(t *testing.T) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
 	tree1.Each(func(key []byte, value Hasher, version int64) bool {
-		f1 := tree1.Finger(rip(key))
-		f2 := tree2.Finger(rip(key))
+		f1 := tree1.Finger(Rip(key))
+		f2 := tree2.Finger(Rip(key))
 		if f1 == nil || f2 == nil {
 			t.Errorf("should not be nil!")
 		}

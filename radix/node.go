@@ -45,7 +45,7 @@ func (self *node) rehash(key []Nibble) {
 			self.size++
 		}
 	}
-	h := murmur.NewBytes(ToBytes(key))
+	h := murmur.NewBytes(toBytes(key))
 	h.Write(self.valueHash)
 	for _, child := range self.children {
 		if child != nil {
@@ -60,7 +60,7 @@ func (self *node) each(prefix []Nibble, f TreeIterator) (cont bool) {
 	if self != nil {
 		prefix = append(prefix, self.segment...)
 		if self.valueHash != nil {
-			cont = f(stitch(prefix), self.value, self.version)
+			cont = f(Stitch(prefix), self.value, self.version)
 		}
 		if cont {
 			for _, child := range self.children {
@@ -85,7 +85,7 @@ func (self *node) reverseEach(prefix []Nibble, f TreeIterator) (cont bool) {
 		}
 		if cont {
 			if self.valueHash != nil {
-				cont = f(stitch(prefix), self.value, self.version)
+				cont = f(Stitch(prefix), self.value, self.version)
 			}
 		}
 	}
@@ -118,7 +118,7 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp i
 	}
 	if cont {
 		if self.valueHash != nil && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-			cont = f(stitch(prefix), self.value, self.version)
+			cont = f(Stitch(prefix), self.value, self.version)
 		}
 	}
 	return
@@ -155,7 +155,7 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp int, f T
 	cont = true
 	prefix = append(prefix, self.segment...)
 	if self.valueHash != nil && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-		cont = f(stitch(prefix), self.value, self.version)
+		cont = f(Stitch(prefix), self.value, self.version)
 	}
 	if cont {
 		for _, child := range self.children {
@@ -185,7 +185,7 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, f 
 	cont = true
 	prefix = append(prefix, self.segment...)
 	if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
-		cont = f(stitch(prefix), self.value, self.version, count)
+		cont = f(Stitch(prefix), self.value, self.version, count)
 		if _, ok := self.value.(*Tree); ok {
 			count += self.size
 		} else {
@@ -225,7 +225,7 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 	}
 	if cont {
 		if self.valueHash != nil && (min == nil || count >= *min) && (max == nil || count <= *max) {
-			cont = f(stitch(prefix), self.value, self.version, count)
+			cont = f(Stitch(prefix), self.value, self.version, count)
 			if _, ok := self.value.(*Tree); ok {
 				count += self.size
 			} else {
@@ -240,7 +240,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 	for i := 0; i < indent; i++ {
 		fmt.Fprint(indentation, " ")
 	}
-	encodedSegment := stringEncode(ToBytes(self.segment))
+	encodedSegment := stringEncode(toBytes(self.segment))
 	fmt.Fprintf(buffer, "%v%v", string(indentation.Bytes()), encodedSegment)
 	if self.valueHash != nil {
 		if subTree, ok := self.value.(*Tree); ok {

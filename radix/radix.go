@@ -20,7 +20,7 @@ type TreeIterator func(key []byte, value Hasher, version int64) (cont bool)
 
 type Nibble byte
 
-func ToBytes(n []Nibble) []byte {
+func toBytes(n []Nibble) []byte {
 	return *((*[]byte)(unsafe.Pointer(&n)))
 }
 
@@ -36,10 +36,10 @@ func hash(h Hasher) []byte {
 }
 
 func nComp(a, b []Nibble) int {
-	return bytes.Compare(ToBytes(a), ToBytes(b))
+	return bytes.Compare(toBytes(a), toBytes(b))
 }
 
-func rip(b []byte) (result []Nibble) {
+func Rip(b []byte) (result []Nibble) {
 	if b == nil {
 		return nil
 	}
@@ -58,7 +58,7 @@ func stringEncode(b []byte) string {
 	}
 	return string(buffer.Bytes())
 }
-func stitch(b []Nibble) (result []byte) {
+func Stitch(b []Nibble) (result []byte) {
 	if b == nil {
 		return nil
 	}
