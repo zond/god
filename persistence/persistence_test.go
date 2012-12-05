@@ -35,7 +35,6 @@ func (self testmap) put(k, v string) {
 	self.p.Dump(Op{
 		Key:   []byte(k),
 		Value: []byte(v),
-		Put:   true,
 	})
 	self.m[k] = v
 }
@@ -43,16 +42,12 @@ func (self testmap) operator() Operate {
 	return func(o Op) {
 		self.l.Lock()
 		defer self.l.Unlock()
-		if o.Put {
-			self.m[string(o.Key)] = string(o.Value)
-		} else {
-			delete(self.m, string(o.Key))
-		}
+		self.m[string(o.Key)] = string(o.Value)
 	}
 }
 func (self testmap) snapshotter() Snapshot {
 	return func(p *Logger) {
-		op := Op{Put: true}
+		op := Op{}
 		self.l.RLock()
 		defer self.l.RUnlock()
 		for k, v := range self.m {
@@ -95,6 +90,7 @@ func TestSwap(t *testing.T) {
 		tm.put(fmt.Sprint(i), fmt.Sprint(i))
 	}
 	tm.p.Stop()
+
 	dir, err := os.Open("test3")
 	if err != nil {
 		t.Fatal(err)
@@ -104,8 +100,9 @@ func TestSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(files) != 2 {
-		t.Errorf("logging should never produce more than 2 files")
+		t.Errorf("%v should only be two files", files)
 	}
+
 	tm2 := newTestmap()
 	tm2.playback()
 	if !reflect.DeepEqual(tm.m, tm2.m) {
