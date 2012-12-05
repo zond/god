@@ -2,9 +2,9 @@ package persistence
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
-	"time"
 )
 
 func operator(ary *[]Op) Operate {
@@ -14,6 +14,7 @@ func operator(ary *[]Op) Operate {
 }
 
 func TestRecordPlay(t *testing.T) {
+	os.RemoveAll("test1")
 	p := NewPersistence("test1")
 	p.Record()
 	op := Op{
@@ -37,8 +38,9 @@ type testmap struct {
 
 func newTestmap() (rval testmap) {
 	rval.m = make(map[string]string)
-	rval.p = NewPersistence(rval.nextFiler()())
-	rval.p.Snapshot(1024, rval.snapshotter(), rval.nextFiler())
+	os.RemoveAll("test3")
+	rval.p = NewPersistence("test3")
+	rval.p.Limit(1024, rval.snapshotter())
 	rval.p.Record()
 	return
 }
@@ -58,22 +60,14 @@ func (self testmap) operator() Operate {
 		}
 	}
 }
-func (self testmap) nextFiler() NextFile {
-	return func() string {
-		return fmt.Sprintf("test.%v", time.Now().UnixNano())
-	}
-}
 func (self testmap) snapshotter() Snapshot {
-	return func() {
-		p := NewPersistence("snapshot")
-		p.Record()
+	return func(p *Persistence) {
 		op := Op{}
 		for k, v := range self.m {
 			op.Key = []byte(k)
 			op.Value = []byte(v)
 			p.Dump(op)
 		}
-		p.Stop()
 	}
 }
 
@@ -86,6 +80,7 @@ func TestSwap(t *testing.T) {
 
 func BenchmarkRecord(b *testing.B) {
 	b.StopTimer()
+	os.RemoveAll("test2")
 	p := NewPersistence("test2")
 	p.Record()
 	op := Op{

@@ -29,3 +29,4 @@ radix/profile/cpuprofile
 radix/profile/profile
 .*.swp
 cli/cli
+persistence/test*

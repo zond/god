@@ -6,8 +6,15 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
 	"sync/atomic"
+	"time"
 )
+
+var logfileReg = regexp.MustCompile("^(\\d+)\\.(snap|log)$")
 
 const (
 	stopped = iota
@@ -24,33 +31,97 @@ type Op struct {
 	Put        bool
 }
 
+type logfile struct {
+	timestamp time.Time
+	filename  string
+	file      *os.File
+	encoder   *gob.Encoder
+	decoder   *gob.Decoder
+}
+
+func createLogfile(dir, suffix string) (rval *logfile) {
+	rval = &logfile{}
+	rval.timestamp = time.Now()
+	rval.filename = filepath.Join(dir, fmt.Sprintf("%v%v", rval.timestamp.UnixNano(), suffix))
+	return
+}
+
+func parseLogfile(file string) (rval *logfile, err error) {
+	match := logfileReg.FindStringSubmatch(filepath.Base(file))
+	if match == nil {
+		err = fmt.Errorf("%v does not match %v", file, logfileReg)
+		return
+	}
+	nanos, err := strconv.ParseInt(match[1], 10, 64)
+	if err != nil {
+		return
+	}
+	rval = &logfile{}
+	rval.timestamp = time.Unix(0, nanos)
+	rval.filename = file
+	return
+}
+
+func (self *logfile) read() *logfile {
+	var err error
+	self.file, err = os.Open(self.filename)
+	if err != nil {
+		panic(err)
+	}
+	self.decoder = gob.NewDecoder(self.file)
+	return self
+}
+
+func (self *logfile) write() *logfile {
+	var err error
+	self.file, err = os.Create(self.filename)
+	if err != nil {
+		panic(err)
+	}
+	self.encoder = gob.NewEncoder(self.file)
+	return self
+}
+
+func (self *logfile) close() {
+	self.file.Close()
+}
+
+type logfiles []*logfile
+
+func (self logfiles) Len() int {
+	return len(self)
+}
+func (self logfiles) Less(i, j int) bool {
+	return self[i].timestamp.Before(self[j].timestamp)
+}
+func (self logfiles) Swap(i, j int) {
+	self[i], self[j] = self[j], self[i]
+}
+
 type Operate func(o Op)
 
-type NextFile func() string
-
-type Snapshot func()
+type Snapshot func(p *Persistence)
 
 type Persistence struct {
 	ops      chan Op
-	stops    chan bool
-	file     string
+	stops    chan chan bool
+	dir      string
 	state    int32
 	maxSize  int64
-	nextFile NextFile
 	snapshot Snapshot
+	suffix   string
 }
 
-func NewPersistence(file string) *Persistence {
-	return &Persistence{
-		ops:   make(chan Op),
-		stops: make(chan bool),
-		file:  file,
+func NewPersistence(dir string) *Persistence {
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		panic(err)
 	}
-}
-
-func (self *Persistence) Snapshot(maxSize int64, snapshot Snapshot, nextFile NextFile) *Persistence {
-	self.maxSize, self.snapshot, self.nextFile = maxSize, snapshot, nextFile
-	return self
+	return &Persistence{
+		ops:    make(chan Op),
+		stops:  make(chan chan bool),
+		dir:    dir,
+		suffix: ".log",
+	}
 }
 
 func (self *Persistence) hasState(s int32) bool {
@@ -60,93 +131,181 @@ func (self *Persistence) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
 
-func (self *Persistence) Record() *Persistence {
-	if self.changeState(stopped, recording) {
-		go self.record()
-	}
+func (self *Persistence) setSuffix(s string) *Persistence {
+	self.suffix = s
 	return self
+}
+
+func (self *Persistence) Limit(maxSize int64, snapshot Snapshot) *Persistence {
+	self.maxSize, self.snapshot = maxSize, snapshot
+	return self
+}
+
+func (self *Persistence) play(log *logfile, operate Operate) {
+	log.read()
+	var op Op
+	var err error
+	err = log.decoder.Decode(&op)
+	for err == nil {
+		operate(op)
+		err = log.decoder.Decode(&op)
+	}
+	if err != io.EOF {
+		panic(err)
+	}
+}
+
+func (self *Persistence) latest() (latestSnapshot *logfile, logs logfiles) {
+	dir, err := os.Open(self.dir)
+	if err != nil {
+		panic(err)
+	}
+	files, err := dir.Readdirnames(0)
+	if err != nil {
+		panic(err)
+	}
+	var match []string
+	for _, file := range files {
+		if match = logfileReg.FindStringSubmatch(file); match != nil && match[2] == "snap" {
+			snapshot, err := parseLogfile(filepath.Join(self.dir, file))
+			if err != nil {
+				panic(err)
+			}
+			if latestSnapshot == nil || latestSnapshot.timestamp.After(snapshot.timestamp) {
+				latestSnapshot = snapshot
+			}
+		}
+	}
+	for _, file := range files {
+		if match = logfileReg.FindStringSubmatch(file); match != nil && match[2] == "log" {
+			logf, err := parseLogfile(filepath.Join(self.dir, file))
+			if err != nil {
+				panic(err)
+			}
+			if latestSnapshot == nil || latestSnapshot.timestamp.Before(logf.timestamp) {
+				logs = append(logs, logf)
+			}
+		}
+	}
+	sort.Sort(logs)
+	return
 }
 
 func (self *Persistence) Play(operate Operate) {
 	if self.changeState(stopped, playing) {
 		defer self.changeState(playing, stopped)
-		in, err := os.Open(self.file)
-		if err != nil {
-			panic(err)
+		snapshot, logs := self.latest()
+		if snapshot != nil {
+			self.play(snapshot, operate)
 		}
-		defer in.Close()
-		decoder := gob.NewDecoder(in)
-		var op Op
-		err = decoder.Decode(&op)
-		for err == nil {
-			operate(op)
-			err = decoder.Decode(&op)
-		}
-		if err != io.EOF {
-			panic(err)
+		for _, logf := range logs {
+			self.play(logf, operate)
 		}
 	}
 }
 
 func (self *Persistence) Stop() *Persistence {
-	self.stops <- true
+	if self.hasState(recording) {
+		stop := make(chan bool)
+		self.stops <- stop
+		<-stop
+	} else {
+		panic(fmt.Errorf("%v is not in state recording", self))
+	}
 	return self
 }
 
-func (self *Persistence) snapshotAndDelete(oldfile string) {
-	self.snapshot()
-	if err := os.Remove(oldfile); err != nil {
-		log.Println(err)
+func (self *Persistence) clearOlderThan(t time.Time) {
+	dir, err := os.Open(self.dir)
+	if err != nil {
+		panic(err)
+	}
+	files, err := dir.Readdirnames(0)
+	if err != nil {
+		panic(err)
+	}
+	for _, filename := range files {
+		if logf, err := parseLogfile(filepath.Join(self.dir, filename)); err == nil {
+			if logf.timestamp.Before(t) {
+				if err = os.Remove(filepath.Join(self.dir, filename)); err != nil {
+					log.Printf("failed removing %v: %v", filename, err)
+				}
+			}
+		}
 	}
 }
 
-func (self *Persistence) swap(fi *os.FileInfo, err *error, out *os.File, encoder *gob.Encoder) (*os.File, *gob.Encoder) {
-	if *fi, *err = os.Stat(self.file); *err != nil {
+func (self *Persistence) snapshotAndDelete(oldrec *logfile, p chan *logfile) {
+	snapshotter := NewPersistence(self.dir).setSuffix(".unfinished")
+	newlogfile := <-snapshotter.Record()
+	p <- newlogfile
+	self.snapshot(snapshotter)
+	snapshotter.Stop()
+	if err := os.Rename(newlogfile.filename, filepath.Join(self.dir, fmt.Sprintf("%v%v", newlogfile.timestamp.UnixNano(), ".snap"))); err != nil {
+		panic(err)
+	}
+	self.clearOlderThan(newlogfile.timestamp)
+}
+
+func (self *Persistence) swap(fi *os.FileInfo, err *error, rec *logfile) *logfile {
+	if *fi, *err = os.Stat(rec.filename); *err != nil {
 		panic(*err)
 	}
 	if (*fi).Size() > self.maxSize {
-		out.Close()
-		oldfile := self.file
-		self.file = self.nextFile()
-		if out, *err = os.Create(self.file); *err != nil {
-			panic(*err)
-		}
-		encoder = gob.NewEncoder(out)
-		go self.snapshotAndDelete(oldfile)
+		rec.close()
+		started := make(chan *logfile)
+		go self.snapshotAndDelete(rec, started)
+		<-started
+		rec = createLogfile(self.dir, self.suffix)
+		rec.write()
 	}
-	return out, encoder
+	return rec
 }
 
-func (self *Persistence) record() {
-	var out *os.File
+func (self *Persistence) Record() (rval chan *logfile) {
+	if !self.changeState(stopped, recording) {
+		panic(fmt.Errorf("%v unable to change state from stopped to recording", self))
+	}
+	rval = make(chan *logfile, 1)
+	go self.record(rval)
+	return
+}
+
+func (self *Persistence) record(p chan *logfile) {
 	var err error
 	var op Op
 	var fi os.FileInfo
+	var stop chan bool
 
-	if out, err = os.Create(self.file); err != nil {
-		panic(err)
-	}
-	defer out.Close()
+	rec := createLogfile(self.dir, self.suffix)
+	rec.write()
+	p <- rec
+	defer rec.close()
 
-	encoder := gob.NewEncoder(out)
 	for {
 		if self.maxSize != 0 {
-			out, encoder = self.swap(&fi, &err, out, encoder)
+			rec = self.swap(&fi, &err, rec)
 		}
 
 		select {
 		case op = <-self.ops:
-			if err = encoder.Encode(op); err != nil {
+			if err = rec.encoder.Encode(op); err != nil {
 				panic(err)
 			}
-		case _ = <-self.stops:
-			self.changeState(recording, stopped)
-			break
+		case stop = <-self.stops:
+			if !self.changeState(recording, stopped) {
+				panic(fmt.Errorf("%v unable to change state from recording to stopped", self))
+			}
+			stop <- true
+			return
 		}
 		select {
-		case _ = <-self.stops:
-			self.changeState(recording, stopped)
-			break
+		case stop = <-self.stops:
+			if !self.changeState(recording, stopped) {
+				panic(fmt.Errorf("%v unable to change state from recording to stopped", self))
+			}
+			stop <- true
+			return
 		default:
 		}
 	}
