@@ -1,6 +1,7 @@
 package dhash
 
 import (
+	"../persistence"
 	"../radix"
 	"sync/atomic"
 	"time"
@@ -39,11 +40,25 @@ func (self *hashTreeServer) GetVersion(key []radix.Nibble, result *HashTreeItem)
 func (self *hashTreeServer) PutVersion(data HashTreeItem, changed *bool) error {
 	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
 	*changed = (*Node)(self).tree.PutVersion(data.Key, radix.ByteHasher(data.Value), data.Expected, data.Version)
+	if *changed {
+		(*Node)(self).logger.Dump(persistence.Op{
+			Key:     radix.Stitch(data.Key),
+			Value:   data.Value,
+			Version: data.Version,
+			Put:     true,
+		})
+	}
 	return nil
 }
 func (self *hashTreeServer) DelVersion(data HashTreeItem, changed *bool) error {
 	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
 	*changed = (*Node)(self).tree.DelVersion(data.Key, data.Expected)
+	if *changed {
+		(*Node)(self).logger.Dump(persistence.Op{
+			Key: radix.Stitch(data.Key),
+			Put: false,
+		})
+	}
 	return nil
 }
 func (self *hashTreeServer) SubFinger(data HashTreeItem, result *radix.Print) error {
@@ -62,10 +77,26 @@ func (self *hashTreeServer) SubGetVersion(data HashTreeItem, result *HashTreeIte
 func (self *hashTreeServer) SubPutVersion(data HashTreeItem, changed *bool) error {
 	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
 	*changed = (*Node)(self).tree.SubPutVersion(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Expected, data.SubExpected, data.SubVersion)
+	if *changed {
+		(*Node)(self).logger.Dump(persistence.Op{
+			Key:     radix.Stitch(data.Key),
+			SubKey:  radix.Stitch(data.SubKey),
+			Value:   data.Value,
+			Version: data.Version,
+			Put:     true,
+		})
+	}
 	return nil
 }
 func (self *hashTreeServer) SubDelVersion(data HashTreeItem, changed *bool) error {
 	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
 	*changed = (*Node)(self).tree.SubDelVersion(data.Key, data.SubKey, data.Expected, data.SubExpected)
+	if *changed {
+		(*Node)(self).logger.Dump(persistence.Op{
+			Key:    radix.Stitch(data.Key),
+			SubKey: radix.Stitch(data.SubKey),
+			Put:    false,
+		})
+	}
 	return nil
 }

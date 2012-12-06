@@ -5,11 +5,12 @@ A Go database
 
 # TODO
 
+* Deletes
+ * Make them not included in slices and index calculations
 * Persistence
  * Functionality
-	* In radix.Tree or in dhash.DHash?
-  * Log operations
-	* Make snapshots
+  * Snapshot
+	* Clean deletions
  * Manual tests
  * Automatic tests
 * Web interface

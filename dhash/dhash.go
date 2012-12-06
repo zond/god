@@ -5,6 +5,7 @@ import (
 	"../common"
 	"../discord"
 	"../murmur"
+	"../persistence"
 	"../radix"
 	"../timenet"
 	"bytes"
@@ -42,15 +43,21 @@ type Node struct {
 	node             *discord.Node
 	timer            *timenet.Timer
 	tree             *radix.Tree
+	logger           *persistence.Logger
 }
 
 func NewNode(addr string) (result *Node) {
 	result = &Node{
-		node:  discord.NewNode(addr),
-		lock:  new(sync.RWMutex),
-		state: created,
-		tree:  radix.NewTree(),
+		node:   discord.NewNode(addr),
+		lock:   new(sync.RWMutex),
+		state:  created,
+		tree:   radix.NewTree(),
+		logger: persistence.NewLogger(addr),
 	}
+	result.logger.Play(func(op persistence.Op) {
+		result.execute(op)
+	})
+	<-result.logger.Record()
 	result.AddChangeListener(func(r *common.Ring) {
 		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
 	})
@@ -59,6 +66,21 @@ func NewNode(addr string) (result *Node) {
 	result.node.Export("DHash", (*dhashServer)(result))
 	result.node.Export("HashTree", (*hashTreeServer)(result))
 	return
+}
+func (self *Node) execute(op persistence.Op) {
+	if op.Put {
+		if op.SubKey == nil {
+			self.tree.Put(op.Key, radix.ByteHasher(op.Value), op.Version)
+		} else {
+			self.tree.SubPut(op.Key, op.SubKey, radix.ByteHasher(op.Value), op.Version)
+		}
+	} else {
+		if op.SubKey == nil {
+			self.tree.Del(op.Key)
+		} else {
+			self.tree.SubDel(op.Key, op.SubKey)
+		}
+	}
 }
 func (self *Node) AddCleanListener(l CleanListener) {
 	self.lock.Lock()
@@ -512,6 +534,13 @@ func (self *Node) subPut(data common.Item) error {
 			go self.forwardOperation(data, "DHash.SlaveSubPut")
 		}
 	}
+	self.logger.Dump(persistence.Op{
+		Key:     data.Key,
+		SubKey:  data.SubKey,
+		Value:   data.Value,
+		Version: data.Timestamp,
+		Put:     true,
+	})
 	self.tree.SubPut(data.Key, data.SubKey, radix.ByteHasher(data.Value), data.Timestamp)
 	return nil
 }
@@ -523,6 +552,12 @@ func (self *Node) put(data common.Item) error {
 			go self.forwardOperation(data, "DHash.SlavePut")
 		}
 	}
+	self.logger.Dump(persistence.Op{
+		Key:     data.Key,
+		Value:   data.Value,
+		Version: data.Timestamp,
+		Put:     true,
+	})
 	self.tree.Put(data.Key, radix.ByteHasher(data.Value), data.Timestamp)
 	return nil
 }

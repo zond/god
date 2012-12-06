@@ -149,12 +149,14 @@ func (self *Logger) Limit(maxSize int64, snapshot Snapshot) *Logger {
 
 func (self *Logger) play(log *logfile, operate Operate) {
 	log.read()
-	var op Op
 	var err error
-	err = log.decoder.Decode(&op)
-	for err == nil {
-		operate(op)
+	for {
+		var op Op
 		err = log.decoder.Decode(&op)
+		if err != nil {
+			break
+		}
+		operate(op)
 	}
 	if err != io.EOF {
 		panic(err)

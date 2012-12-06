@@ -30,3 +30,4 @@ radix/profile/profile
 .*.swp
 cli/cli
 persistence/test*
+127.0.0.1:*
