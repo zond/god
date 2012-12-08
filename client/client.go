@@ -94,23 +94,24 @@ func (self *Conn) Reconnect() {
 		node = self.ring.Random()
 	}
 }
-func (self *Conn) SubDel(key, subKey []byte) {
-	self.SubPut(key, subKey, nil)
-}
-func (self *Conn) SSubDel(key, subKey []byte) {
-	self.SSubPut(key, subKey, nil)
-}
-func (self *Conn) SDel(key []byte) {
-	self.SPut(key, nil)
-}
-func (self *Conn) Del(key []byte) {
-	self.Put(key, nil)
-}
 func (self *Conn) SSubPut(key, subKey, value []byte) {
 	self.subPut(key, subKey, value, true)
 }
 func (self *Conn) SubPut(key, subKey, value []byte) {
 	self.subPut(key, subKey, value, false)
+}
+func (self *Conn) subDel(key, subKey []byte, sync bool) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+		Sync:   sync,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	var x int
+	if err := successor.Call("DHash.SubDel", data, &x); err != nil {
+		self.removeNode(*successor)
+		self.subDel(key, subKey, sync)
+	}
 }
 func (self *Conn) subPut(key, subKey, value []byte, sync bool) {
 	data := common.Item{
@@ -123,7 +124,19 @@ func (self *Conn) subPut(key, subKey, value []byte, sync bool) {
 	var x int
 	if err := successor.Call("DHash.SubPut", data, &x); err != nil {
 		self.removeNode(*successor)
-		self.SubPut(key, subKey, value)
+		self.subPut(key, subKey, value, sync)
+	}
+}
+func (self *Conn) del(key []byte, sync bool) {
+	data := common.Item{
+		Key:  key,
+		Sync: sync,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	var x int
+	if err := successor.Call("DHash.Del", data, &x); err != nil {
+		self.removeNode(*successor)
+		self.del(key, sync)
 	}
 }
 func (self *Conn) put(key, value []byte, sync bool) {
@@ -136,7 +149,7 @@ func (self *Conn) put(key, value []byte, sync bool) {
 	var x int
 	if err := successor.Call("DHash.Put", data, &x); err != nil {
 		self.removeNode(*successor)
-		self.Put(key, value)
+		self.put(key, value, sync)
 	}
 }
 func (self *Conn) SPut(key, value []byte) {
@@ -144,6 +157,18 @@ func (self *Conn) SPut(key, value []byte) {
 }
 func (self *Conn) Put(key, value []byte) {
 	self.put(key, value, false)
+}
+func (self *Conn) SubDel(key, subKey []byte) {
+	self.subDel(key, subKey, false)
+}
+func (self *Conn) SSubDel(key, subKey []byte) {
+	self.subDel(key, subKey, true)
+}
+func (self *Conn) SDel(key []byte) {
+	self.del(key, true)
+}
+func (self *Conn) Del(key []byte) {
+	self.del(key, false)
 }
 func (self *Conn) ReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	data := common.Item{
