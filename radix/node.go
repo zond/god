@@ -481,7 +481,7 @@ func (self *node) del(prefix, segment []Nibble, use int) (result *node, oldBytes
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) insert(prefix []Nibble, n *node, use int) (result *node, oldBytes []byte, oldTree *Tree, version int64, existed int) {
+func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node, oldBytes []byte, oldTree *Tree, version int64, existed int) {
 	if self == nil {
 		n.rehash(append(prefix, n.segment...))
 		result = n
@@ -510,6 +510,12 @@ func (self *node) insert(prefix []Nibble, n *node, use int) (result *node, oldBy
 					self.use |= TreeValue
 				}
 			}
+			if clear&ByteValue != 0 {
+				self.use &^= ByteValue
+			}
+			if clear&TreeValue != 0 {
+				self.use &^= ByteValue
+			}
 			self.empty, self.version = n.empty, n.version
 			self.rehash(append(prefix, self.segment...))
 			return
@@ -526,7 +532,7 @@ func (self *node) insert(prefix []Nibble, n *node, use int) (result *node, oldBy
 			// k is pre-calculated here because n.segment may change when n is inserted
 			k := n.segment[0]
 			prefix = append(prefix, self.segment...)
-			self.children[k], oldBytes, oldTree, version, existed = self.children[k].insert(prefix, n, use)
+			self.children[k], oldBytes, oldTree, version, existed = self.children[k].insert(prefix, n, use, clear)
 			self.rehash(prefix)
 			result = self
 			return

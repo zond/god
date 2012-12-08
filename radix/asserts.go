@@ -35,7 +35,7 @@ func assertOldPut(t *testing.T, tree *Tree, k, v, old string) {
 
 func assertDelSuccess(t *testing.T, tree *Tree, k, old string) {
 	assertExistance(t, tree, k, old)
-	if value, existed := tree.Del([]byte(k)); !existed || string(value) != old {
+	if value, existed := tree.Del([]byte(k), 0); !existed || string(value) != old {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), common.HexEncode([]byte(k)), old, value, existed)
 	}
 	assertNonExistance(t, tree, k)
@@ -43,7 +43,7 @@ func assertDelSuccess(t *testing.T, tree *Tree, k, old string) {
 
 func assertDelFailure(t *testing.T, tree *Tree, k string) {
 	assertNonExistance(t, tree, k)
-	if value, existed := tree.Del([]byte(k)); existed || value != nil {
+	if value, existed := tree.Del([]byte(k), 0); existed || value != nil {
 		t.Errorf("%v should not contain %v, got %v, %v", tree.Describe(), Rip([]byte(k)), value, existed)
 	}
 	assertNonExistance(t, tree, k)
