@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	ByteValue = 1 << iota
-	TreeValue
+	byteValue = 1 << iota
+	treeValue
 )
 
 type nodeIndexIterator func(key []byte, byteValue []byte, treeValue *Tree, use int, version int64, index int) (cont bool)
@@ -54,10 +54,10 @@ func (self *node) setSegment(part []Nibble) {
 func (self *node) rehash(key []Nibble) {
 	self.treeSize = 0
 	self.byteSize = 0
-	if self.use&TreeValue != 0 {
+	if self.use&treeValue != 0 {
 		self.treeSize = self.treeValue.Size()
 	}
-	if self.use&ByteValue != 0 {
+	if self.use&byteValue != 0 {
 		self.byteSize = 1
 	}
 	h := murmur.NewBytes(toBytes(key))
@@ -173,10 +173,10 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, 
 func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int) (result int) {
 	prefix = append(prefix, self.segment...)
 	if (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-		if use&ByteValue != 0 {
+		if use&byteValue != 0 {
 			result += self.byteSize
 		}
-		if use&TreeValue != 0 {
+		if use&treeValue != 0 {
 			result += self.treeSize
 		}
 	}
@@ -204,10 +204,10 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, us
 	prefix = append(prefix, self.segment...)
 	if self.use&use != 0 && (min == nil || count >= *min) && (max == nil || count <= *max) {
 		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version, count)
-		if use&ByteValue != 0 {
+		if use&byteValue != 0 {
 			count += self.byteSize
 		}
-		if use&TreeValue != 0 {
+		if use&treeValue != 0 {
 			count += self.treeSize
 		}
 	}
@@ -216,10 +216,10 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, us
 		for _, child := range self.children {
 			if child != nil {
 				relevantChildSize = 0
-				if use&ByteValue != 0 {
+				if use&byteValue != 0 {
 					relevantChildSize += child.byteSize
 				}
-				if use&TreeValue != 0 {
+				if use&treeValue != 0 {
 					relevantChildSize += child.treeSize
 				}
 				if (min == nil || relevantChildSize+count > *min) && (max == nil || count <= *max) {
@@ -243,10 +243,10 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 		child = self.children[i]
 		if child != nil {
 			relevantChildSize = 0
-			if use&ByteValue != 0 {
+			if use&byteValue != 0 {
 				relevantChildSize += child.byteSize
 			}
-			if use&TreeValue != 0 {
+			if use&treeValue != 0 {
 				relevantChildSize += child.treeSize
 			}
 			if (min == nil || relevantChildSize+count > *min) && (max == nil || count <= *max) {
@@ -261,10 +261,10 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 	if cont {
 		if self.use&use != 0 && (min == nil || count >= *min) && (max == nil || count <= *max) {
 			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version, count)
-			if use&ByteValue != 0 {
+			if use&byteValue != 0 {
 				count += self.byteSize
 			}
-			if use&TreeValue != 0 {
+			if use&treeValue != 0 {
 				count += self.treeSize
 			}
 		}
@@ -326,10 +326,10 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
 		} else if beyond_segment {
 			return
 		} else if beyond_self {
-			if use&ByteValue&self.use != 0 {
+			if use&byteValue&self.use != 0 {
 				count++
 			}
-			if use&TreeValue&self.use != 0 {
+			if use&treeValue&self.use != 0 {
 				count += self.treeSize
 			}
 			start, step, stop := 0, 1, len(self.children)
@@ -341,10 +341,10 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
 				child = self.children[j]
 				if child != nil {
 					if (up && j < int(segment[i])) || (!up && j > int(segment[i])) {
-						if use&ByteValue != 0 {
+						if use&byteValue != 0 {
 							count += child.byteSize
 						}
-						if use&TreeValue != 0 {
+						if use&treeValue != 0 {
 							count += child.treeSize
 						}
 					} else {
@@ -368,10 +368,10 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
 				} else {
 					for _, child := range self.children {
 						if child != nil {
-							if use&ByteValue != 0 {
+							if use&byteValue != 0 {
 								count += child.byteSize
 							}
-							if use&TreeValue != 0 {
+							if use&treeValue != 0 {
 								count += child.treeSize
 							}
 						}
@@ -418,15 +418,15 @@ func (self *node) del(prefix, segment []Nibble, use int) (result *node, oldBytes
 		beyond_self = i >= len(self.segment)
 		if beyond_segment && beyond_self {
 			if self.use&^use != 0 {
-				if self.use&use&ByteValue != 0 {
+				if self.use&use&byteValue != 0 {
 					oldBytes = self.byteValue
-					existed |= ByteValue
-					self.byteValue, self.byteHash, self.use = nil, murmur.HashBytes(nil), self.use&^ByteValue
+					existed |= byteValue
+					self.byteValue, self.byteHash, self.use = nil, murmur.HashBytes(nil), self.use&^byteValue
 				}
-				if self.use&use&TreeValue != 0 {
+				if self.use&use&treeValue != 0 {
 					oldTree = self.treeValue
-					existed |= TreeValue
-					self.treeValue, self.use = nil, self.use&^TreeValue
+					existed |= treeValue
+					self.treeValue, self.use = nil, self.use&^treeValue
 				}
 				result = self
 				self.rehash(append(prefix, segment...))
@@ -494,27 +494,27 @@ func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node
 		beyond_self = i >= len(self.segment)
 		if beyond_n && beyond_self {
 			result, oldBytes, oldTree, version, existed = self, self.byteValue, self.treeValue, self.version, self.use
-			if use&ByteValue != 0 {
+			if use&byteValue != 0 {
 				self.byteValue, self.byteHash = n.byteValue, n.byteHash
-				if n.use&ByteValue == 0 {
-					self.use &^= ByteValue
+				if n.use&byteValue == 0 {
+					self.use &^= byteValue
 				} else {
-					self.use |= ByteValue
+					self.use |= byteValue
 				}
 			}
-			if use&TreeValue != 0 {
+			if use&treeValue != 0 {
 				self.treeValue = n.treeValue
-				if n.use&TreeValue == 0 {
-					self.use &^= TreeValue
+				if n.use&treeValue == 0 {
+					self.use &^= treeValue
 				} else {
-					self.use |= TreeValue
+					self.use |= treeValue
 				}
 			}
-			if clear&ByteValue != 0 {
-				self.use &^= ByteValue
+			if clear&byteValue != 0 {
+				self.use &^= byteValue
 			}
-			if clear&TreeValue != 0 {
-				self.use &^= ByteValue
+			if clear&treeValue != 0 {
+				self.use &^= byteValue
 			}
 			self.empty, self.version = n.empty, n.version
 			self.rehash(append(prefix, self.segment...))

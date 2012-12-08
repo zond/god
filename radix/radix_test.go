@@ -958,7 +958,6 @@ func TestTreeBasicOps(t *testing.T) {
 	assertSize(t, tree, 2)
 	assertDelFailure(t, tree, "guanabana")
 	assertSize(t, tree, 2)
-	fmt.Println(tree.Describe())
 }
 
 func benchTreeSync(b *testing.B, size, delta int) {
