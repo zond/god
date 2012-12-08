@@ -16,16 +16,16 @@ func (self remoteHashTree) Finger(key []radix.Nibble) (result *radix.Print) {
 	common.Remote(self).Call("HashTree.Finger", key, result)
 	return
 }
-func (self remoteHashTree) GetVersion(key []radix.Nibble) (value radix.Hasher, version int64, existed bool) {
+func (self remoteHashTree) GetVersion(key []radix.Nibble) (value []byte, version int64, existed bool) {
 	result := HashTreeItem{}
 	common.Remote(self).Call("HashTree.GetVersion", key, &result)
-	value, version, existed = radix.ByteHasher(result.Value), result.Version, result.Exists
+	value, version, existed = result.Value, result.Version, result.Exists
 	return
 }
-func (self remoteHashTree) PutVersion(key []radix.Nibble, value radix.Hasher, expected, version int64) (changed bool) {
+func (self remoteHashTree) PutVersion(key []radix.Nibble, value []byte, expected, version int64) (changed bool) {
 	data := HashTreeItem{
 		Key:      key,
-		Value:    []byte(value.(radix.ByteHasher)),
+		Value:    value,
 		Expected: expected,
 		Version:  version,
 	}
@@ -50,21 +50,21 @@ func (self remoteHashTree) SubFinger(key, subKey []radix.Nibble, expected int64)
 	common.Remote(self).Call("HashTree.SubFinger", data, result)
 	return
 }
-func (self remoteHashTree) SubGetVersion(key, subKey []radix.Nibble, expected int64) (value radix.Hasher, version int64, existed bool) {
+func (self remoteHashTree) SubGetVersion(key, subKey []radix.Nibble, expected int64) (value []byte, version int64, existed bool) {
 	data := HashTreeItem{
 		Key:      key,
 		SubKey:   subKey,
 		Expected: expected,
 	}
 	common.Remote(self).Call("HashTree.SubGetVersion", data, &data)
-	value, version, existed = radix.ByteHasher(data.Value), data.SubVersion, data.Exists
+	value, version, existed = data.Value, data.SubVersion, data.Exists
 	return
 }
-func (self remoteHashTree) SubPutVersion(key, subKey []radix.Nibble, value radix.Hasher, expected, subExpected, subVersion int64) (changed bool) {
+func (self remoteHashTree) SubPutVersion(key, subKey []radix.Nibble, value []byte, expected, subExpected, subVersion int64) (changed bool) {
 	data := HashTreeItem{
 		Key:         key,
 		SubKey:      subKey,
-		Value:       []byte(value.(radix.ByteHasher)),
+		Value:       value,
 		Expected:    expected,
 		SubExpected: subExpected,
 		SubVersion:  subVersion,

@@ -6,14 +6,26 @@ import (
 
 type dhashServer Node
 
+func (self *dhashServer) SlaveSubDel(data common.Item, x *int) error {
+	return (*Node)(self).subDel(data)
+}
+func (self *dhashServer) SubDel(data common.Item, x *int) error {
+	return (*Node)(self).SubDel(data)
+}
 func (self *dhashServer) SlaveSubPut(data common.Item, x *int) error {
 	return (*Node)(self).subPut(data)
 }
 func (self *dhashServer) SubPut(data common.Item, x *int) error {
 	return (*Node)(self).SubPut(data)
 }
+func (self *dhashServer) SlaveDel(data common.Item, x *int) error {
+	return (*Node)(self).del(data)
+}
 func (self *dhashServer) SlavePut(data common.Item, x *int) error {
 	return (*Node)(self).put(data)
+}
+func (self *dhashServer) Del(data common.Item, x *int) error {
+	return (*Node)(self).Del(data)
 }
 func (self *dhashServer) Put(data common.Item, x *int) error {
 	return (*Node)(self).Put(data)
