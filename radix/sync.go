@@ -13,13 +13,13 @@ type HashTree interface {
 	Hash() []byte
 
 	Finger(key []Nibble) *Print
-	GetVersion(key []Nibble) (value Hasher, version int64, existed bool)
-	PutVersion(key []Nibble, value Hasher, expected, version int64) bool
+	GetVersion(key []Nibble) (byteValue []byte, version int64, existed bool)
+	PutVersion(key []Nibble, byteValue []byte, expected, version int64) bool
 	DelVersion(key []Nibble, expected int64) bool
 
 	SubFinger(key, subKey []Nibble, expected int64) (result *Print)
-	SubGetVersion(key, subKey []Nibble, expected int64) (value Hasher, version int64, existed bool)
-	SubPutVersion(key, subKey []Nibble, value Hasher, expected, subExpected, subVersion int64) bool
+	SubGetVersion(key, subKey []Nibble, expected int64) (byteValue []byte, version int64, existed bool)
+	SubPutVersion(key, subKey []Nibble, byteValue []byte, expected, subExpected, subVersion int64) bool
 	SubDelVersion(key, subKey []Nibble, expected, subExpected int64) bool
 }
 
@@ -99,13 +99,13 @@ func (self *Sync) withinLimits(key []Nibble) bool {
 }
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint.Exists {
-		if sourcePrint.ValueHash != nil && self.withinLimits(sourcePrint.Key) {
+		if !sourcePrint.Empty && self.withinLimits(sourcePrint.Key) {
 			// If there is a node at source	and it is within our limits	
 			var subPut int
 			if !sourcePrint.coveredBy(destinationPrint) {
 				// If the key at destination is missing or wrong				
 				if sourcePrint.SubTree {
-					subPut += NewSync(&subTreeWrapper{
+					subSync := NewSync(&subTreeWrapper{
 						self.source,
 						sourcePrint.Key,
 						sourcePrint.version(),
@@ -113,23 +113,25 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 						self.destination,
 						sourcePrint.Key,
 						destinationPrint.version(),
-					}).Run().PutCount()
+					})
+					if self.destructive {
+						subSync.Destroy()
+					}
+					subPut += subSync.Run().PutCount()
 					self.putCount += subPut
-				} else {
-					if value, version, existed := self.source.GetVersion(sourcePrint.Key); existed && version == sourcePrint.version() {
-						if self.destination.PutVersion(sourcePrint.Key, value, destinationPrint.version(), sourcePrint.version()) {
-							self.putCount++
-						}
+				}
+				if value, version, existed := self.source.GetVersion(sourcePrint.Key); existed && version == sourcePrint.version() {
+					if self.destination.PutVersion(sourcePrint.Key, value, destinationPrint.version(), sourcePrint.version()) {
+						self.putCount++
 					}
 				}
 			}
-			if self.destructive && sourcePrint.ValueHash != nil {
+			if self.destructive && !sourcePrint.Empty {
 				if self.source.DelVersion(sourcePrint.Key, sourcePrint.version()) {
 					if sourcePrint.SubTree {
 						self.delCount += subPut
-					} else {
-						self.delCount++
 					}
+					self.delCount++
 				}
 			}
 		}

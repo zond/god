@@ -1,22 +1,12 @@
 package radix
 
 import (
-	"../murmur"
 	"bytes"
 	"fmt"
 	"unsafe"
 )
 
-var nilHash = murmur.HashBytes(nil)
 var encodeChars = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
-
-type Hasher interface {
-	Hash() []byte
-}
-
-type TreeIndexIterator func(key []byte, value Hasher, version int64, index int) (cont bool)
-
-type TreeIterator func(key []byte, value Hasher, version int64) (cont bool)
 
 type Nibble byte
 
@@ -27,13 +17,6 @@ func toBytes(n []Nibble) []byte {
 const (
 	parts = 2
 )
-
-func hash(h Hasher) []byte {
-	if h == nil {
-		return nilHash
-	}
-	return h.Hash()
-}
 
 func nComp(a, b []Nibble) int {
 	return bytes.Compare(toBytes(a), toBytes(b))
@@ -71,18 +54,6 @@ func Stitch(b []Nibble) (result []byte) {
 	return
 }
 
-type StringHasher string
-
-func (self StringHasher) Hash() []byte {
-	return murmur.HashString(string(self))
-}
-
-type ByteHasher []byte
-
-func (self ByteHasher) Hash() []byte {
-	return murmur.HashBytes([]byte(self))
-}
-
 type SubPrint struct {
 	Key    []Nibble
 	Sum    []byte
@@ -96,27 +67,29 @@ func (self SubPrint) equals(other SubPrint) bool {
 type Print struct {
 	Exists    bool
 	Key       []Nibble
-	ValueHash []byte
+	Empty     bool
 	Version   int64
 	SubTree   bool
 	SubPrints []SubPrint
+	Sum       []byte
 }
 
 func (self *Print) coveredBy(other *Print) bool {
 	if self == nil {
 		return other == nil
 	}
-	return other != nil && (other.Version > self.Version || bytes.Compare(other.ValueHash, self.ValueHash) == 0)
+	return other != nil && (other.Version > self.Version || bytes.Compare(self.Sum, other.Sum) == 0)
 }
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
 }
 func (self *Print) set(n *node) {
 	self.Exists = true
-	self.ValueHash = n.valueHash
+	self.Sum = n.hash
+	self.Empty = n.empty
 	self.Version = n.version
 	self.SubPrints = make([]SubPrint, len(n.children))
-	_, self.SubTree = n.value.(*Tree)
+	self.SubTree = n.treeValue != nil
 	for index, child := range n.children {
 		if child != nil {
 			self.SubPrints[index] = SubPrint{

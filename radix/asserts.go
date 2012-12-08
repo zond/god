@@ -1,6 +1,7 @@
 package radix
 
 import (
+	"../common"
 	"testing"
 )
 
@@ -11,14 +12,14 @@ func assertSize(t *testing.T, tree *Tree, s int) {
 }
 
 func assertExistance(t *testing.T, tree *Tree, k, v string) {
-	if value, _, existed := tree.Get([]byte(k)); !existed || value != StringHasher(v) {
+	if value, _, existed := tree.Get([]byte(k)); !existed || string(value) != v {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), Rip([]byte(k)), v, value, existed)
 	}
 }
 
 func assertNewPut(t *testing.T, tree *Tree, k, v string) {
 	assertNonExistance(t, tree, k)
-	if value, existed := tree.Put([]byte(k), StringHasher(v), 0); existed || value != nil {
+	if value, existed := tree.Put([]byte(k), []byte(v), 0); existed || value != nil {
 		t.Errorf("%v should not contain %v, got %v, %v", tree.Describe(), Rip([]byte(k)), value, existed)
 	}
 	assertExistance(t, tree, k, v)
@@ -26,7 +27,7 @@ func assertNewPut(t *testing.T, tree *Tree, k, v string) {
 
 func assertOldPut(t *testing.T, tree *Tree, k, v, old string) {
 	assertExistance(t, tree, k, old)
-	if value, existed := tree.Put([]byte(k), StringHasher(v), 0); !existed || value != StringHasher(old) {
+	if value, existed := tree.Put([]byte(k), []byte(v), 0); !existed || string(value) != old {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), Rip([]byte(k)), v, value, existed)
 	}
 	assertExistance(t, tree, k, v)
@@ -34,8 +35,8 @@ func assertOldPut(t *testing.T, tree *Tree, k, v, old string) {
 
 func assertDelSuccess(t *testing.T, tree *Tree, k, old string) {
 	assertExistance(t, tree, k, old)
-	if value, existed := tree.Del([]byte(k)); !existed || value != StringHasher(old) {
-		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), Rip([]byte(k)), old, value, existed)
+	if value, existed := tree.Del([]byte(k)); !existed || string(value) != old {
+		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), common.HexEncode([]byte(k)), old, value, existed)
 	}
 	assertNonExistance(t, tree, k)
 }

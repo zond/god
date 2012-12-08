@@ -14,7 +14,7 @@ import (
 
 var benchmarkTestTree *Tree
 var benchmarkTestKeys [][]byte
-var benchmarkTestValues []Hasher
+var benchmarkTestValues [][]byte
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -26,19 +26,19 @@ func TestSyncVersions(t *testing.T) {
 	tree3 := NewTree()
 	n := 10
 	var k []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte{byte(i)}
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 		if i == 2 {
-			tree3.Put(k, StringHasher("other version"), 2)
+			tree3.Put(k, []byte("other version"), 2)
 		} else {
 			tree3.Put(k, v, 0)
 		}
 	}
 	tree2 := NewTree()
-	tree2.Put([]byte{2}, StringHasher("other version"), 2)
+	tree2.Put([]byte{2}, []byte("other version"), 2)
 	s := NewSync(tree1, tree2)
 	s.Run()
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
@@ -53,7 +53,7 @@ func TestSyncVersions(t *testing.T) {
 	if !reflect.DeepEqual(tree3, tree2) {
 		t.Errorf("%v and %v are unequal", tree3, tree2)
 	}
-	tree1.Put([]byte{2}, StringHasher("yet another version"), 3)
+	tree1.Put([]byte{2}, []byte("yet another version"), 3)
 	s.Run()
 	if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should not be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
@@ -78,10 +78,10 @@ func TestSyncLimits(t *testing.T) {
 	fromKey := []byte{byte(from)}
 	toKey := []byte{byte(to)}
 	var k []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte{byte(i)}
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 		if i >= from && i < to {
 			tree3.Put(k, v, 0)
@@ -116,10 +116,10 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 	tree3 := NewTree()
 	n := 10
 	var k, sk []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		if i%2 == 0 {
 			tree1.Put(k, v, 0)
 			tree3.Put(k, v, 0)
@@ -141,7 +141,7 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 		t.Errorf("\n%v and \n%v are unequal", tree1.Describe(), tree2.Describe())
 	}
 	if tree3.Size() != 0 {
-		t.Errorf("should be empty")
+		t.Errorf("%v should be empty", tree3.Describe())
 	}
 	if !reflect.DeepEqual(tree3, NewTree()) {
 		t.Errorf("%v and %v should be equal", tree3.Describe(), NewTree().Describe())
@@ -151,7 +151,7 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 func TestTreeSizeBetween(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 10; i < 21; i++ {
 		for j := i; j < 21; j++ {
@@ -178,24 +178,25 @@ func TestTreeSizeBetween(t *testing.T) {
 		}
 	}
 	for i := 0; i < 10; i++ {
-		tree.SubPut([]byte{50}, []byte{byte(i)}, ByteHasher([]byte{byte(i)}), 0)
+		tree.SubPut([]byte{50}, []byte{byte(i)}, []byte{byte(i)}, 0)
 	}
-	if tree.SizeBetween([]byte{50}, []byte{50}, true, true) != 10 {
-		t.Errorf("wrong size calculated")
+	ary := []byte{50}
+	if s := tree.SizeBetween(ary, ary, true, true); s != 10 {
+		t.Errorf("wrong size calculated for %v\nbetween %v and %v\nwanted %v but got %v", tree.Describe(), common.HexEncode(ary), common.HexEncode(ary), 10, s)
 	}
 }
 
 func TestSubTree(t *testing.T) {
 	tree := NewTree()
 	assertSize(t, tree, 0)
-	tree.Put([]byte("a"), StringHasher("a"), 0)
+	tree.Put([]byte("a"), []byte("a"), 0)
 	assertSize(t, tree, 1)
-	tree.SubPut([]byte("b"), []byte("c"), StringHasher("d"), 1)
+	tree.SubPut([]byte("b"), []byte("c"), []byte("d"), 1)
 	assertSize(t, tree, 2)
-	tree.SubPut([]byte("b"), []byte("d"), StringHasher("e"), 2)
+	tree.SubPut([]byte("b"), []byte("d"), []byte("e"), 2)
 	assertSize(t, tree, 3)
-	if v, ver, e := tree.SubGet([]byte("b"), []byte("d")); v != StringHasher("e") || ver != 2 || !e {
-		t.Errorf("wrong result, wanted %v, %v, %v got %v, %v, %v", StringHasher("e"), 2, true, v, ver, e)
+	if v, ver, e := tree.SubGet([]byte("b"), []byte("d")); bytes.Compare(v, []byte("e")) != 0 || ver != 2 || !e {
+		t.Errorf("wrong result, wanted %v, %v, %v got %v, %v, %v", []byte("e"), 2, true, v, ver, e)
 	}
 }
 
@@ -204,10 +205,10 @@ func TestSyncSubTreeVersions(t *testing.T) {
 	tree3 := NewTree()
 	n := 10
 	var k, sk []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		if i%2 == 0 {
 			tree3.Put(k, v, 0)
 			tree1.Put(k, v, 0)
@@ -216,7 +217,7 @@ func TestSyncSubTreeVersions(t *testing.T) {
 				sk = []byte(fmt.Sprint(j))
 				tree1.SubPut(k, sk, v, 0)
 				if i == 1 && j == 3 {
-					tree3.SubPut(k, sk, StringHasher("another value"), 2)
+					tree3.SubPut(k, sk, []byte("another value"), 2)
 				} else {
 					tree3.SubPut(k, sk, v, 0)
 				}
@@ -224,7 +225,7 @@ func TestSyncSubTreeVersions(t *testing.T) {
 		}
 	}
 	tree2 := NewTree()
-	tree2.SubPut([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), StringHasher("another value"), 2)
+	tree2.SubPut([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), []byte("another value"), 2)
 	s := NewSync(tree1, tree2)
 	s.Run()
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
@@ -239,7 +240,7 @@ func TestSyncSubTreeVersions(t *testing.T) {
 	if !reflect.DeepEqual(tree3, tree2) {
 		t.Errorf("\n%v and \n%v are unequal", tree3.Describe(), tree2.Describe())
 	}
-	tree1.SubPut([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), StringHasher("another value again"), 3)
+	tree1.SubPut([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), []byte("another value again"), 3)
 	s.Run()
 	if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
 		t.Errorf("should not be equal")
@@ -258,10 +259,10 @@ func TestSyncSubTree(t *testing.T) {
 	tree1 := NewTree()
 	n := 10
 	var k, sk []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		if i%2 == 0 {
 			tree1.Put(k, v, 0)
 		} else {
@@ -287,10 +288,10 @@ func TestSyncDestructive(t *testing.T) {
 	tree3 := NewTree()
 	n := 1000
 	var k []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 		tree3.Put(k, v, 0)
 	}
@@ -317,10 +318,10 @@ func TestSyncDestructiveMatching(t *testing.T) {
 	tree3 := NewTree()
 	n := 1000
 	var k []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 		tree2.Put(k, v, 0)
 		tree3.Put(k, v, 0)
@@ -342,10 +343,10 @@ func TestSyncComplete(t *testing.T) {
 	tree1 := NewTree()
 	n := 1000
 	var k []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 	}
 	tree2 := NewTree()
@@ -363,14 +364,14 @@ func TestSyncRandomLimits(t *testing.T) {
 	tree1 := NewTree()
 	n := 10
 	var k []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 	}
 	var keys [][]byte
-	tree1.Each(func(key []byte, value Hasher, version int64) bool {
+	tree1.Each(func(key []byte, byteValue []byte, version int64) bool {
 		keys = append(keys, key)
 		return true
 	})
@@ -385,9 +386,9 @@ func TestSyncRandomLimits(t *testing.T) {
 				fromKey = keys[fromIndex]
 				toKey = keys[toIndex]
 				tree2 = NewTree()
-				tree1.Each(func(key []byte, value Hasher, version int64) bool {
+				tree1.Each(func(key []byte, byteValue []byte, version int64) bool {
 					if common.BetweenIE(key, fromKey, toKey) {
-						tree2.Put(key, value, 0)
+						tree2.Put(key, byteValue, 0)
 					}
 					return true
 				})
@@ -408,10 +409,10 @@ func TestSyncPartial(t *testing.T) {
 	mod := 2
 	n := 100
 	var k []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 		if i%mod != 0 {
 			tree2.Put(k, v, 0)
@@ -430,13 +431,13 @@ func TestSyncPartial(t *testing.T) {
 func TestTreeHash(t *testing.T) {
 	tree1 := NewTree()
 	var keys [][]byte
-	var vals []StringHasher
+	var vals [][]byte
 	n := 10
 	var k []byte
-	var v StringHasher
+	var v []byte
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(rand.Int63()))
-		v = StringHasher(fmt.Sprint(rand.Int63()))
+		v = []byte(fmt.Sprint(rand.Int63()))
 		keys = append(keys, k)
 		vals = append(vals, v)
 		tree1.Put(k, v, 0)
@@ -457,7 +458,7 @@ func TestTreeHash(t *testing.T) {
 	if !reflect.DeepEqual(tree1.Finger(nil), tree2.Finger(nil)) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
-	tree1.Each(func(key []byte, value Hasher, version int64) bool {
+	tree1.Each(func(key []byte, byteValue []byte, version int64) bool {
 		f1 := tree1.Finger(Rip(key))
 		f2 := tree2.Finger(Rip(key))
 		if f1 == nil || f2 == nil {
@@ -489,7 +490,7 @@ func TestTreeHash(t *testing.T) {
 	if !reflect.DeepEqual(tree1.Finger(nil), tree2.Finger(nil)) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
-	tree1.Each(func(key []byte, value Hasher, version int64) bool {
+	tree1.Each(func(key []byte, byteValue []byte, version int64) bool {
 		f1 := tree1.Finger(Rip(key))
 		f2 := tree2.Finger(Rip(key))
 		if f1 == nil || f2 == nil {
@@ -502,20 +503,20 @@ func TestTreeHash(t *testing.T) {
 	})
 }
 
-func createKVArraysDown(from, to int) (keys [][]byte, values []Hasher) {
+func createKVArraysDown(from, to int) (keys [][]byte, values [][]byte) {
 	for i := to - 1; i >= from; i-- {
 		if i >= from {
 			keys = append(keys, []byte(fmt.Sprint(i)))
-			values = append(values, StringHasher(fmt.Sprint(i)))
+			values = append(values, []byte(fmt.Sprint(i)))
 		}
 	}
 	return
 }
-func createKVArraysUp(from, to int) (keys [][]byte, values []Hasher) {
+func createKVArraysUp(from, to int) (keys [][]byte, values [][]byte) {
 	for i := from; i < to; i++ {
 		if i < to {
 			keys = append(keys, []byte(fmt.Sprint(i)))
-			values = append(values, StringHasher(fmt.Sprint(i)))
+			values = append(values, []byte(fmt.Sprint(i)))
 		}
 	}
 	return
@@ -524,13 +525,13 @@ func createKVArraysUp(from, to int) (keys [][]byte, values []Hasher) {
 func TestTreeReverseEach(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	var foundKeys [][]byte
-	var foundValues []Hasher
-	tree.ReverseEach(func(key []byte, value Hasher, version int64) bool {
+	var foundValues [][]byte
+	tree.ReverseEach(func(key []byte, byteValue []byte, version int64) bool {
 		foundKeys = append(foundKeys, key)
-		foundValues = append(foundValues, value)
+		foundValues = append(foundValues, byteValue)
 		return true
 	})
 	cmpKeys, cmpValues := createKVArraysDown(100, 200)
@@ -543,9 +544,9 @@ func TestTreeReverseEach(t *testing.T) {
 	foundKeys = nil
 	foundValues = nil
 	count := 10
-	tree.ReverseEach(func(key []byte, value Hasher, version int64) bool {
+	tree.ReverseEach(func(key []byte, byteValue []byte, version int64) bool {
 		foundKeys = append(foundKeys, key)
-		foundValues = append(foundValues, value)
+		foundValues = append(foundValues, byteValue)
 		count--
 		return count > 0
 	})
@@ -561,13 +562,13 @@ func TestTreeReverseEach(t *testing.T) {
 func TestTreeEach(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	var foundKeys [][]byte
-	var foundValues []Hasher
-	tree.Each(func(key []byte, value Hasher, version int64) bool {
+	var foundValues [][]byte
+	tree.Each(func(key []byte, byteValue []byte, version int64) bool {
 		foundKeys = append(foundKeys, key)
-		foundValues = append(foundValues, value)
+		foundValues = append(foundValues, byteValue)
 		return true
 	})
 	cmpKeys, cmpValues := createKVArraysUp(100, 200)
@@ -580,9 +581,9 @@ func TestTreeEach(t *testing.T) {
 	foundKeys = nil
 	foundValues = nil
 	count := 10
-	tree.Each(func(key []byte, value Hasher, version int64) bool {
+	tree.Each(func(key []byte, byteValue []byte, version int64) bool {
 		foundKeys = append(foundKeys, key)
-		foundValues = append(foundValues, value)
+		foundValues = append(foundValues, byteValue)
 		count--
 		return count > 0
 	})
@@ -598,16 +599,16 @@ func TestTreeEach(t *testing.T) {
 func TestTreeReverseEachBetween(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	var foundKeys, cmpKeys [][]byte
-	var foundValues, cmpValues []Hasher
+	var foundValues, cmpValues [][]byte
 	for i := 10; i < 21; i++ {
 		for j := i; j < 21; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, value Hasher, version int64) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, byteValue []byte, version int64) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 			cmpKeys, cmpValues = createKVArraysDown(common.Max(11, i), common.Min(j+1, 20))
@@ -616,9 +617,9 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, value Hasher, version int64) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, byteValue []byte, version int64) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 			cmpKeys, cmpValues = createKVArraysDown(common.Max(11, i+1), common.Min(j+1, 20))
@@ -627,9 +628,9 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, value Hasher, version int64) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, byteValue []byte, version int64) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 			cmpKeys, cmpValues = createKVArraysDown(common.Max(11, i), common.Min(j, 20))
@@ -638,9 +639,9 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, value Hasher, version int64) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, byteValue []byte, version int64) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 			cmpKeys, cmpValues = createKVArraysDown(common.Max(11, i+1), common.Min(j, 20))
@@ -654,16 +655,16 @@ func TestTreeReverseEachBetween(t *testing.T) {
 func TestTreeEachBetween(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	var foundKeys, cmpKeys [][]byte
-	var foundValues, cmpValues []Hasher
+	var foundValues, cmpValues [][]byte
 	for i := 10; i < 21; i++ {
 		for j := i; j < 21; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, value Hasher, version int64) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, byteValue []byte, version int64) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 			cmpKeys, cmpValues = createKVArraysUp(common.Max(11, i), common.Min(j+1, 20))
@@ -672,9 +673,9 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, value Hasher, version int64) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, byteValue []byte, version int64) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 			cmpKeys, cmpValues = createKVArraysUp(common.Max(11, i+1), common.Min(j+1, 20))
@@ -683,9 +684,9 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, value Hasher, version int64) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, byteValue []byte, version int64) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 			cmpKeys, cmpValues = createKVArraysUp(common.Max(11, i), common.Min(j, 20))
@@ -694,9 +695,9 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, value Hasher, version int64) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, byteValue []byte, version int64) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 			cmpKeys, cmpValues = createKVArraysUp(common.Max(11, i+1), common.Min(j, 20))
@@ -710,7 +711,7 @@ func TestTreeEachBetween(t *testing.T) {
 func TestTreeReverseIndexOf(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i += 2 {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 100; i < 200; i++ {
 		shouldExist := i%2 == 0
@@ -730,13 +731,13 @@ func TestTreeReverseIndexOf(t *testing.T) {
 func TestTreeIndexOf(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i += 2 {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 100; i < 200; i++ {
 		shouldExist := i%2 == 0
 		wantedIndex := (i - 99) / 2
 		if ind, e := tree.IndexOf([]byte(fmt.Sprint(i))); ind != wantedIndex || e != shouldExist {
-			t.Errorf("%v.IndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), i, ind, e, wantedIndex, shouldExist)
+			t.Errorf("%v.IndexOf(%v) => %v, %v should be %v, %v", tree.Describe(), common.HexEncode([]byte(fmt.Sprint(i))), ind, e, wantedIndex, shouldExist)
 		}
 	}
 	if ind, e := tree.IndexOf([]byte("1991")); ind != 50 || e {
@@ -750,16 +751,16 @@ func TestTreeIndexOf(t *testing.T) {
 func TestTreeReverseEachBetweenIndex(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	var foundKeys, cmpKeys [][]byte
-	var foundValues, cmpValues []Hasher
+	var foundValues, cmpValues [][]byte
 	for i := -1; i < 10; i++ {
 		for j := i; j < 10; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetweenIndex(&i, &j, func(key []byte, value Hasher, version int64, index int) bool {
+			tree.ReverseEachBetweenIndex(&i, &j, func(key []byte, byteValue []byte, version int64, index int) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 
@@ -774,16 +775,16 @@ func TestTreeReverseEachBetweenIndex(t *testing.T) {
 func TestTreeEachBetweenIndex(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	var foundKeys, cmpKeys [][]byte
-	var foundValues, cmpValues []Hasher
+	var foundValues, cmpValues [][]byte
 	for i := -1; i < 10; i++ {
 		for j := i; j < 10; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetweenIndex(&i, &j, func(key []byte, value Hasher, version int64, index int) bool {
+			tree.EachBetweenIndex(&i, &j, func(key []byte, byteValue []byte, version int64, index int) bool {
 				foundKeys = append(foundKeys, key)
-				foundValues = append(foundValues, value)
+				foundValues = append(foundValues, byteValue)
 				return true
 			})
 
@@ -821,24 +822,24 @@ func TestTreeNilKey(t *testing.T) {
 func TestTreeFirstLast(t *testing.T) {
 	tree := NewTree()
 	for i := 10; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
-	if key, value, version, existed := tree.First(); !existed || bytes.Compare(key, []byte(fmt.Sprint(10))) != 0 || version != 0 || value != StringHasher(fmt.Sprint(10)) {
-		t.Errorf("%v.First() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), []byte(fmt.Sprint(10)), StringHasher(fmt.Sprint(10)), 0, true, key, value, version, existed)
+	if key, value, version, existed := tree.First(); !existed || bytes.Compare(key, []byte(fmt.Sprint(10))) != 0 || version != 0 || bytes.Compare(value, []byte(fmt.Sprint(10))) != 0 {
+		t.Errorf("%v.First() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), []byte(fmt.Sprint(10)), []byte(fmt.Sprint(10)), 0, true, key, value, version, existed)
 	}
-	if key, value, version, existed := tree.Last(); !existed || bytes.Compare(key, []byte(fmt.Sprint(19))) != 0 || version != 0 || value != StringHasher(fmt.Sprint(19)) {
-		t.Errorf("%v.Last() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), string([]byte(fmt.Sprint(19))), StringHasher(fmt.Sprint(19)), 0, true, string(key), string(value.(StringHasher)), version, existed)
+	if key, value, version, existed := tree.Last(); !existed || bytes.Compare(key, []byte(fmt.Sprint(19))) != 0 || version != 0 || bytes.Compare(value, []byte(fmt.Sprint(19))) != 0 {
+		t.Errorf("%v.Last() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), string([]byte(fmt.Sprint(19))), []byte(fmt.Sprint(19)), 0, true, string(key), string(value), version, existed)
 	}
 }
 
 func TestTreeIndex(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 0; i < 100; i++ {
-		if key, value, version, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+100))) != 0 || version != 0 || value != StringHasher(fmt.Sprint(i+100)) {
-			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+100)), StringHasher(fmt.Sprint(i+100)), 0, true, key, value, version, existed)
+		if key, value, version, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+100))) != 0 || version != 0 || bytes.Compare(value, []byte(fmt.Sprint(i+100))) != 0 {
+			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+100)), []byte(fmt.Sprint(i+100)), 0, true, key, value, version, existed)
 		}
 	}
 }
@@ -846,11 +847,11 @@ func TestTreeIndex(t *testing.T) {
 func TestTreePrev(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 101; i < 200; i++ {
-		if key, value, _, existed := tree.Prev([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i-1) || value != StringHasher(fmt.Sprint(i-1)) || !existed {
-			t.Errorf("%v, %v, %v should be %v, %v, %v", string(key), value, existed, fmt.Sprint(i-1), StringHasher(fmt.Sprint(i-1)), true)
+		if key, value, _, existed := tree.Prev([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i-1) || bytes.Compare(value, []byte(fmt.Sprint(i-1))) != 0 || !existed {
+			t.Errorf("%v, %v, %v should be %v, %v, %v", string(key), value, existed, fmt.Sprint(i-1), []byte(fmt.Sprint(i-1)), true)
 		}
 	}
 	if key, value, _, existed := tree.Prev([]byte("100")); existed {
@@ -861,11 +862,11 @@ func TestTreePrev(t *testing.T) {
 func TestTreeNext(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), StringHasher(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 100; i < 199; i++ {
-		if key, value, _, existed := tree.Next([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i+1) || value != StringHasher(fmt.Sprint(i+1)) || !existed {
-			t.Errorf("%v, %v, %v should be %v, %v, %v", string(key), value, existed, fmt.Sprint(i+1), StringHasher(fmt.Sprint(i+1)), true)
+		if key, value, _, existed := tree.Next([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i+1) || bytes.Compare(value, []byte(fmt.Sprint(i+1))) != 0 || !existed {
+			t.Errorf("%v, %v, %v should be %v, %v, %v", string(key), value, existed, fmt.Sprint(i+1), []byte(fmt.Sprint(i+1)), true)
 		}
 	}
 	if key, value, _, existed := tree.Next([]byte("199")); existed {
@@ -900,33 +901,33 @@ func TestTreeBasicOps(t *testing.T) {
 	assertSize(t, tree, 6)
 	assertOldPut(t, tree, "guanabana", "city", "man")
 	assertSize(t, tree, 6)
-	m := make(map[string]Hasher)
-	tree.Each(func(key []byte, value Hasher, version int64) bool {
-		m[hex.EncodeToString(key)] = value
+	m := make(map[string][]byte)
+	tree.Each(func(key []byte, byteValue []byte, version int64) bool {
+		m[hex.EncodeToString(key)] = byteValue
 		return true
 	})
-	comp := map[string]Hasher{
-		hex.EncodeToString([]byte("apple")):     StringHasher("fruit"),
-		hex.EncodeToString([]byte("crab")):      StringHasher("animal"),
-		hex.EncodeToString([]byte("crabapple")): StringHasher("fruit"),
-		hex.EncodeToString([]byte("banana")):    StringHasher("fruit"),
-		hex.EncodeToString([]byte("guava")):     StringHasher("fruit"),
-		hex.EncodeToString([]byte("guanabana")): StringHasher("city"),
+	comp := map[string][]byte{
+		hex.EncodeToString([]byte("apple")):     []byte("fruit"),
+		hex.EncodeToString([]byte("crab")):      []byte("animal"),
+		hex.EncodeToString([]byte("crabapple")): []byte("fruit"),
+		hex.EncodeToString([]byte("banana")):    []byte("fruit"),
+		hex.EncodeToString([]byte("guava")):     []byte("fruit"),
+		hex.EncodeToString([]byte("guanabana")): []byte("city"),
 	}
 	if !reflect.DeepEqual(m, comp) {
-		t.Errorf("should be equal!")
+		t.Errorf("%+v and %+v should be equal!", m, comp)
 	}
 	if !reflect.DeepEqual(tree.ToMap(), comp) {
-		t.Errorf("should be equal!")
+		t.Errorf("%v and %v should be equal!", tree.ToMap(), comp)
 	}
-	if old, existed := tree.Put(nil, StringHasher("nil"), 0); old != nil || existed {
+	if old, existed := tree.Put(nil, []byte("nil"), 0); old != nil || existed {
 		t.Error("should not exist yet")
 	}
 	if old, existed := tree.Put([]byte("nil"), nil, 0); old != nil || existed {
 		t.Error("should not exist yet")
 	}
-	if value, _, existed := tree.Get(nil); !existed || value != StringHasher("nil") {
-		t.Errorf("%v should contain %v => %v, got %v, %v", tree, nil, "nil", value, existed)
+	if value, _, existed := tree.Get(nil); !existed || bytes.Compare(value, []byte("nil")) != 0 {
+		t.Errorf("%v should contain %v => %v, got %v, %v", tree.Describe(), nil, "nil", value, existed)
 	}
 	if value, _, existed := tree.Get([]byte("nil")); !existed || value != nil {
 		t.Errorf("%v should contain %v => %v, got %v, %v", tree, "nil", nil, value, existed)
@@ -964,10 +965,10 @@ func benchTreeSync(b *testing.B, size, delta int) {
 	tree1 := NewTree()
 	tree2 := NewTree()
 	var k []byte
-	var v Hasher
+	var v []byte
 	for i := 0; i < size; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
-		v = StringHasher(fmt.Sprint(i))
+		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 		tree2.Put(k, v, 0)
 	}
@@ -1016,19 +1017,19 @@ func benchTree(b *testing.B, n int, put, get bool) {
 	b.StopTimer()
 	for len(benchmarkTestKeys) < n {
 		benchmarkTestKeys = append(benchmarkTestKeys, murmur.HashString(fmt.Sprint(len(benchmarkTestKeys))))
-		benchmarkTestValues = append(benchmarkTestValues, StringHasher(fmt.Sprint(len(benchmarkTestValues))))
+		benchmarkTestValues = append(benchmarkTestValues, []byte(fmt.Sprint(len(benchmarkTestValues))))
 	}
 	for benchmarkTestTree.Size() < n {
 		benchmarkTestTree.Put(benchmarkTestKeys[benchmarkTestTree.Size()], benchmarkTestValues[benchmarkTestTree.Size()], 0)
 	}
 	var keys [][]byte
-	var vals []Hasher
+	var vals [][]byte
 	for i := 0; i < b.N; i++ {
 		keys = append(keys, murmur.HashString(fmt.Sprint(rand.Int63())))
-		vals = append(vals, StringHasher(fmt.Sprint(rand.Int63())))
+		vals = append(vals, []byte(fmt.Sprint(rand.Int63())))
 	}
 	var k []byte
-	var v Hasher
+	var v []byte
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		k = benchmarkTestKeys[i%len(benchmarkTestKeys)]
@@ -1038,7 +1039,7 @@ func benchTree(b *testing.B, n int, put, get bool) {
 		}
 		if get {
 			j, _, existed := benchmarkTestTree.Get(k)
-			if j != v {
+			if bytes.Compare(j, v) != 0 {
 				b.Fatalf("%v should contain %v, but got %v, %v", benchmarkTestTree.Describe(), v, j, existed)
 			}
 		}
