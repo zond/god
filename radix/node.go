@@ -483,6 +483,12 @@ func (self *node) del(prefix, segment []Nibble, use int) (result *node, oldBytes
 }
 func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node, oldBytes []byte, oldTree *Tree, version int64, existed int) {
 	if self == nil {
+		if clear&byteValue != 0 {
+			n.use &^= byteValue
+		}
+		if clear&treeValue != 0 {
+			n.use &^= byteValue
+		}
 		n.rehash(append(prefix, n.segment...))
 		result = n
 		return
@@ -525,6 +531,12 @@ func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node
 			result, oldBytes, oldTree, version, existed = n, nil, nil, 0, 0
 			prefix = append(prefix, self.segment...)
 			self.rehash(prefix)
+			if clear&byteValue != 0 {
+				n.use &^= byteValue
+			}
+			if clear&treeValue != 0 {
+				n.use &^= byteValue
+			}
 			n.rehash(append(prefix, n.segment...))
 			return
 		} else if beyond_self {
@@ -548,6 +560,12 @@ func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node
 
 			prefix = append(prefix, result.segment...)
 
+			if clear&byteValue != 0 {
+				n.use &^= byteValue
+			}
+			if clear&treeValue != 0 {
+				n.use &^= byteValue
+			}
 			n.rehash(append(prefix, n.segment...))
 			self.rehash(append(prefix, self.segment...))
 			result.rehash(prefix)

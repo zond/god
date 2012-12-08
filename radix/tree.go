@@ -385,26 +385,26 @@ func (self *Tree) SubPut(key, subKey []byte, byteValue []byte, version int64) (o
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	ripped := Rip(key)
-	_, subTree, subTreeVersion, ex := self.root.get(ripped)
+	_, subTree, _, ex := self.root.get(ripped)
 	if ex&treeValue == 0 || subTree == nil {
 		subTree = newTreeWith(Rip(subKey), byteValue, version)
 	} else {
 		oldBytes, existed = subTree.Put(subKey, byteValue, version)
 	}
-	self.putVersion(ripped, nil, subTree, treeValue, subTreeVersion, subTreeVersion)
+	self.put(ripped, nil, subTree, treeValue, 0, version)
 	return
 }
 func (self *Tree) SubDel(key, subKey []byte, version int64) (oldBytes []byte, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	ripped := Rip(key)
-	_, subTree, subTreeVersion, ex := self.root.get(ripped)
+	_, subTree, _, ex := self.root.get(ripped)
 	if ex&treeValue != 0 && subTree != nil {
-		oldBytes, existed = subTree.Del(key, version)
+		oldBytes, existed = subTree.Del(subKey, version)
 		if subTree.Size() == 0 {
-			self.put(ripped, nil, nil, treeValue, treeValue, subTreeVersion)
+			self.put(ripped, nil, nil, treeValue, treeValue, version)
 		} else {
-			self.put(ripped, nil, subTree, treeValue, 0, subTreeVersion)
+			self.put(ripped, nil, subTree, treeValue, 0, version)
 		}
 	}
 	return
