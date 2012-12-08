@@ -207,14 +207,14 @@ func describeTree(conn *client.Conn, args []string) {
 }
 
 func get(conn *client.Conn, args []string) {
-	if value, existed := conn.Get([]byte(args[1])); existed && value != nil {
-		fmt.Println(string(value))
+	if value, existed := conn.Get([]byte(args[1])); existed {
+		fmt.Printf("%+v\n", string(value))
 	}
 }
 
 func subGet(conn *client.Conn, args []string) {
-	if value, existed := conn.SubGet([]byte(args[1]), []byte(args[2])); existed && value != nil {
-		fmt.Println(string(value))
+	if value, existed := conn.SubGet([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Printf("%+v\n", string(value))
 	}
 }
 
