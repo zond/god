@@ -474,6 +474,9 @@ func (self *Node) forwardOperation(data common.Item, operation string) {
 		err = successor.Call(operation, data, &x)
 	}
 }
+func (self *Node) clear() {
+	self.tree = radix.NewTree()
+}
 func (self *Node) subDel(data common.Item) error {
 	if data.TTL > 1 {
 		if data.Sync {

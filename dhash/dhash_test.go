@@ -2,17 +2,29 @@ package dhash
 
 import (
 	"../common"
-	"../radix"
 	"bytes"
 	"fmt"
 	"runtime"
+	"sort"
 	"testing"
 	"time"
 )
 
+type dhashAry []*Node
+
+func (self dhashAry) Less(i, j int) bool {
+	return self[i].node.Remote().Less(self[j].node.Remote())
+}
+func (self dhashAry) Swap(i, j int) {
+	self[i], self[j] = self[j], self[i]
+}
+func (self dhashAry) Len() int {
+	return len(self)
+}
+
 func countHaving(t *testing.T, dhashes []*Node, key, value []byte) (result int) {
 	for _, d := range dhashes {
-		if foundValue, _, existed := d.tree.Get(key); existed && bytes.Compare([]byte(foundValue.(radix.ByteHasher)), value) == 0 {
+		if foundValue, _, existed := d.tree.Get(key); existed && bytes.Compare(foundValue, value) == 0 {
 			result++
 		}
 	}
@@ -39,16 +51,16 @@ func testStartup(t *testing.T, n, port int) (dhashes []*Node) {
 }
 
 func testSync(t *testing.T, dhashes []*Node) {
-	dhashes[0].tree.Put([]byte{0}, radix.ByteHasher([]byte{0}), 0)
+	dhashes[0].tree.Put([]byte{0}, []byte{0}, 0)
 	common.AssertWithin(t, func() (string, bool) {
-		having := countHaving(t, dhashes, []byte{0}, radix.ByteHasher([]byte{0}))
+		having := countHaving(t, dhashes, []byte{0}, []byte{0})
 		return fmt.Sprint(having), having == common.Redundancy
 	}, time.Second*10)
 }
 
 func testClean(t *testing.T, dhashes []*Node) {
 	for _, n := range dhashes {
-		n.tree.Put([]byte{1}, radix.ByteHasher([]byte{1}), 0)
+		n.tree.Put([]byte{1}, []byte{1}, 0)
 	}
 	common.AssertWithin(t, func() (string, bool) {
 		having := countHaving(t, dhashes, []byte{1}, []byte{1})
@@ -58,7 +70,7 @@ func testClean(t *testing.T, dhashes []*Node) {
 
 func testPut(t *testing.T, dhashes []*Node) {
 	for index, n := range dhashes {
-		n.Put(common.Item{Key: []byte{byte(index + 100)}, Value: radix.ByteHasher([]byte{byte(index + 100)})})
+		n.Put(common.Item{Key: []byte{byte(index + 100)}, Value: []byte{byte(index + 100)}})
 	}
 	common.AssertWithin(t, func() (string, bool) {
 		haves := make(map[int]bool)
@@ -71,6 +83,9 @@ func testPut(t *testing.T, dhashes []*Node) {
 }
 
 func testMigrate(t *testing.T, dhashes []*Node) {
+	for _, d := range dhashes {
+		d.clear()
+	}
 	var item common.Item
 	for i := 0; i < 1000; i++ {
 		item.Key = []byte(fmt.Sprint(i))
@@ -80,17 +95,27 @@ func testMigrate(t *testing.T, dhashes []*Node) {
 	}
 	common.AssertWithin(t, func() (string, bool) {
 		sum := 0
-		for _, d := range dhashes {
+		status := new(bytes.Buffer)
+		ordered := dhashAry(dhashes)
+		sort.Sort(ordered)
+		lastOwned := -1
+		ok := true
+		for _, d := range ordered {
 			sum += d.Owned()
-			fmt.Println(d.GetAddr(), common.HexEncode(d.node.GetPosition()), d.Owned())
+			fmt.Fprintf(status, "%v %v %v\n", d.node.GetAddr(), common.HexEncode(d.node.GetPosition()), d.Owned())
+			if float64(lastOwned)/float64(d.Owned()) > migrateHysteresis {
+				ok = false
+			}
+			if d.Owned() == 0 {
+				ok = false
+			}
 		}
-		fmt.Println("/////", sum)
-		return "", false
+		return string(status.Bytes()), ok && sum == 1000
 	}, time.Second*100)
 }
 
 func testFind(t *testing.T, dhashes []*Node) {
-	dhashes[0].tree.Put([]byte{2}, radix.ByteHasher([]byte{2}), 0)
+	dhashes[0].tree.Put([]byte{2}, []byte{2}, 0)
 	common.AssertWithin(t, func() (string, bool) {
 		having := make(map[bool]bool)
 		for _, n := range dhashes {
@@ -111,9 +136,9 @@ func stopServers(servers []*Node) {
 func TestDHash(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	dhashes := testStartup(t, 6, 10191)
-	//	testSync(t, dhashes)
-	//	testClean(t, dhashes)
-	//	testPut(t, dhashes)
-	//	testFind(t, dhashes)
+	testSync(t, dhashes)
+	testClean(t, dhashes)
+	testPut(t, dhashes)
+	testFind(t, dhashes)
 	testMigrate(t, dhashes)
 }

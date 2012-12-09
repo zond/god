@@ -5,13 +5,6 @@ A Go database
 
 # TODO
 
-* Byte and Tree on the same key
- * Test it
-* Deletes
- * Build tentative delete into Tree
-  * See that tentatively deleted entries are still there, even if never returned
-	* See that they get deleted for REAL on REAL deletes
- * Make them not included in slices and index calculations
 * Persistence
  * Move the logging inside radix.Tree lock
  * Functionality
