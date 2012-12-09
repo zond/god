@@ -5,8 +5,18 @@ A Go database
 
 # TODO
 
+* Client API
+ * Clean it up and refactor if needed
+ * Fill it up with more functions if deemed appropriate
+ * Size
+ * SubSize
+ * SubClear
+ * Inter/Union/Diff
+ * StoreInter/StoreUnion/StoreDiff
+* Sync
+ * Test if sync between newly cleared subtree and old full subtree works as intended (both are clear after)
 * Persistence
- * Move the logging inside radix.Tree lock
+ * Put logging inside radix.Tree lock
  * Functionality
   * Snapshot
 	 * Make Persistence handle the entire snapshotting
