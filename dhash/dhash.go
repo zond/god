@@ -175,17 +175,17 @@ func (self *Node) migrate() {
 				var wantedPos []byte
 				pred := self.node.GetPredecessor()
 				if bytes.Compare(pred.Pos, self.node.GetPosition()) < 1 {
-					if wantedPos, _, _, _, existed = self.tree.NextIndex(self.tree.SizeBetween(nil, self.node.GetPosition(), true, false) - wantedDelta); !existed {
+					if wantedPos, _, _, existed = self.tree.NextIndex(self.tree.SizeBetween(nil, self.node.GetPosition(), true, false) - wantedDelta); !existed {
 						return
 					}
 				} else {
 					ownedAfterNil := self.tree.SizeBetween(nil, succ.Pos, true, false)
 					if ownedAfterNil > wantedDelta {
-						if wantedPos, _, _, _, existed = self.tree.NextIndex(ownedAfterNil - wantedDelta); !existed {
+						if wantedPos, _, _, existed = self.tree.NextIndex(ownedAfterNil - wantedDelta); !existed {
 							return
 						}
 					} else {
-						if wantedPos, _, _, _, existed = self.tree.NextIndex(self.tree.Size() + ownedAfterNil - wantedDelta); !existed {
+						if wantedPos, _, _, existed = self.tree.NextIndex(self.tree.Size() + ownedAfterNil - wantedDelta); !existed {
 							return
 						}
 					}
@@ -198,14 +198,14 @@ func (self *Node) migrate() {
 	}
 }
 func (self *Node) circularNext(key []byte) (nextKey []byte, existed bool) {
-	if nextKey, _, _, existed = self.tree.Next(key); existed {
+	if nextKey, _, existed = self.tree.Next(key); existed {
 		return
 	}
 	nextKey = make([]byte, murmur.Size)
 	if _, _, existed = self.tree.Get(nextKey); existed {
 		return
 	}
-	nextKey, _, _, existed = self.tree.Next(nextKey)
+	nextKey, _, existed = self.tree.Next(nextKey)
 	return
 }
 func (self *Node) owners(key []byte) (owners common.Remotes, isOwner bool) {
@@ -307,7 +307,7 @@ func (self *Node) Find(data common.Item, result *common.Item) error {
 }
 func (self *Node) Prev(data common.Item, result *common.Item) error {
 	*result = data
-	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.Prev(data.Key)
+	result.Key, result.Timestamp, result.Exists = self.tree.Prev(data.Key)
 	return nil
 }
 func (self *Node) RingHash(x int, ringHash *[]byte) error {
@@ -320,7 +320,7 @@ func (self *Node) Count(r common.Range, result *int) error {
 }
 func (self *Node) Next(data common.Item, result *common.Item) error {
 	*result = data
-	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.Next(data.Key)
+	result.Key, result.Timestamp, result.Exists = self.tree.Next(data.Key)
 	return nil
 }
 func (self *Node) Last(data common.Item, result *common.Item) error {
@@ -328,11 +328,11 @@ func (self *Node) Last(data common.Item, result *common.Item) error {
 	return nil
 }
 func (self *Node) PrevIndex(data common.Item, result *common.Item) error {
-	result.Key, result.Value, result.Timestamp, result.Index, result.Exists = self.tree.SubPrevIndex(data.Key, data.Index)
+	result.Key, result.Timestamp, result.Index, result.Exists = self.tree.SubPrevIndex(data.Key, data.Index)
 	return nil
 }
 func (self *Node) NextIndex(data common.Item, result *common.Item) error {
-	result.Key, result.Value, result.Timestamp, result.Index, result.Exists = self.tree.SubNextIndex(data.Key, data.Index)
+	result.Key, result.Timestamp, result.Index, result.Exists = self.tree.SubNextIndex(data.Key, data.Index)
 	return nil
 }
 func (self *Node) First(data common.Item, result *common.Item) error {
@@ -340,11 +340,11 @@ func (self *Node) First(data common.Item, result *common.Item) error {
 	return nil
 }
 func (self *Node) SubPrev(data common.Item, result *common.Item) error {
-	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.SubPrev(data.Key, data.SubKey)
+	result.Key, result.Timestamp, result.Exists = self.tree.SubPrev(data.Key, data.SubKey)
 	return nil
 }
 func (self *Node) SubNext(data common.Item, result *common.Item) error {
-	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.SubNext(data.Key, data.SubKey)
+	result.Key, result.Timestamp, result.Exists = self.tree.SubNext(data.Key, data.SubKey)
 	return nil
 }
 func (self *Node) Get(data common.Item, result *common.Item) error {
