@@ -82,11 +82,11 @@ func (self *Ring) SetNodes(nodes Remotes) {
 }
 func (self *Ring) sendChanges(oldHash []byte) {
 	if bytes.Compare(oldHash, self.hash()) != 0 {
+		self.lock.Unlock()
+		defer self.lock.Lock()
 		clone := NewRingNodes(self.nodes.Clone())
 		for _, listener := range self.changeListeners {
-			self.lock.Unlock()
 			listener(clone)
-			self.lock.Lock()
 		}
 	}
 }
