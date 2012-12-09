@@ -13,9 +13,9 @@ const (
 	treeValue
 )
 
-type nodeIndexIterator func(key []byte, byteValue []byte, treeValue *Tree, use int, version int64, index int) (cont bool)
+type nodeIndexIterator func(key, byteValue []byte, treeValue *Tree, use int, version int64, index int) (cont bool)
 
-type nodeIterator func(key []byte, byteValue []byte, treeValue *Tree, use int, version int64) (cont bool)
+type nodeIterator func(key, byteValue []byte, treeValue *Tree, use int, version int64) (cont bool)
 
 // node is the generic implementation of a combined radix/merkle tree with size for each subtree (both regarding bytes and inner trees) cached.
 // it also contains both byte slices and inner trees in each node.
@@ -172,29 +172,33 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, 
 }
 func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int) (result int) {
 	prefix = append(prefix, self.segment...)
-	if (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
+	m := len(prefix)
+	if m > len(min) {
+		m = len(min)
+	}
+	if m > len(max) {
+		m = len(max)
+	}
+	if (min == nil || nComp(prefix[:m], min[:m]) > 0) && (max == nil || nComp(prefix[:m], max[:m]) < 0) {
 		if use&byteValue != 0 {
 			result += self.byteSize
 		}
 		if use&treeValue != 0 {
 			result += self.treeSize
 		}
+		return
+	}
+	if self.use&use != 0 && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
+		if self.use&use&byteValue != 0 {
+			result++
+		}
+		if self.use&use&treeValue != 0 {
+			result += self.treeValue.Size()
+		}
 	}
 	for _, child := range self.children {
 		if child != nil {
-			childKey := make([]Nibble, len(prefix)+len(child.segment))
-			copy(childKey, prefix)
-			copy(childKey[len(prefix):], child.segment)
-			m := len(childKey)
-			if m > len(min) {
-				m = len(min)
-			}
-			if m > len(max) {
-				m = len(max)
-			}
-			if (min == nil || nComp(childKey[:m], min[:m]) > -1) && (max == nil || nComp(childKey[:m], max[:m]) < 1) {
-				result += child.sizeBetween(prefix, min, max, mincmp, maxcmp, use)
-			}
+			result += child.sizeBetween(prefix, min, max, mincmp, maxcmp, use)
 		}
 	}
 	return
@@ -204,11 +208,11 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, us
 	prefix = append(prefix, self.segment...)
 	if self.use&use != 0 && (min == nil || count >= *min) && (max == nil || count <= *max) {
 		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version, count)
-		if use&byteValue != 0 {
-			count += self.byteSize
+		if self.use&use&byteValue != 0 {
+			count++
 		}
-		if use&treeValue != 0 {
-			count += self.treeSize
+		if self.use&use&treeValue != 0 {
+			count += self.treeValue.Size()
 		}
 	}
 	if cont {
@@ -261,11 +265,11 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 	if cont {
 		if self.use&use != 0 && (min == nil || count >= *min) && (max == nil || count <= *max) {
 			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version, count)
-			if use&byteValue != 0 {
-				count += self.byteSize
+			if self.use&use&byteValue != 0 {
+				count++
 			}
-			if use&treeValue != 0 {
-				count += self.treeSize
+			if self.use&use&treeValue != 0 {
+				count += self.treeValue.Size()
 			}
 		}
 	}
@@ -330,7 +334,7 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
 				count++
 			}
 			if use&treeValue&self.use != 0 {
-				count += self.treeSize
+				count += self.treeValue.Size()
 			}
 			start, step, stop := 0, 1, len(self.children)
 			if !up {

@@ -71,21 +71,23 @@ type Print struct {
 	Version   int64
 	SubTree   bool
 	SubPrints []SubPrint
-	Sum       []byte
+	ByteHash  []byte
+	TreeHash  []byte
 }
 
 func (self *Print) coveredBy(other *Print) bool {
 	if self == nil {
 		return other == nil
 	}
-	return other != nil && (other.Version > self.Version || bytes.Compare(self.Sum, other.Sum) == 0)
+	return other != nil && (other.Version > self.Version || (bytes.Compare(self.ByteHash, other.ByteHash) == 0 && bytes.Compare(self.TreeHash, other.TreeHash) == 0))
 }
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
 }
 func (self *Print) set(n *node) {
 	self.Exists = true
-	self.Sum = n.hash
+	self.ByteHash = n.byteHash
+	self.TreeHash = n.treeValue.Hash()
 	self.Empty = n.empty
 	self.Version = n.version
 	self.SubPrints = make([]SubPrint, len(n.children))

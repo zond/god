@@ -8,7 +8,7 @@ type subTreeWrapper struct {
 
 func (self *subTreeWrapper) Hash() (hash []byte) {
 	if p := self.parentTree.Finger(self.key); p != nil {
-		hash = p.Sum
+		hash = p.TreeHash
 	}
 	return
 }

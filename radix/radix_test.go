@@ -158,22 +158,22 @@ func TestTreeSizeBetween(t *testing.T) {
 			expected := common.Max(0, common.Min(j+1, 20)-common.Max(11, i))
 			val := tree.SizeBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true)
 			if val != expected {
-				t.Errorf("%v.SizeBetween(%v, %v, true, true) should be %v but was %v", tree.Describe(), i, j, expected, val)
+				t.Errorf("%v.SizeBetween(%v, %v, true, true) should be %v but was %v", tree.Describe(), common.HexEncode([]byte(fmt.Sprint(i))), common.HexEncode([]byte(fmt.Sprint(j))), expected, val)
 			}
 			expected = common.Max(0, common.Min(j+1, 20)-common.Max(11, i+1))
 			val = tree.SizeBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true)
 			if val != expected {
-				t.Errorf("%v.SizeBetween(%v, %v, false, true) should be %v but was %v", tree.Describe(), i, j, expected, val)
+				t.Errorf("%v.SizeBetween(%v, %v, false, true) should be %v but was %v", tree.Describe(), common.HexEncode([]byte(fmt.Sprint(i))), common.HexEncode([]byte(fmt.Sprint(j))), expected, val)
 			}
 			expected = common.Max(0, common.Min(j, 20)-common.Max(11, i))
 			val = tree.SizeBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false)
 			if val != expected {
-				t.Errorf("%v.SizeBetween(%v, %v, true, false) should be %v but was %v", tree.Describe(), i, j, expected, val)
+				t.Errorf("%v.SizeBetween(%v, %v, true, false) should be %v but was %v", tree.Describe(), common.HexEncode([]byte(fmt.Sprint(i))), common.HexEncode([]byte(fmt.Sprint(j))), expected, val)
 			}
 			expected = common.Max(0, common.Min(j, 20)-common.Max(11, i+1))
 			val = tree.SizeBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false)
 			if val != expected {
-				t.Errorf("%v.SizeBetween(%v, %v, false, false) should be %v but was %v", tree.Describe(), i, j, expected, val)
+				t.Errorf("%v.SizeBetween(%v, %v, false, false) should be %v but was %v", tree.Describe(), common.HexEncode([]byte(fmt.Sprint(i))), common.HexEncode([]byte(fmt.Sprint(j))), expected, val)
 			}
 		}
 	}
@@ -850,12 +850,12 @@ func TestTreePrev(t *testing.T) {
 		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 101; i < 200; i++ {
-		if key, value, _, existed := tree.Prev([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i-1) || bytes.Compare(value, []byte(fmt.Sprint(i-1))) != 0 || !existed {
-			t.Errorf("%v, %v, %v should be %v, %v, %v", string(key), value, existed, fmt.Sprint(i-1), []byte(fmt.Sprint(i-1)), true)
+		if key, _, existed := tree.Prev([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i-1) || !existed {
+			t.Errorf("%v, %v should be %v, %v", string(key), existed, fmt.Sprint(i-1), true)
 		}
 	}
-	if key, value, _, existed := tree.Prev([]byte("100")); existed {
-		t.Errorf("%v, %v, %v should not exist!", key, value, existed)
+	if key, _, existed := tree.Prev([]byte("100")); existed {
+		t.Errorf("%v, %v should not exist!", key, existed)
 	}
 }
 
@@ -865,12 +865,12 @@ func TestTreeNext(t *testing.T) {
 		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 100; i < 199; i++ {
-		if key, value, _, existed := tree.Next([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i+1) || bytes.Compare(value, []byte(fmt.Sprint(i+1))) != 0 || !existed {
-			t.Errorf("%v, %v, %v should be %v, %v, %v", string(key), value, existed, fmt.Sprint(i+1), []byte(fmt.Sprint(i+1)), true)
+		if key, _, existed := tree.Next([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i+1) || !existed {
+			t.Errorf("%v, %v should be %v, %v", string(key), existed, fmt.Sprint(i+1), true)
 		}
 	}
-	if key, value, _, existed := tree.Next([]byte("199")); existed {
-		t.Errorf("%v, %v, %v should not exist!", key, value, existed)
+	if key, _, existed := tree.Next([]byte("199")); existed {
+		t.Errorf("%v, %v should not exist!", key, existed)
 	}
 }
 
