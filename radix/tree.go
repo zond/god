@@ -5,7 +5,14 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sync"
+	"time"
 )
+
+type NaiveTimer struct{}
+
+func (self NaiveTimer) ContinuousTime() int64 {
+	return time.Now().UnixNano()
+}
 
 type TreeIterator func(key []byte, value []byte, timestamp int64) (cont bool)
 
@@ -42,19 +49,24 @@ func newNodeIndexIterator(f TreeIndexIterator) nodeIndexIterator {
 // Tree defines a more specialized wrapper around the node structure.
 // It contains an RWMutex to make it thread safe, and it defines a simplified and limited access API.
 type Tree struct {
-	lock *sync.RWMutex
-	root *node
+	lock  *sync.RWMutex
+	timer Timer
+	root  *node
 }
 
-func NewTree() (result *Tree) {
+func NewTree() *Tree {
+	return NewTreeTimer(NaiveTimer{})
+}
+func NewTreeTimer(timer Timer) (result *Tree) {
 	result = &Tree{
-		lock: new(sync.RWMutex),
+		lock:  new(sync.RWMutex),
+		timer: timer,
 	}
-	result.root, _, _, _, _ = result.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), 0, 0)
+	result.root, _, _, _, _ = result.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), result.timer.ContinuousTime())
 	return
 }
-func newTreeWith(key []Nibble, byteValue []byte, timestamp int64) (result *Tree) {
-	result = NewTree()
+func (self *Tree) newTreeWith(key []Nibble, byteValue []byte, timestamp int64) (result *Tree) {
+	result = NewTreeTimer(self.timer)
 	result.PutTimestamp(key, byteValue, 0, timestamp)
 	return
 }
@@ -191,14 +203,18 @@ func (self *Tree) Describe() string {
 	return self.describeIndented(0, 0)
 }
 
-func (self *Tree) put(key []Nibble, byteValue []byte, treeValue *Tree, use, clear int, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
-	self.root, oldBytes, oldTree, _, existed = self.root.insert(nil, newNode(key, byteValue, treeValue, timestamp, false, use), use, clear)
+func (self *Tree) fakeDel(key []Nibble, use int, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
+	self.root, oldBytes, oldTree, _, existed = self.root.fakeDel(nil, key, use, timestamp, self.timer.ContinuousTime())
+	return
+}
+func (self *Tree) put(key []Nibble, byteValue []byte, treeValue *Tree, use int, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
+	self.root, oldBytes, oldTree, _, existed = self.root.insert(nil, newNode(key, byteValue, treeValue, timestamp, false, use), self.timer.ContinuousTime())
 	return
 }
 func (self *Tree) Put(key []byte, bValue []byte, timestamp int64) (oldBytes []byte, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	oldBytes, _, ex := self.put(Rip(key), bValue, nil, byteValue, 0, timestamp)
+	oldBytes, _, ex := self.put(Rip(key), bValue, nil, byteValue, timestamp)
 	existed = ex*byteValue != 0
 	return
 }
@@ -288,7 +304,7 @@ func (self *Tree) ReverseIndex(n int) (key []byte, byteValue []byte, timestamp i
 func (self *Tree) Del(key []byte, timestamp int64) (oldBytes []byte, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	oldBytes, _, ex := self.put(Rip(key), nil, nil, byteValue, byteValue, timestamp)
+	oldBytes, _, ex := self.fakeDel(Rip(key), byteValue, timestamp)
 	existed = ex&byteValue != 0
 	return
 }
@@ -407,11 +423,11 @@ func (self *Tree) SubPut(key, subKey []byte, byteValue []byte, timestamp int64) 
 	ripped := Rip(key)
 	_, subTree, subTreeTimestamp, ex := self.root.get(ripped)
 	if ex&treeValue == 0 || subTree == nil {
-		subTree = newTreeWith(Rip(subKey), byteValue, timestamp)
+		subTree = self.newTreeWith(Rip(subKey), byteValue, timestamp)
 	} else {
 		oldBytes, existed = subTree.Put(subKey, byteValue, timestamp)
 	}
-	self.put(ripped, nil, subTree, treeValue, 0, subTreeTimestamp)
+	self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
 	return
 }
 func (self *Tree) SubDel(key, subKey []byte, timestamp int64) (oldBytes []byte, existed bool) {
@@ -422,9 +438,9 @@ func (self *Tree) SubDel(key, subKey []byte, timestamp int64) (oldBytes []byte, 
 	if ex&treeValue != 0 && subTree != nil {
 		oldBytes, existed = subTree.Del(subKey, timestamp)
 		if subTree.Size() == 0 {
-			self.put(ripped, nil, nil, treeValue, treeValue, timestamp)
+			self.fakeDel(ripped, treeValue, timestamp)
 		} else {
-			self.put(ripped, nil, subTree, treeValue, 0, subTreeTimestamp)
+			self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
 		}
 	}
 	return
@@ -444,7 +460,7 @@ func (self *Tree) GetTimestamp(key []Nibble) (bValue []byte, timestamp int64, ex
 }
 func (self *Tree) putTimestamp(key []Nibble, bValue []byte, treeValue *Tree, use int, expected, timestamp int64) bool {
 	if _, _, current, _ := self.root.get(key); current == expected {
-		self.root, _, _, _, _ = self.root.insert(nil, newNode(key, bValue, treeValue, timestamp, false, use), use, 0)
+		self.root, _, _, _, _ = self.root.insert(nil, newNode(key, bValue, treeValue, timestamp, false, use), self.timer.ContinuousTime())
 		return true
 	}
 	return false
@@ -456,7 +472,7 @@ func (self *Tree) PutTimestamp(key []Nibble, bValue []byte, expected, timestamp 
 }
 func (self *Tree) delTimestamp(key []Nibble, use int, expected int64) bool {
 	if _, _, current, ex := self.root.get(key); ex&use != 0 && current == expected {
-		self.root, _, _, _ = self.root.del(nil, key, use)
+		self.root, _, _, _, _ = self.root.del(nil, key, use, self.timer.ContinuousTime())
 		return true
 	}
 	return false
@@ -490,7 +506,7 @@ func (self *Tree) SubPutTimestamp(key, subKey []Nibble, bValue []byte, expected,
 	defer self.lock.Unlock()
 	if _, subTree, subTreeTimestamp, _ := self.root.get(key); subTreeTimestamp == expected {
 		if subTree == nil {
-			subTree = newTreeWith(subKey, bValue, subTimestamp)
+			subTree = self.newTreeWith(subKey, bValue, subTimestamp)
 		} else {
 			subTree.PutTimestamp(subKey, bValue, subExpected, subTimestamp)
 		}

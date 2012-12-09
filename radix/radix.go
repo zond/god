@@ -10,6 +10,10 @@ var encodeChars = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a"
 
 type Nibble byte
 
+type Timer interface {
+	ContinuousTime() int64
+}
+
 func toBytes(n []Nibble) []byte {
 	return *((*[]byte)(unsafe.Pointer(&n)))
 }
