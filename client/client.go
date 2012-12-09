@@ -94,12 +94,7 @@ func (self *Conn) Reconnect() {
 		node = self.ring.Random()
 	}
 }
-func (self *Conn) SSubPut(key, subKey, value []byte) {
-	self.subPut(key, subKey, value, true)
-}
-func (self *Conn) SubPut(key, subKey, value []byte) {
-	self.subPut(key, subKey, value, false)
-}
+
 func (self *Conn) subDel(key, subKey []byte, sync bool) {
 	data := common.Item{
 		Key:    key,
@@ -152,6 +147,65 @@ func (self *Conn) put(key, value []byte, sync bool) {
 		self.put(key, value, sync)
 	}
 }
+func (self *Conn) mergeRecent(operation string, r common.Range, up bool) (result []common.Item) {
+	currentRedundancy := self.ring.Redundancy()
+	futures := make([]*rpc.Call, currentRedundancy)
+	results := make([]*[]common.Item, currentRedundancy)
+	nodes := make(common.Remotes, currentRedundancy)
+	nextKey := r.Key
+	var nextSuccessor *common.Remote
+	for i := 0; i < currentRedundancy; i++ {
+		_, _, nextSuccessor = self.ring.Remotes(nextKey)
+		var thisResult []common.Item
+		nodes[i] = *nextSuccessor
+		results[i] = &thisResult
+		futures[i] = nextSuccessor.Go(operation, r, &thisResult)
+		nextKey = nextSuccessor.Pos
+	}
+	for index, future := range futures {
+		<-future.Done
+		if future.Error != nil {
+			self.removeNode(nodes[index])
+			return self.mergeRecent(operation, r, up)
+		}
+	}
+	result = common.MergeItems(results, up)
+	return
+}
+func (self *Conn) findRecent(operation string, data common.Item) (result *common.Item) {
+	currentRedundancy := self.ring.Redundancy()
+	futures := make([]*rpc.Call, currentRedundancy)
+	results := make([]*common.Item, currentRedundancy)
+	nodes := make(common.Remotes, currentRedundancy)
+	nextKey := data.Key
+	var nextSuccessor *common.Remote
+	for i := 0; i < currentRedundancy; i++ {
+		_, _, nextSuccessor = self.ring.Remotes(nextKey)
+		thisResult := &common.Item{}
+		nodes[i] = *nextSuccessor
+		results[i] = thisResult
+		futures[i] = nextSuccessor.Go(operation, data, thisResult)
+		nextKey = nextSuccessor.Pos
+	}
+	for index, future := range futures {
+		<-future.Done
+		if future.Error != nil {
+			self.removeNode(nodes[index])
+			return self.findRecent(operation, data)
+		}
+		if result == nil || result.Timestamp < results[index].Timestamp {
+			result = results[index]
+		}
+	}
+	return
+}
+
+func (self *Conn) SSubPut(key, subKey, value []byte) {
+	self.subPut(key, subKey, value, true)
+}
+func (self *Conn) SubPut(key, subKey, value []byte) {
+	self.subPut(key, subKey, value, false)
+}
 func (self *Conn) SPut(key, value []byte) {
 	self.put(key, value, true)
 }
@@ -198,6 +252,29 @@ func (self *Conn) IndexOf(key, subKey []byte) (index int, existed bool) {
 	index, existed = result.N, result.Existed
 	return
 }
+func (self *Conn) Next(key []byte) (nextKey []byte, existed bool) {
+	data := common.Item{
+		Key: key,
+	}
+	result := &common.Item{}
+	_, _, successor := self.ring.Remotes(key)
+	firstAddr := successor.Addr
+	for {
+		if err := successor.Call("DHash.Next", data, result); err != nil {
+			self.removeNode(*successor)
+			return self.Next(key)
+		}
+		if result.Exists {
+			break
+		}
+		_, _, successor = self.ring.Remotes(successor.Pos)
+		if successor.Addr == firstAddr {
+			break
+		}
+	}
+	nextKey, existed = result.Key, result.Exists
+	return
+}
 func (self *Conn) Prev(key []byte) (prevKey []byte, existed bool) {
 	data := common.Item{
 		Key: key,
@@ -236,20 +313,6 @@ func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) 
 	}
 	return
 }
-func (self *Conn) PrevIndex(key []byte, index int) (foundKey []byte, foundIndex int, existed bool) {
-	data := common.Item{
-		Key:   key,
-		Index: index,
-	}
-	result := &common.Item{}
-	_, _, successor := self.ring.Remotes(key)
-	if err := successor.Call("DHash.PrevIndex", data, result); err != nil {
-		self.removeNode(*successor)
-		return self.NextIndex(key, index)
-	}
-	foundKey, foundIndex, existed = result.Key, result.Index, result.Exists
-	return
-}
 func (self *Conn) NextIndex(key []byte, index int) (foundKey []byte, foundIndex int, existed bool) {
 	data := common.Item{
 		Key:   key,
@@ -264,52 +327,18 @@ func (self *Conn) NextIndex(key []byte, index int) (foundKey []byte, foundIndex 
 	foundKey, foundIndex, existed = result.Key, result.Index, result.Exists
 	return
 }
-func (self *Conn) Next(key []byte) (nextKey []byte, existed bool) {
+func (self *Conn) PrevIndex(key []byte, index int) (foundKey []byte, foundIndex int, existed bool) {
 	data := common.Item{
-		Key: key,
+		Key:   key,
+		Index: index,
 	}
 	result := &common.Item{}
 	_, _, successor := self.ring.Remotes(key)
-	firstAddr := successor.Addr
-	for {
-		if err := successor.Call("DHash.Next", data, result); err != nil {
-			self.removeNode(*successor)
-			return self.Next(key)
-		}
-		if result.Exists {
-			break
-		}
-		_, _, successor = self.ring.Remotes(successor.Pos)
-		if successor.Addr == firstAddr {
-			break
-		}
+	if err := successor.Call("DHash.PrevIndex", data, result); err != nil {
+		self.removeNode(*successor)
+		return self.NextIndex(key, index)
 	}
-	nextKey, existed = result.Key, result.Exists
-	return
-}
-func (self *Conn) mergeRecent(operation string, r common.Range, up bool) (result []common.Item) {
-	currentRedundancy := self.ring.Redundancy()
-	futures := make([]*rpc.Call, currentRedundancy)
-	results := make([]*[]common.Item, currentRedundancy)
-	nodes := make(common.Remotes, currentRedundancy)
-	nextKey := r.Key
-	var nextSuccessor *common.Remote
-	for i := 0; i < currentRedundancy; i++ {
-		_, _, nextSuccessor = self.ring.Remotes(nextKey)
-		var thisResult []common.Item
-		nodes[i] = *nextSuccessor
-		results[i] = &thisResult
-		futures[i] = nextSuccessor.Go(operation, r, &thisResult)
-		nextKey = nextSuccessor.Pos
-	}
-	for index, future := range futures {
-		<-future.Done
-		if future.Error != nil {
-			self.removeNode(nodes[index])
-			return self.mergeRecent(operation, r, up)
-		}
-	}
-	result = common.MergeItems(results, up)
+	foundKey, foundIndex, existed = result.Key, result.Index, result.Exists
 	return
 }
 func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
@@ -354,33 +383,6 @@ func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []com
 		MaxInc: maxinc,
 	}
 	result = self.mergeRecent("DHash.Slice", r, true)
-	return
-}
-func (self *Conn) findRecent(operation string, data common.Item) (result *common.Item) {
-	currentRedundancy := self.ring.Redundancy()
-	futures := make([]*rpc.Call, currentRedundancy)
-	results := make([]*common.Item, currentRedundancy)
-	nodes := make(common.Remotes, currentRedundancy)
-	nextKey := data.Key
-	var nextSuccessor *common.Remote
-	for i := 0; i < currentRedundancy; i++ {
-		_, _, nextSuccessor = self.ring.Remotes(nextKey)
-		thisResult := &common.Item{}
-		nodes[i] = *nextSuccessor
-		results[i] = thisResult
-		futures[i] = nextSuccessor.Go(operation, data, thisResult)
-		nextKey = nextSuccessor.Pos
-	}
-	for index, future := range futures {
-		<-future.Done
-		if future.Error != nil {
-			self.removeNode(nodes[index])
-			return self.findRecent(operation, data)
-		}
-		if result == nil || result.Timestamp < results[index].Timestamp {
-			result = results[index]
-		}
-	}
 	return
 }
 func (self *Conn) SubPrev(key, subKey []byte) (prevKey []byte, existed bool) {
