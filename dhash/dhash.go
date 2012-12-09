@@ -49,12 +49,12 @@ func NewNode(addr string) (result *Node) {
 		node:  discord.NewNode(addr),
 		lock:  new(sync.RWMutex),
 		state: created,
-		tree:  radix.NewTree(),
 	}
 	result.AddChangeListener(func(r *common.Ring) {
 		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
 	})
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
+	result.tree = radix.NewTreeTimer(result.timer)
 	result.node.Export("Timenet", (*timerServer)(result.timer))
 	result.node.Export("DHash", (*dhashServer)(result))
 	result.node.Export("HashTree", (*hashTreeServer)(result))
@@ -475,7 +475,7 @@ func (self *Node) forwardOperation(data common.Item, operation string) {
 	}
 }
 func (self *Node) clear() {
-	self.tree = radix.NewTree()
+	self.tree = radix.NewTreeTimer(self.timer)
 }
 func (self *Node) subDel(data common.Item) error {
 	if data.TTL > 1 {
