@@ -494,7 +494,7 @@ func (self *Tree) SubPutVersion(key, subKey []Nibble, bValue []byte, expected, s
 		} else {
 			subTree.PutVersion(subKey, bValue, subExpected, subVersion)
 		}
-		self.putVersion(key, nil, subTree, treeValue, expected, expected)
+		self.putVersion(key, nil, subTree, treeValue, expected, subTreeVersion)
 		return true
 	}
 	return false
@@ -507,7 +507,7 @@ func (self *Tree) SubDelVersion(key, subKey []Nibble, expected, subExpected int6
 		if subTree.Size() == 0 {
 			self.delVersion(key, treeValue, expected)
 		} else {
-			self.putVersion(key, nil, subTree, treeValue, expected, expected)
+			self.putVersion(key, nil, subTree, treeValue, expected, subTreeVersion)
 		}
 		return true
 	}
