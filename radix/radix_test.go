@@ -32,13 +32,13 @@ func TestSyncVersions(t *testing.T) {
 		v = []byte(fmt.Sprint(i))
 		tree1.Put(k, v, 0)
 		if i == 2 {
-			tree3.Put(k, []byte("other version"), 2)
+			tree3.Put(k, []byte("other timestamp"), 2)
 		} else {
 			tree3.Put(k, v, 0)
 		}
 	}
 	tree2 := NewTree()
-	tree2.Put([]byte{2}, []byte("other version"), 2)
+	tree2.Put([]byte{2}, []byte("other timestamp"), 2)
 	s := NewSync(tree1, tree2)
 	s.Run()
 	if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
@@ -53,7 +53,7 @@ func TestSyncVersions(t *testing.T) {
 	if !reflect.DeepEqual(tree3, tree2) {
 		t.Errorf("%v and %v are unequal", tree3, tree2)
 	}
-	tree1.Put([]byte{2}, []byte("yet another version"), 3)
+	tree1.Put([]byte{2}, []byte("yet another timestamp"), 3)
 	s.Run()
 	if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
 		t.Errorf("%v and %v have hashes\n%v\n%v\nand they should not be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
@@ -371,7 +371,7 @@ func TestSyncRandomLimits(t *testing.T) {
 		tree1.Put(k, v, 0)
 	}
 	var keys [][]byte
-	tree1.Each(func(key []byte, byteValue []byte, version int64) bool {
+	tree1.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
 		keys = append(keys, key)
 		return true
 	})
@@ -386,7 +386,7 @@ func TestSyncRandomLimits(t *testing.T) {
 				fromKey = keys[fromIndex]
 				toKey = keys[toIndex]
 				tree2 = NewTree()
-				tree1.Each(func(key []byte, byteValue []byte, version int64) bool {
+				tree1.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
 					if common.BetweenIE(key, fromKey, toKey) {
 						tree2.Put(key, byteValue, 0)
 					}
@@ -458,7 +458,7 @@ func TestTreeHash(t *testing.T) {
 	if !reflect.DeepEqual(tree1.Finger(nil), tree2.Finger(nil)) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
-	tree1.Each(func(key []byte, byteValue []byte, version int64) bool {
+	tree1.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
 		f1 := tree1.Finger(Rip(key))
 		f2 := tree2.Finger(Rip(key))
 		if f1 == nil || f2 == nil {
@@ -490,7 +490,7 @@ func TestTreeHash(t *testing.T) {
 	if !reflect.DeepEqual(tree1.Finger(nil), tree2.Finger(nil)) {
 		t.Errorf("%v and %v have prints\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Finger(nil), tree2.Finger(nil))
 	}
-	tree1.Each(func(key []byte, byteValue []byte, version int64) bool {
+	tree1.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
 		f1 := tree1.Finger(Rip(key))
 		f2 := tree2.Finger(Rip(key))
 		if f1 == nil || f2 == nil {
@@ -529,7 +529,7 @@ func TestTreeReverseEach(t *testing.T) {
 	}
 	var foundKeys [][]byte
 	var foundValues [][]byte
-	tree.ReverseEach(func(key []byte, byteValue []byte, version int64) bool {
+	tree.ReverseEach(func(key []byte, byteValue []byte, timestamp int64) bool {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, byteValue)
 		return true
@@ -544,7 +544,7 @@ func TestTreeReverseEach(t *testing.T) {
 	foundKeys = nil
 	foundValues = nil
 	count := 10
-	tree.ReverseEach(func(key []byte, byteValue []byte, version int64) bool {
+	tree.ReverseEach(func(key []byte, byteValue []byte, timestamp int64) bool {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, byteValue)
 		count--
@@ -566,7 +566,7 @@ func TestTreeEach(t *testing.T) {
 	}
 	var foundKeys [][]byte
 	var foundValues [][]byte
-	tree.Each(func(key []byte, byteValue []byte, version int64) bool {
+	tree.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, byteValue)
 		return true
@@ -581,7 +581,7 @@ func TestTreeEach(t *testing.T) {
 	foundKeys = nil
 	foundValues = nil
 	count := 10
-	tree.Each(func(key []byte, byteValue []byte, version int64) bool {
+	tree.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
 		foundKeys = append(foundKeys, key)
 		foundValues = append(foundValues, byteValue)
 		count--
@@ -606,7 +606,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 	for i := 10; i < 21; i++ {
 		for j := i; j < 21; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, byteValue []byte, version int64) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, byteValue []byte, timestamp int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -617,7 +617,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, byteValue []byte, version int64) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, byteValue []byte, timestamp int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -628,7 +628,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, byteValue []byte, version int64) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, byteValue []byte, timestamp int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -639,7 +639,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, byteValue []byte, version int64) bool {
+			tree.ReverseEachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, byteValue []byte, timestamp int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -662,7 +662,7 @@ func TestTreeEachBetween(t *testing.T) {
 	for i := 10; i < 21; i++ {
 		for j := i; j < 21; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, byteValue []byte, version int64) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, true, func(key []byte, byteValue []byte, timestamp int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -673,7 +673,7 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, byteValue []byte, version int64) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, true, func(key []byte, byteValue []byte, timestamp int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -684,7 +684,7 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, byteValue []byte, version int64) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), true, false, func(key []byte, byteValue []byte, timestamp int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -695,7 +695,7 @@ func TestTreeEachBetween(t *testing.T) {
 			}
 
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, byteValue []byte, version int64) bool {
+			tree.EachBetween([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(j)), false, false, func(key []byte, byteValue []byte, timestamp int64) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -758,7 +758,7 @@ func TestTreeReverseEachBetweenIndex(t *testing.T) {
 	for i := -1; i < 10; i++ {
 		for j := i; j < 10; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.ReverseEachBetweenIndex(&i, &j, func(key []byte, byteValue []byte, version int64, index int) bool {
+			tree.ReverseEachBetweenIndex(&i, &j, func(key []byte, byteValue []byte, timestamp int64, index int) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -782,7 +782,7 @@ func TestTreeEachBetweenIndex(t *testing.T) {
 	for i := -1; i < 10; i++ {
 		for j := i; j < 10; j++ {
 			foundKeys, cmpKeys, foundValues, cmpValues = nil, nil, nil, nil
-			tree.EachBetweenIndex(&i, &j, func(key []byte, byteValue []byte, version int64, index int) bool {
+			tree.EachBetweenIndex(&i, &j, func(key []byte, byteValue []byte, timestamp int64, index int) bool {
 				foundKeys = append(foundKeys, key)
 				foundValues = append(foundValues, byteValue)
 				return true
@@ -824,11 +824,11 @@ func TestTreeFirstLast(t *testing.T) {
 	for i := 10; i < 20; i++ {
 		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
-	if key, value, version, existed := tree.First(); !existed || bytes.Compare(key, []byte(fmt.Sprint(10))) != 0 || version != 0 || bytes.Compare(value, []byte(fmt.Sprint(10))) != 0 {
-		t.Errorf("%v.First() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), []byte(fmt.Sprint(10)), []byte(fmt.Sprint(10)), 0, true, key, value, version, existed)
+	if key, value, timestamp, existed := tree.First(); !existed || bytes.Compare(key, []byte(fmt.Sprint(10))) != 0 || timestamp != 0 || bytes.Compare(value, []byte(fmt.Sprint(10))) != 0 {
+		t.Errorf("%v.First() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), []byte(fmt.Sprint(10)), []byte(fmt.Sprint(10)), 0, true, key, value, timestamp, existed)
 	}
-	if key, value, version, existed := tree.Last(); !existed || bytes.Compare(key, []byte(fmt.Sprint(19))) != 0 || version != 0 || bytes.Compare(value, []byte(fmt.Sprint(19))) != 0 {
-		t.Errorf("%v.Last() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), string([]byte(fmt.Sprint(19))), []byte(fmt.Sprint(19)), 0, true, string(key), string(value), version, existed)
+	if key, value, timestamp, existed := tree.Last(); !existed || bytes.Compare(key, []byte(fmt.Sprint(19))) != 0 || timestamp != 0 || bytes.Compare(value, []byte(fmt.Sprint(19))) != 0 {
+		t.Errorf("%v.Last() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), string([]byte(fmt.Sprint(19))), []byte(fmt.Sprint(19)), 0, true, string(key), string(value), timestamp, existed)
 	}
 }
 
@@ -838,8 +838,8 @@ func TestTreeIndex(t *testing.T) {
 		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
 	}
 	for i := 0; i < 100; i++ {
-		if key, value, version, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+100))) != 0 || version != 0 || bytes.Compare(value, []byte(fmt.Sprint(i+100))) != 0 {
-			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+100)), []byte(fmt.Sprint(i+100)), 0, true, key, value, version, existed)
+		if key, value, timestamp, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+100))) != 0 || timestamp != 0 || bytes.Compare(value, []byte(fmt.Sprint(i+100))) != 0 {
+			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+100)), []byte(fmt.Sprint(i+100)), 0, true, key, value, timestamp, existed)
 		}
 	}
 }
@@ -902,7 +902,7 @@ func TestTreeBasicOps(t *testing.T) {
 	assertOldPut(t, tree, "guanabana", "city", "man")
 	assertSize(t, tree, 6)
 	m := make(map[string][]byte)
-	tree.Each(func(key []byte, byteValue []byte, version int64) bool {
+	tree.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
 		m[hex.EncodeToString(key)] = byteValue
 		return true
 	})

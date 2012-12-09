@@ -13,9 +13,9 @@ const (
 	treeValue
 )
 
-type nodeIndexIterator func(key, byteValue []byte, treeValue *Tree, use int, version int64, index int) (cont bool)
+type nodeIndexIterator func(key, byteValue []byte, treeValue *Tree, use int, timestamp int64, index int) (cont bool)
 
-type nodeIterator func(key, byteValue []byte, treeValue *Tree, use int, version int64) (cont bool)
+type nodeIterator func(key, byteValue []byte, treeValue *Tree, use int, timestamp int64) (cont bool)
 
 // node is the generic implementation of a combined radix/merkle tree with size for each subtree (both regarding bytes and inner trees) cached.
 // it also contains both byte slices and inner trees in each node.
@@ -24,7 +24,7 @@ type node struct {
 	byteValue []byte
 	byteHash  []byte
 	treeValue *Tree
-	version   int64
+	timestamp int64
 	hash      []byte
 	children  []*node
 	empty     bool // this node only serves a structural purpose (ie remove it if it is no longer useful for that)
@@ -33,13 +33,13 @@ type node struct {
 	byteSize  int
 }
 
-func newNode(segment []Nibble, byteValue []byte, treeValue *Tree, version int64, empty bool, use int) *node {
+func newNode(segment []Nibble, byteValue []byte, treeValue *Tree, timestamp int64, empty bool, use int) *node {
 	return &node{
 		segment:   segment,
 		byteValue: byteValue,
 		byteHash:  murmur.HashBytes(byteValue),
 		treeValue: treeValue,
-		version:   version,
+		timestamp: timestamp,
 		hash:      make([]byte, murmur.Size),
 		children:  make([]*node, 1<<(8/parts)),
 		empty:     empty,
@@ -77,7 +77,7 @@ func (self *node) each(prefix []Nibble, use int, f nodeIterator) (cont bool) {
 	if self != nil {
 		prefix = append(prefix, self.segment...)
 		if self.use&use != 0 {
-			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version)
+			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 		}
 		if cont {
 			for _, child := range self.children {
@@ -102,7 +102,7 @@ func (self *node) reverseEach(prefix []Nibble, use int, f nodeIterator) (cont bo
 		}
 		if cont {
 			if self.use&use != 0 {
-				cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version)
+				cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 			}
 		}
 	}
@@ -112,7 +112,7 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int
 	cont = true
 	prefix = append(prefix, self.segment...)
 	if self.use&use != 0 && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version)
+		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 	}
 	if cont {
 		for _, child := range self.children {
@@ -165,7 +165,7 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, 
 	}
 	if cont {
 		if self.use&use != 0 && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version)
+			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 		}
 	}
 	return
@@ -207,7 +207,7 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, us
 	cont = true
 	prefix = append(prefix, self.segment...)
 	if self.use&use != 0 && (min == nil || count >= *min) && (max == nil || count <= *max) {
-		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version, count)
+		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp, count)
 		if self.use&use&byteValue != 0 {
 			count++
 		}
@@ -264,7 +264,7 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 	}
 	if cont {
 		if self.use&use != 0 && (min == nil || count >= *min) && (max == nil || count <= *max) {
-			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.version, count)
+			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp, count)
 			if self.use&use&byteValue != 0 {
 				count++
 			}
@@ -281,7 +281,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 		fmt.Fprint(indentation, " ")
 	}
 	encodedSegment := stringEncode(toBytes(self.segment))
-	keyHeader := fmt.Sprintf("%v%#v (%v/%v, %v, %v, %v, %v) => ", string(indentation.Bytes()), encodedSegment, self.byteSize, self.treeSize, self.empty, self.use, self.version, hex.EncodeToString(self.hash))
+	keyHeader := fmt.Sprintf("%v%#v (%v/%v, %v, %v, %v, %v) => ", string(indentation.Bytes()), encodedSegment, self.byteSize, self.treeSize, self.empty, self.use, self.timestamp, hex.EncodeToString(self.hash))
 	if self.empty {
 		fmt.Fprintf(buffer, "%v\n", keyHeader)
 	} else {
@@ -388,7 +388,7 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) get(segment []Nibble) (byteValue []byte, treeValue *Tree, version int64, existed int) {
+func (self *node) get(segment []Nibble) (byteValue []byte, treeValue *Tree, timestamp int64, existed int) {
 	if self == nil {
 		return
 	}
@@ -398,12 +398,12 @@ func (self *node) get(segment []Nibble) (byteValue []byte, treeValue *Tree, vers
 		beyond_self = i >= len(self.segment)
 		beyond_segment = i >= len(segment)
 		if beyond_self && beyond_segment {
-			byteValue, treeValue, version, existed = self.byteValue, self.treeValue, self.version, self.use
+			byteValue, treeValue, timestamp, existed = self.byteValue, self.treeValue, self.timestamp, self.use
 			return
 		} else if beyond_segment {
 			return
 		} else if beyond_self {
-			byteValue, treeValue, version, existed = self.children[segment[i]].get(segment[i:])
+			byteValue, treeValue, timestamp, existed = self.children[segment[i]].get(segment[i:])
 			return
 		} else if segment[i] != self.segment[i] {
 			return
@@ -445,7 +445,7 @@ func (self *node) del(prefix, segment []Nibble, use int) (result *node, oldBytes
 				}
 				if n_children > 1 || self.segment == nil {
 					result, oldBytes, oldTree, existed = self, self.byteValue, self.treeValue, self.use
-					self.byteValue, self.byteHash, self.treeValue, self.empty, self.use, self.version = nil, murmur.HashBytes(nil), nil, true, 0, 0
+					self.byteValue, self.byteHash, self.treeValue, self.empty, self.use, self.timestamp = nil, murmur.HashBytes(nil), nil, true, 0, 0
 					self.rehash(append(prefix, segment...))
 				} else if n_children == 1 {
 					a_child.setSegment(append(self.segment, a_child.segment...))
@@ -485,7 +485,7 @@ func (self *node) del(prefix, segment []Nibble, use int) (result *node, oldBytes
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node, oldBytes []byte, oldTree *Tree, version int64, existed int) {
+func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node, oldBytes []byte, oldTree *Tree, timestamp int64, existed int) {
 	if self == nil {
 		if clear&byteValue != 0 {
 			n.use &^= byteValue
@@ -503,7 +503,7 @@ func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node
 		beyond_n = i >= len(n.segment)
 		beyond_self = i >= len(self.segment)
 		if beyond_n && beyond_self {
-			result, oldBytes, oldTree, version, existed = self, self.byteValue, self.treeValue, self.version, self.use
+			result, oldBytes, oldTree, timestamp, existed = self, self.byteValue, self.treeValue, self.timestamp, self.use
 			if use&byteValue != 0 {
 				self.byteValue, self.byteHash = n.byteValue, n.byteHash
 				if n.use&byteValue == 0 {
@@ -526,13 +526,13 @@ func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node
 			if clear&treeValue != 0 {
 				self.use &^= byteValue
 			}
-			self.empty, self.version = n.empty, n.version
+			self.empty, self.timestamp = n.empty, n.timestamp
 			self.rehash(append(prefix, self.segment...))
 			return
 		} else if beyond_n {
 			self.setSegment(self.segment[i:])
 			n.children[self.segment[0]] = self
-			result, oldBytes, oldTree, version, existed = n, nil, nil, 0, 0
+			result, oldBytes, oldTree, timestamp, existed = n, nil, nil, 0, 0
 			prefix = append(prefix, self.segment...)
 			self.rehash(prefix)
 			if clear&byteValue != 0 {
@@ -548,12 +548,12 @@ func (self *node) insert(prefix []Nibble, n *node, use, clear int) (result *node
 			// k is pre-calculated here because n.segment may change when n is inserted
 			k := n.segment[0]
 			prefix = append(prefix, self.segment...)
-			self.children[k], oldBytes, oldTree, version, existed = self.children[k].insert(prefix, n, use, clear)
+			self.children[k], oldBytes, oldTree, timestamp, existed = self.children[k].insert(prefix, n, use, clear)
 			self.rehash(prefix)
 			result = self
 			return
 		} else if n.segment[i] != self.segment[i] {
-			result, oldBytes, oldTree, version, existed = newNode(nil, nil, nil, 0, true, 0), nil, nil, 0, 0
+			result, oldBytes, oldTree, timestamp, existed = newNode(nil, nil, nil, 0, true, 0), nil, nil, 0, 0
 			result.setSegment(n.segment[:i])
 
 			n.setSegment(n.segment[i:])

@@ -13,14 +13,14 @@ type HashTree interface {
 	Hash() []byte
 
 	Finger(key []Nibble) *Print
-	GetVersion(key []Nibble) (byteValue []byte, version int64, existed bool)
-	PutVersion(key []Nibble, byteValue []byte, expected, version int64) bool
-	DelVersion(key []Nibble, expected int64) bool
+	GetTimestamp(key []Nibble) (byteValue []byte, timestamp int64, existed bool)
+	PutTimestamp(key []Nibble, byteValue []byte, expected, timestamp int64) bool
+	DelTimestamp(key []Nibble, expected int64) bool
 
 	SubFinger(key, subKey []Nibble, expected int64) (result *Print)
-	SubGetVersion(key, subKey []Nibble, expected int64) (byteValue []byte, version int64, existed bool)
-	SubPutVersion(key, subKey []Nibble, byteValue []byte, expected, subExpected, subVersion int64) bool
-	SubDelVersion(key, subKey []Nibble, expected, subExpected int64) bool
+	SubGetTimestamp(key, subKey []Nibble, expected int64) (byteValue []byte, timestamp int64, existed bool)
+	SubPutTimestamp(key, subKey []Nibble, byteValue []byte, expected, subExpected, subTimestamp int64) bool
+	SubDelTimestamp(key, subKey []Nibble, expected, subExpected int64) bool
 }
 
 type Sync struct {
@@ -108,11 +108,11 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 					subSync := NewSync(&subTreeWrapper{
 						self.source,
 						sourcePrint.Key,
-						sourcePrint.version(),
+						sourcePrint.timestamp(),
 					}, &subTreeWrapper{
 						self.destination,
 						sourcePrint.Key,
-						destinationPrint.version(),
+						destinationPrint.timestamp(),
 					})
 					if self.destructive {
 						subSync.Destroy()
@@ -120,14 +120,14 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 					subPut += subSync.Run().PutCount()
 					self.putCount += subPut
 				}
-				if value, version, existed := self.source.GetVersion(sourcePrint.Key); existed && version == sourcePrint.version() {
-					if self.destination.PutVersion(sourcePrint.Key, value, destinationPrint.version(), sourcePrint.version()) {
+				if value, timestamp, existed := self.source.GetTimestamp(sourcePrint.Key); existed && timestamp == sourcePrint.timestamp() {
+					if self.destination.PutTimestamp(sourcePrint.Key, value, destinationPrint.timestamp(), sourcePrint.timestamp()) {
 						self.putCount++
 					}
 				}
 			}
 			if self.destructive && !sourcePrint.Empty {
-				if self.source.DelVersion(sourcePrint.Key, sourcePrint.version()) {
+				if self.source.DelTimestamp(sourcePrint.Key, sourcePrint.timestamp()) {
 					if sourcePrint.SubTree {
 						self.delCount += subPut
 					}

@@ -68,7 +68,7 @@ type Print struct {
 	Exists    bool
 	Key       []Nibble
 	Empty     bool
-	Version   int64
+	Timestamp int64
 	SubTree   bool
 	SubPrints []SubPrint
 	ByteHash  []byte
@@ -79,7 +79,7 @@ func (self *Print) coveredBy(other *Print) bool {
 	if self == nil {
 		return other == nil
 	}
-	return other != nil && (other.Version > self.Version || (bytes.Compare(self.ByteHash, other.ByteHash) == 0 && bytes.Compare(self.TreeHash, other.TreeHash) == 0))
+	return other != nil && (other.Timestamp > self.Timestamp || (bytes.Compare(self.ByteHash, other.ByteHash) == 0 && bytes.Compare(self.TreeHash, other.TreeHash) == 0))
 }
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
@@ -89,7 +89,7 @@ func (self *Print) set(n *node) {
 	self.ByteHash = n.byteHash
 	self.TreeHash = n.treeValue.Hash()
 	self.Empty = n.empty
-	self.Version = n.version
+	self.Timestamp = n.timestamp
 	self.SubPrints = make([]SubPrint, len(n.children))
 	self.SubTree = n.treeValue != nil
 	for index, child := range n.children {
@@ -102,9 +102,9 @@ func (self *Print) set(n *node) {
 		}
 	}
 }
-func (self *Print) version() int64 {
+func (self *Print) timestamp() int64 {
 	if self == nil {
 		return 0
 	}
-	return self.Version
+	return self.Timestamp
 }
