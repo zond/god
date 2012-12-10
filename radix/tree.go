@@ -503,9 +503,18 @@ func (self *Tree) SubDel(key, subKey []byte, timestamp int64) (oldBytes []byte, 
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	ripped := Rip(key)
-	_, subTree, subTreeTimestamp, ex := self.root.get(ripped)
-	if ex&treeValue != 0 && subTree != nil {
+	if _, subTree, subTreeTimestamp, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
 		oldBytes, existed = subTree.Del(subKey, timestamp)
+		self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
+	}
+	return
+}
+func (self *Tree) SubClear(key []byte, timestamp int64) (removed int) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	ripped := Rip(key)
+	if _, subTree, subTreeTimestamp, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
+		removed = subTree.Clear(timestamp)
 		self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
 	}
 	return

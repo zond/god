@@ -61,7 +61,7 @@ func (self *node) rehash(key []Nibble, now int64) {
 	self.treeSize = 0
 	self.byteSize = 0
 	self.realSize = 0
-	self.realSize += self.treeValue.Size()
+	self.realSize += self.treeValue.RealSize()
 	if self.timestamp != 0 {
 		self.realSize++
 	}
