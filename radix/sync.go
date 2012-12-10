@@ -100,7 +100,6 @@ func (self *Sync) withinLimits(key []Nibble) bool {
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint.Exists {
 		if !sourcePrint.Empty && self.withinLimits(sourcePrint.Key) {
-			// If there is a node at source	and it is within our limits	
 			if sourcePrint.SubTree && (self.destructive || bytes.Compare(sourcePrint.TreeHash, destinationPrint.TreeHash) != 0) {
 				subSync := NewSync(&subTreeWrapper{
 					self.source,
@@ -116,17 +115,18 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 				self.putCount += subSync.PutCount()
 				self.delCount += subSync.DelCount()
 			}
-			// If the key at destination is missing or wrong				
-			if !sourcePrint.coveredBy(destinationPrint) {
-				if value, timestamp, present := self.source.GetTimestamp(sourcePrint.Key); timestamp == sourcePrint.timestamp() {
-					if self.destination.PutTimestamp(sourcePrint.Key, value, present, destinationPrint.timestamp(), sourcePrint.timestamp()) {
-						self.putCount++
+			if sourcePrint.Timestamp > 0 {
+				if !sourcePrint.coveredBy(destinationPrint) {
+					if value, timestamp, present := self.source.GetTimestamp(sourcePrint.Key); timestamp == sourcePrint.timestamp() {
+						if self.destination.PutTimestamp(sourcePrint.Key, value, present, destinationPrint.timestamp(), sourcePrint.timestamp()) {
+							self.putCount++
+						}
 					}
 				}
-			}
-			if self.destructive && !sourcePrint.Empty {
-				if self.source.DelTimestamp(sourcePrint.Key, sourcePrint.timestamp()) {
-					self.delCount++
+				if self.destructive && !sourcePrint.Empty {
+					if self.source.DelTimestamp(sourcePrint.Key, sourcePrint.timestamp()) {
+						self.delCount++
+					}
 				}
 			}
 		}
