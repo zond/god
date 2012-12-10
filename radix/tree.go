@@ -510,7 +510,11 @@ func (self *Tree) SubDel(key, subKey []byte) (oldBytes []byte, existed bool) {
 	ripped := Rip(key)
 	if _, subTree, subTreeTimestamp, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
 		oldBytes, existed = subTree.Del(subKey)
-		self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
+		if subTree.RealSize() == 0 {
+			self.Del(key)
+		} else {
+			self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
+		}
 	}
 	return
 }
