@@ -51,7 +51,7 @@ func testStartup(t *testing.T, n, port int) (dhashes []*Node) {
 }
 
 func testSync(t *testing.T, dhashes []*Node) {
-	dhashes[0].tree.Put([]byte{0}, []byte{0}, 0)
+	dhashes[0].tree.Put([]byte{0}, []byte{0}, 1)
 	common.AssertWithin(t, func() (string, bool) {
 		having := countHaving(t, dhashes, []byte{0}, []byte{0})
 		return fmt.Sprint(having), having == common.Redundancy
@@ -60,7 +60,7 @@ func testSync(t *testing.T, dhashes []*Node) {
 
 func testClean(t *testing.T, dhashes []*Node) {
 	for _, n := range dhashes {
-		n.tree.Put([]byte{1}, []byte{1}, 0)
+		n.tree.Put([]byte{1}, []byte{1}, 1)
 	}
 	common.AssertWithin(t, func() (string, bool) {
 		having := countHaving(t, dhashes, []byte{1}, []byte{1})
@@ -70,7 +70,7 @@ func testClean(t *testing.T, dhashes []*Node) {
 
 func testPut(t *testing.T, dhashes []*Node) {
 	for index, n := range dhashes {
-		n.Put(common.Item{Key: []byte{byte(index + 100)}, Value: []byte{byte(index + 100)}})
+		n.Put(common.Item{Key: []byte{byte(index + 100)}, Timestamp: 1, Value: []byte{byte(index + 100)}})
 	}
 	common.AssertWithin(t, func() (string, bool) {
 		haves := make(map[int]bool)
@@ -90,7 +90,7 @@ func testMigrate(t *testing.T, dhashes []*Node) {
 	for i := 0; i < 1000; i++ {
 		item.Key = []byte(fmt.Sprint(i))
 		item.Value = []byte(fmt.Sprint(i))
-		item.Timestamp = 0
+		item.Timestamp = 1
 		dhashes[0].Put(item)
 	}
 	common.AssertWithin(t, func() (string, bool) {
@@ -115,7 +115,7 @@ func testMigrate(t *testing.T, dhashes []*Node) {
 }
 
 func testFind(t *testing.T, dhashes []*Node) {
-	dhashes[0].tree.Put([]byte{2}, []byte{2}, 0)
+	dhashes[0].tree.Put([]byte{2}, []byte{2}, 1)
 	common.AssertWithin(t, func() (string, bool) {
 		having := make(map[bool]bool)
 		for _, n := range dhashes {
