@@ -54,6 +54,9 @@ func (self *dhashServer) SubGet(data common.Item, result *common.Item) error {
 func (self *dhashServer) Get(data common.Item, result *common.Item) error {
 	return (*Node)(self).Get(data, result)
 }
+func (self *dhashServer) SubSize(key []byte, result *int) error {
+	return (*Node)(self).SubSize(key, result)
+}
 func (self *dhashServer) Owned(x int, result *int) error {
 	*result = (*Node)(self).Owned()
 	return nil

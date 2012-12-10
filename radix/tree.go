@@ -415,6 +415,14 @@ func (self *Tree) SubNext(key, subKey []byte) (nextKey, nextValue []byte, nextTi
 	}
 	return
 }
+func (self *Tree) SubSize(key []byte) (result int) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(Rip(key)); ex&treeValue != 0 && subTree != nil {
+		result = subTree.Size()
+	}
+	return
+}
 func (self *Tree) SubSizeBetween(key, min, max []byte, mininc, maxinc bool) (result int) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()

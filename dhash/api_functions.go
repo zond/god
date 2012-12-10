@@ -30,6 +30,10 @@ func (self *Node) DescribeTree() string {
 func (self *Node) client() *client.Conn {
 	return client.NewConnRing(common.NewRingNodes(self.node.Nodes()))
 }
+func (self *Node) SubSize(key []byte, result *int) error {
+	*result = self.tree.SubSize(key)
+	return nil
+}
 func (self *Node) SubFind(data common.Item, result *common.Item) error {
 	*result = data
 	result.Value, result.Exists = self.client().Get(data.Key)

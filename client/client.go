@@ -462,6 +462,14 @@ func (self *Conn) DescribeNode(key []byte) (result common.DHashDescription, err 
 	err = match.Call("DHash.Describe", 0, &result)
 	return
 }
+func (self *Conn) SubSize(key []byte) (result int) {
+	_, _, successor := self.ring.Remotes(key)
+	if err := successor.Call("DHash.SubSize", key, &result); err != nil {
+		self.removeNode(*successor)
+		return self.SubSize(key)
+	}
+	return
+}
 func (self *Conn) Size() (result int) {
 	var tmp int
 	for _, node := range self.ring.Nodes() {
