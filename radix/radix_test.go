@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -19,6 +20,8 @@ var benchmarkTestValues [][]byte
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	benchmarkTestTree = NewTree()
+	benchmarkTestTree.Log("benchmarklogs")
+	benchmarkTestTree.logger.Clear()
 }
 
 func TestSyncVersions(t *testing.T) {
@@ -1015,6 +1018,8 @@ func BenchmarkTreeSync100000_1000(b *testing.B) {
 
 func benchTree(b *testing.B, n int, put, get bool) {
 	b.StopTimer()
+	oldprocs := runtime.GOMAXPROCS(runtime.NumCPU())
+	defer runtime.GOMAXPROCS(oldprocs)
 	for len(benchmarkTestKeys) < n {
 		benchmarkTestKeys = append(benchmarkTestKeys, murmur.HashString(fmt.Sprint(len(benchmarkTestKeys))))
 		benchmarkTestValues = append(benchmarkTestValues, []byte(fmt.Sprint(len(benchmarkTestValues))))
