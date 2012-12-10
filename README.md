@@ -6,7 +6,6 @@ A Go database
 # TODO
 
 * Client API
- * SubClear
  * Inter/Union/Diff
  * StoreInter/StoreUnion/StoreDiff
 * Persistence

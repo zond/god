@@ -95,6 +95,18 @@ func (self *Conn) Reconnect() {
 	}
 }
 
+func (self *Conn) subClear(key []byte, sync bool) {
+	data := common.Item{
+		Key:  key,
+		Sync: sync,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	var x int
+	if err := successor.Call("DHash.SubClear", data, &x); err != nil {
+		self.removeNode(*successor)
+		self.subClear(key, sync)
+	}
+}
 func (self *Conn) subDel(key, subKey []byte, sync bool) {
 	data := common.Item{
 		Key:    key,
@@ -211,6 +223,12 @@ func (self *Conn) SPut(key, value []byte) {
 }
 func (self *Conn) Put(key, value []byte) {
 	self.put(key, value, false)
+}
+func (self *Conn) SubClear(key []byte) {
+	self.subClear(key, false)
+}
+func (self *Conn) SSubClear(key []byte) {
+	self.subClear(key, true)
 }
 func (self *Conn) SubDel(key, subKey []byte) {
 	self.subDel(key, subKey, false)

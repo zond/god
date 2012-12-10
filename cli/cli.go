@@ -45,6 +45,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("subPut \\S+ \\S+ \\S+"):            subPut,
 	newActionSpec("subGet \\S+ \\S+"):                 subGet,
 	newActionSpec("subDel \\S+ \\S+"):                 subDel,
+	newActionSpec("subClear \\S+"):                    subClear,
 	newActionSpec("describeAll"):                      describeAll,
 	newActionSpec("describe \\S+"):                    describe,
 	newActionSpec("describeTree \\S+"):                describeTree,
@@ -234,6 +235,10 @@ func put(conn *client.Conn, args []string) {
 
 func subPut(conn *client.Conn, args []string) {
 	conn.SubPut([]byte(args[1]), []byte(args[2]), []byte(args[3]))
+}
+
+func subClear(conn *client.Conn, args []string) {
+	conn.SubClear([]byte(args[1]))
 }
 
 func subDel(conn *client.Conn, args []string) {
