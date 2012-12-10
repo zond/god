@@ -30,19 +30,13 @@ func cmps(mininc, maxinc bool) (mincmp, maxcmp int) {
 
 func newNodeIterator(f TreeIterator) nodeIterator {
 	return func(key []byte, bValue []byte, tValue *Tree, use int, timestamp int64) (cont bool) {
-		if use&byteValue != 0 {
-			return f(key, bValue, timestamp)
-		}
-		return true
+		return f(key, bValue, timestamp)
 	}
 }
 
 func newNodeIndexIterator(f TreeIndexIterator) nodeIndexIterator {
 	return func(key []byte, bValue []byte, tValue *Tree, use int, timestamp int64, index int) (cont bool) {
-		if use&byteValue != 0 {
-			return f(key, bValue, timestamp, index)
-		}
-		return true
+		return f(key, bValue, timestamp, index)
 	}
 }
 
@@ -225,50 +219,74 @@ func (self *Tree) Get(key []byte) (bValue []byte, timestamp int64, existed bool)
 	existed = ex&byteValue != 0
 	return
 }
-func (self *Tree) Prev(key []byte) (prevKey []byte, prevTimestamp int64, existed bool) {
+func (self *Tree) PrevMarker(key []byte) (prevKey []byte, existed bool) {
 	if self == nil {
 		return
 	}
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	self.root.reverseEachBetween(nil, nil, Rip(key), 0, 0, byteValue|treeValue, func(k, b []byte, t *Tree, u int, v int64) bool {
-		prevKey, prevTimestamp, existed = k, v, u != 0
+	self.root.reverseEachBetween(nil, nil, Rip(key), 0, 0, 0, func(k, b []byte, t *Tree, u int, v int64) bool {
+		prevKey, existed = k, true
 		return false
 	})
 	return
 }
-func (self *Tree) Next(key []byte) (nextKey []byte, nextTimestamp int64, existed bool) {
+func (self *Tree) NextMarker(key []byte) (nextKey []byte, existed bool) {
 	if self == nil {
 		return
 	}
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	self.root.eachBetween(nil, Rip(key), nil, 0, 0, byteValue|treeValue, func(k, b []byte, t *Tree, u int, v int64) bool {
-		nextKey, nextTimestamp, existed = k, v, u != 0
+	self.root.eachBetween(nil, Rip(key), nil, 0, 0, 0, func(k, b []byte, t *Tree, u int, v int64) bool {
+		nextKey, existed = k, true
 		return false
 	})
 	return
 }
-func (self *Tree) NextIndex(index int) (key []byte, timestamp int64, ind int, existed bool) {
+func (self *Tree) Prev(key []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
 	if self == nil {
 		return
 	}
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	self.root.eachBetweenIndex(nil, 0, &index, nil, byteValue|treeValue, func(k, b []byte, t *Tree, u int, v int64, i int) bool {
-		key, timestamp, ind, existed = k, v, i, u != 0
+	self.root.reverseEachBetween(nil, nil, Rip(key), 0, 0, byteValue, func(k, b []byte, t *Tree, u int, v int64) bool {
+		prevKey, prevValue, prevTimestamp, existed = k, b, v, u != 0
 		return false
 	})
 	return
 }
-func (self *Tree) PrevIndex(index int) (key []byte, timestamp int64, ind int, existed bool) {
+func (self *Tree) Next(key []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
 	if self == nil {
 		return
 	}
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	self.root.reverseEachBetweenIndex(nil, 0, nil, &index, byteValue|treeValue, func(k, b []byte, t *Tree, u int, v int64, i int) bool {
-		key, timestamp, ind, existed = k, v, i, u != 0
+	self.root.eachBetween(nil, Rip(key), nil, 0, 0, byteValue, func(k, b []byte, t *Tree, u int, v int64) bool {
+		nextKey, nextValue, nextTimestamp, existed = k, b, v, u != 0
+		return false
+	})
+	return
+}
+func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
+	if self == nil {
+		return
+	}
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	self.root.eachBetweenIndex(nil, 0, &index, nil, byteValue, func(k, b []byte, t *Tree, u int, v int64, i int) bool {
+		key, value, timestamp, ind, existed = k, b, v, i, u != 0
+		return false
+	})
+	return
+}
+func (self *Tree) PrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
+	if self == nil {
+		return
+	}
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	self.root.reverseEachBetweenIndex(nil, 0, nil, &index, byteValue, func(k, b []byte, t *Tree, u int, v int64, i int) bool {
+		key, value, timestamp, ind, existed = k, b, v, i, u != 0
 		return false
 	})
 	return
@@ -325,19 +343,19 @@ func (self *Tree) SubIndexOf(key, subKey []byte) (index int, existed bool) {
 	}
 	return
 }
-func (self *Tree) SubPrevIndex(key []byte, index int) (foundKey []byte, foundTimestamp int64, foundIndex int, existed bool) {
+func (self *Tree) SubPrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundTimestamp int64, foundIndex int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if _, subTree, _, ex := self.root.get(Rip(key)); ex&treeValue != 0 && subTree != nil {
-		foundKey, foundTimestamp, foundIndex, existed = subTree.PrevIndex(index)
+		foundKey, foundValue, foundTimestamp, foundIndex, existed = subTree.PrevIndex(index)
 	}
 	return
 }
-func (self *Tree) SubNextIndex(key []byte, index int) (foundKey []byte, foundTimestamp int64, foundIndex int, existed bool) {
+func (self *Tree) SubNextIndex(key []byte, index int) (foundKey, foundValue []byte, foundTimestamp int64, foundIndex int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if _, subTree, _, ex := self.root.get(Rip(key)); ex&treeValue != 0 && subTree != nil {
-		foundKey, foundTimestamp, foundIndex, existed = subTree.NextIndex(index)
+		foundKey, foundValue, foundTimestamp, foundIndex, existed = subTree.NextIndex(index)
 	}
 	return
 }
@@ -357,19 +375,19 @@ func (self *Tree) SubLast(key []byte) (lastKey []byte, lastBytes []byte, lastTim
 	}
 	return
 }
-func (self *Tree) SubPrev(key, subKey []byte) (prevKey []byte, prevTimestamp int64, existed bool) {
+func (self *Tree) SubPrev(key, subKey []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if _, subTree, _, ex := self.root.get(Rip(key)); ex&treeValue != 0 && subTree != nil {
-		prevKey, prevTimestamp, existed = subTree.Prev(subKey)
+		prevKey, prevValue, prevTimestamp, existed = subTree.Prev(subKey)
 	}
 	return
 }
-func (self *Tree) SubNext(key, subKey []byte) (nextKey []byte, nextTimestamp int64, existed bool) {
+func (self *Tree) SubNext(key, subKey []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	if _, subTree, _, ex := self.root.get(Rip(key)); ex&treeValue != 0 && subTree != nil {
-		nextKey, nextTimestamp, existed = subTree.Next(subKey)
+		nextKey, nextValue, nextTimestamp, existed = subTree.Next(subKey)
 	}
 	return
 }

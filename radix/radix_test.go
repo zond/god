@@ -30,11 +30,11 @@ func TestSyncVersions(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte{byte(i)}
 		v = []byte(fmt.Sprint(i))
-		tree1.Put(k, v, 0)
+		tree1.Put(k, v, 1)
 		if i == 2 {
 			tree3.Put(k, []byte("other timestamp"), 2)
 		} else {
-			tree3.Put(k, v, 0)
+			tree3.Put(k, v, 1)
 		}
 	}
 	tree2 := NewTree()
@@ -82,9 +82,9 @@ func TestSyncLimits(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte{byte(i)}
 		v = []byte(fmt.Sprint(i))
-		tree1.Put(k, v, 0)
+		tree1.Put(k, v, 1)
 		if i >= from && i < to {
-			tree3.Put(k, v, 0)
+			tree3.Put(k, v, 1)
 		}
 	}
 	tree2 := NewTree()
@@ -121,13 +121,13 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
 		v = []byte(fmt.Sprint(i))
 		if i%2 == 0 {
-			tree1.Put(k, v, 0)
-			tree3.Put(k, v, 0)
+			tree1.Put(k, v, 1)
+			tree3.Put(k, v, 1)
 		} else {
 			for j := 0; j < 10; j++ {
 				sk = []byte(fmt.Sprint(j))
-				tree1.SubPut(k, sk, v, 0)
-				tree3.SubPut(k, sk, v, 0)
+				tree1.SubPut(k, sk, v, 1)
+				tree3.SubPut(k, sk, v, 1)
 			}
 		}
 	}
@@ -151,7 +151,7 @@ func TestSyncSubTreeDestructive(t *testing.T) {
 func TestTreeSizeBetween(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	for i := 10; i < 21; i++ {
 		for j := i; j < 21; j++ {
@@ -178,7 +178,7 @@ func TestTreeSizeBetween(t *testing.T) {
 		}
 	}
 	for i := 0; i < 10; i++ {
-		tree.SubPut([]byte{50}, []byte{byte(i)}, []byte{byte(i)}, 0)
+		tree.SubPut([]byte{50}, []byte{byte(i)}, []byte{byte(i)}, 1)
 	}
 	ary := []byte{50}
 	if s := tree.SizeBetween(ary, ary, true, true); s != 10 {
@@ -189,7 +189,7 @@ func TestTreeSizeBetween(t *testing.T) {
 func TestSubTree(t *testing.T) {
 	tree := NewTree()
 	assertSize(t, tree, 0)
-	tree.Put([]byte("a"), []byte("a"), 0)
+	tree.Put([]byte("a"), []byte("a"), 1)
 	assertSize(t, tree, 1)
 	tree.SubPut([]byte("b"), []byte("c"), []byte("d"), 1)
 	assertSize(t, tree, 2)
@@ -210,16 +210,16 @@ func TestSyncSubTreeVersions(t *testing.T) {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
 		v = []byte(fmt.Sprint(i))
 		if i%2 == 0 {
-			tree3.Put(k, v, 0)
-			tree1.Put(k, v, 0)
+			tree3.Put(k, v, 1)
+			tree1.Put(k, v, 1)
 		} else {
 			for j := 0; j < 10; j++ {
 				sk = []byte(fmt.Sprint(j))
-				tree1.SubPut(k, sk, v, 0)
+				tree1.SubPut(k, sk, v, 1)
 				if i == 1 && j == 3 {
 					tree3.SubPut(k, sk, []byte("another value"), 2)
 				} else {
-					tree3.SubPut(k, sk, v, 0)
+					tree3.SubPut(k, sk, v, 1)
 				}
 			}
 		}
@@ -264,11 +264,11 @@ func TestSyncSubTree(t *testing.T) {
 		k = []byte(murmur.HashString(fmt.Sprint(i)))
 		v = []byte(fmt.Sprint(i))
 		if i%2 == 0 {
-			tree1.Put(k, v, 0)
+			tree1.Put(k, v, 1)
 		} else {
 			for j := 0; j < 10; j++ {
 				sk = []byte(fmt.Sprint(j))
-				tree1.SubPut(k, sk, v, 0)
+				tree1.SubPut(k, sk, v, 1)
 			}
 		}
 	}
@@ -292,8 +292,8 @@ func TestSyncDestructive(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
 		v = []byte(fmt.Sprint(i))
-		tree1.Put(k, v, 0)
-		tree3.Put(k, v, 0)
+		tree1.Put(k, v, 1)
+		tree3.Put(k, v, 1)
 	}
 	tree2 := NewTree()
 	s := NewSync(tree3, tree2).Destroy()
@@ -322,9 +322,9 @@ func TestSyncDestructiveMatching(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
 		v = []byte(fmt.Sprint(i))
-		tree1.Put(k, v, 0)
-		tree2.Put(k, v, 0)
-		tree3.Put(k, v, 0)
+		tree1.Put(k, v, 1)
+		tree2.Put(k, v, 1)
+		tree3.Put(k, v, 1)
 	}
 	NewSync(tree1, tree2).Destroy().Run()
 	if !reflect.DeepEqual(tree2, tree3) {
@@ -347,7 +347,7 @@ func TestSyncComplete(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
 		v = []byte(fmt.Sprint(i))
-		tree1.Put(k, v, 0)
+		tree1.Put(k, v, 1)
 	}
 	tree2 := NewTree()
 	s := NewSync(tree1, tree2)
@@ -368,7 +368,7 @@ func TestSyncRandomLimits(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
 		v = []byte(fmt.Sprint(i))
-		tree1.Put(k, v, 0)
+		tree1.Put(k, v, 1)
 	}
 	var keys [][]byte
 	tree1.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
@@ -388,7 +388,7 @@ func TestSyncRandomLimits(t *testing.T) {
 				tree2 = NewTree()
 				tree1.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
 					if common.BetweenIE(key, fromKey, toKey) {
-						tree2.Put(key, byteValue, 0)
+						tree2.Put(key, byteValue, 1)
 					}
 					return true
 				})
@@ -413,9 +413,9 @@ func TestSyncPartial(t *testing.T) {
 	for i := 0; i < n; i++ {
 		k = []byte(fmt.Sprint(i))
 		v = []byte(fmt.Sprint(i))
-		tree1.Put(k, v, 0)
+		tree1.Put(k, v, 1)
 		if i%mod != 0 {
-			tree2.Put(k, v, 0)
+			tree2.Put(k, v, 1)
 		}
 	}
 	s := NewSync(tree1, tree2)
@@ -440,7 +440,7 @@ func TestTreeHash(t *testing.T) {
 		v = []byte(fmt.Sprint(rand.Int63()))
 		keys = append(keys, k)
 		vals = append(vals, v)
-		tree1.Put(k, v, 0)
+		tree1.Put(k, v, 1)
 	}
 	keybackup := keys
 	tree2 := NewTree()
@@ -448,7 +448,7 @@ func TestTreeHash(t *testing.T) {
 		index := rand.Int() % len(keys)
 		k = keys[index]
 		v = vals[index]
-		tree2.Put(k, v, 0)
+		tree2.Put(k, v, 1)
 		keys = append(keys[:index], keys[index+1:]...)
 		vals = append(vals[:index], vals[index+1:]...)
 	}
@@ -525,7 +525,7 @@ func createKVArraysUp(from, to int) (keys [][]byte, values [][]byte) {
 func TestTreeReverseEach(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	var foundKeys [][]byte
 	var foundValues [][]byte
@@ -562,7 +562,7 @@ func TestTreeReverseEach(t *testing.T) {
 func TestTreeEach(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	var foundKeys [][]byte
 	var foundValues [][]byte
@@ -599,7 +599,7 @@ func TestTreeEach(t *testing.T) {
 func TestTreeReverseEachBetween(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	var foundKeys, cmpKeys [][]byte
 	var foundValues, cmpValues [][]byte
@@ -655,7 +655,7 @@ func TestTreeReverseEachBetween(t *testing.T) {
 func TestTreeEachBetween(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	var foundKeys, cmpKeys [][]byte
 	var foundValues, cmpValues [][]byte
@@ -711,7 +711,7 @@ func TestTreeEachBetween(t *testing.T) {
 func TestTreeReverseIndexOf(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i += 2 {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	for i := 100; i < 200; i++ {
 		shouldExist := i%2 == 0
@@ -731,7 +731,7 @@ func TestTreeReverseIndexOf(t *testing.T) {
 func TestTreeIndexOf(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i += 2 {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	for i := 100; i < 200; i++ {
 		shouldExist := i%2 == 0
@@ -751,7 +751,7 @@ func TestTreeIndexOf(t *testing.T) {
 func TestTreeReverseEachBetweenIndex(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	var foundKeys, cmpKeys [][]byte
 	var foundValues, cmpValues [][]byte
@@ -775,7 +775,7 @@ func TestTreeReverseEachBetweenIndex(t *testing.T) {
 func TestTreeEachBetweenIndex(t *testing.T) {
 	tree := NewTree()
 	for i := 11; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	var foundKeys, cmpKeys [][]byte
 	var foundValues, cmpValues [][]byte
@@ -802,7 +802,7 @@ func TestTreeNilKey(t *testing.T) {
 	if value, _, existed := tree.Get(nil); value != nil || existed {
 		t.Errorf("should not exist")
 	}
-	if value, existed := tree.Put(nil, nil, 0); value != nil || existed {
+	if value, existed := tree.Put(nil, nil, 1); value != nil || existed {
 		t.Errorf("should not exist")
 	}
 	if value, _, existed := tree.Get(nil); value != nil || !existed {
@@ -822,24 +822,24 @@ func TestTreeNilKey(t *testing.T) {
 func TestTreeFirstLast(t *testing.T) {
 	tree := NewTree()
 	for i := 10; i < 20; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
-	if key, value, timestamp, existed := tree.First(); !existed || bytes.Compare(key, []byte(fmt.Sprint(10))) != 0 || timestamp != 0 || bytes.Compare(value, []byte(fmt.Sprint(10))) != 0 {
-		t.Errorf("%v.First() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), []byte(fmt.Sprint(10)), []byte(fmt.Sprint(10)), 0, true, key, value, timestamp, existed)
+	if key, value, timestamp, existed := tree.First(); !existed || bytes.Compare(key, []byte(fmt.Sprint(10))) != 0 || timestamp != 1 || bytes.Compare(value, []byte(fmt.Sprint(10))) != 0 {
+		t.Errorf("%v.First() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), []byte(fmt.Sprint(10)), []byte(fmt.Sprint(10)), 1, true, key, value, timestamp, existed)
 	}
-	if key, value, timestamp, existed := tree.Last(); !existed || bytes.Compare(key, []byte(fmt.Sprint(19))) != 0 || timestamp != 0 || bytes.Compare(value, []byte(fmt.Sprint(19))) != 0 {
-		t.Errorf("%v.Last() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), string([]byte(fmt.Sprint(19))), []byte(fmt.Sprint(19)), 0, true, string(key), string(value), timestamp, existed)
+	if key, value, timestamp, existed := tree.Last(); !existed || bytes.Compare(key, []byte(fmt.Sprint(19))) != 0 || timestamp != 1 || bytes.Compare(value, []byte(fmt.Sprint(19))) != 0 {
+		t.Errorf("%v.Last() should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), string([]byte(fmt.Sprint(19))), []byte(fmt.Sprint(19)), 1, true, string(key), string(value), timestamp, existed)
 	}
 }
 
 func TestTreeIndex(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	for i := 0; i < 100; i++ {
-		if key, value, timestamp, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+100))) != 0 || timestamp != 0 || bytes.Compare(value, []byte(fmt.Sprint(i+100))) != 0 {
-			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+100)), []byte(fmt.Sprint(i+100)), 0, true, key, value, timestamp, existed)
+		if key, value, timestamp, existed := tree.Index(i); !existed || bytes.Compare(key, []byte(fmt.Sprint(i+100))) != 0 || timestamp != 1 || bytes.Compare(value, []byte(fmt.Sprint(i+100))) != 0 {
+			t.Errorf("%v.Index(%v) should be %v, %v, %v, %v but was %v, %v, %v, %v", tree.Describe(), i, []byte(fmt.Sprint(i+100)), []byte(fmt.Sprint(i+100)), 1, true, key, value, timestamp, existed)
 		}
 	}
 }
@@ -847,14 +847,14 @@ func TestTreeIndex(t *testing.T) {
 func TestTreePrev(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	for i := 101; i < 200; i++ {
-		if key, _, existed := tree.Prev([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i-1) || !existed {
+		if key, _, _, existed := tree.Prev([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i-1) || !existed {
 			t.Errorf("%v, %v should be %v, %v", string(key), existed, fmt.Sprint(i-1), true)
 		}
 	}
-	if key, _, existed := tree.Prev([]byte("100")); existed {
+	if key, _, _, existed := tree.Prev([]byte("100")); existed {
 		t.Errorf("%v, %v should not exist!", key, existed)
 	}
 }
@@ -862,14 +862,14 @@ func TestTreePrev(t *testing.T) {
 func TestTreeNext(t *testing.T) {
 	tree := NewTree()
 	for i := 100; i < 200; i++ {
-		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 0)
+		tree.Put([]byte(fmt.Sprint(i)), []byte(fmt.Sprint(i)), 1)
 	}
 	for i := 100; i < 199; i++ {
-		if key, _, existed := tree.Next([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i+1) || !existed {
+		if key, _, _, existed := tree.Next([]byte(fmt.Sprint(i))); string(key) != fmt.Sprint(i+1) || !existed {
 			t.Errorf("%v, %v should be %v, %v", string(key), existed, fmt.Sprint(i+1), true)
 		}
 	}
-	if key, _, existed := tree.Next([]byte("199")); existed {
+	if key, _, _, existed := tree.Next([]byte("199")); existed {
 		t.Errorf("%v, %v should not exist!", key, existed)
 	}
 }
@@ -920,10 +920,10 @@ func TestTreeBasicOps(t *testing.T) {
 	if !reflect.DeepEqual(tree.ToMap(), comp) {
 		t.Errorf("%v and %v should be equal!", tree.ToMap(), comp)
 	}
-	if old, existed := tree.Put(nil, []byte("nil"), 0); old != nil || existed {
+	if old, existed := tree.Put(nil, []byte("nil"), 1); old != nil || existed {
 		t.Error("should not exist yet")
 	}
-	if old, existed := tree.Put([]byte("nil"), nil, 0); old != nil || existed {
+	if old, existed := tree.Put([]byte("nil"), nil, 1); old != nil || existed {
 		t.Error("should not exist yet")
 	}
 	if value, _, existed := tree.Get(nil); !existed || bytes.Compare(value, []byte("nil")) != 0 {
@@ -969,8 +969,8 @@ func benchTreeSync(b *testing.B, size, delta int) {
 	for i := 0; i < size; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
 		v = []byte(fmt.Sprint(i))
-		tree1.Put(k, v, 0)
-		tree2.Put(k, v, 0)
+		tree1.Put(k, v, 1)
+		tree2.Put(k, v, 1)
 	}
 	var s *Sync
 	for i := 0; i < b.N/delta; i++ {
@@ -1020,7 +1020,7 @@ func benchTree(b *testing.B, n int, put, get bool) {
 		benchmarkTestValues = append(benchmarkTestValues, []byte(fmt.Sprint(len(benchmarkTestValues))))
 	}
 	for benchmarkTestTree.Size() < n {
-		benchmarkTestTree.Put(benchmarkTestKeys[benchmarkTestTree.Size()], benchmarkTestValues[benchmarkTestTree.Size()], 0)
+		benchmarkTestTree.Put(benchmarkTestKeys[benchmarkTestTree.Size()], benchmarkTestValues[benchmarkTestTree.Size()], 1)
 	}
 	var keys [][]byte
 	var vals [][]byte
@@ -1035,7 +1035,7 @@ func benchTree(b *testing.B, n int, put, get bool) {
 		k = benchmarkTestKeys[i%len(benchmarkTestKeys)]
 		v = benchmarkTestValues[i%len(benchmarkTestValues)]
 		if put {
-			benchmarkTestTree.Put(k, v, 0)
+			benchmarkTestTree.Put(k, v, 1)
 		}
 		if get {
 			j, _, existed := benchmarkTestTree.Get(k)

@@ -84,7 +84,7 @@ func (self *node) each(prefix []Nibble, use int, f nodeIterator) (cont bool) {
 	cont = true
 	if self != nil {
 		prefix = append(prefix, self.segment...)
-		if self.use&use != 0 {
+		if use == 0 || self.use&use != 0 {
 			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 		}
 		if cont {
@@ -109,7 +109,7 @@ func (self *node) reverseEach(prefix []Nibble, use int, f nodeIterator) (cont bo
 			}
 		}
 		if cont {
-			if self.use&use != 0 {
+			if use == 0 || self.use&use != 0 {
 				cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 			}
 		}
@@ -119,7 +119,7 @@ func (self *node) reverseEach(prefix []Nibble, use int, f nodeIterator) (cont bo
 func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int, f nodeIterator) (cont bool) {
 	cont = true
 	prefix = append(prefix, self.segment...)
-	if self.use&use != 0 && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
+	if (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
 		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 	}
 	if cont {
@@ -172,7 +172,7 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, 
 		}
 	}
 	if cont {
-		if self.use&use != 0 && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
+		if (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
 			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 		}
 	}
@@ -196,11 +196,11 @@ func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int
 		}
 		return
 	}
-	if self.use&use != 0 && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-		if self.use&use&byteValue != 0 {
+	if (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
+		if use == 0 || self.use&use&byteValue != 0 {
 			result++
 		}
-		if self.use&use&treeValue != 0 {
+		if use == 0 || self.use&use&treeValue != 0 {
 			result += self.treeValue.Size()
 		}
 	}
@@ -214,12 +214,12 @@ func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int
 func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, use int, f nodeIndexIterator) (cont bool) {
 	cont = true
 	prefix = append(prefix, self.segment...)
-	if self.use&use != 0 && (min == nil || count >= *min) && (max == nil || count <= *max) {
+	if (use == 0 || self.use&use != 0) && (min == nil || count >= *min) && (max == nil || count <= *max) {
 		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp, count)
-		if self.use&use&byteValue != 0 {
+		if use == 0 || self.use&use&byteValue != 0 {
 			count++
 		}
-		if self.use&use&treeValue != 0 {
+		if use == 0 || self.use&use&treeValue != 0 {
 			count += self.treeValue.Size()
 		}
 	}
@@ -271,12 +271,12 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 		}
 	}
 	if cont {
-		if self.use&use != 0 && (min == nil || count >= *min) && (max == nil || count <= *max) {
+		if (use == 0 || self.use&use != 0) && (min == nil || count >= *min) && (max == nil || count <= *max) {
 			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp, count)
-			if self.use&use&byteValue != 0 {
+			if use == 0 || self.use&use&byteValue != 0 {
 				count++
 			}
-			if self.use&use&treeValue != 0 {
+			if use == 0 || self.use&use&treeValue != 0 {
 				count += self.treeValue.Size()
 			}
 		}
@@ -338,10 +338,10 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
 		} else if beyond_segment {
 			return
 		} else if beyond_self {
-			if use&byteValue&self.use != 0 {
+			if use == 0 || use&byteValue&self.use != 0 {
 				count++
 			}
-			if use&treeValue&self.use != 0 {
+			if use == 0 || use&treeValue&self.use != 0 {
 				count += self.treeValue.Size()
 			}
 			start, step, stop := 0, 1, len(self.children)
