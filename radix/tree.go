@@ -159,14 +159,28 @@ func (self *Tree) String() string {
 	}
 	return fmt.Sprint(self.ToMap())
 }
-func (self *Tree) SizeBetween(min, max []byte, mininc, maxinc bool) int {
+func (self *Tree) sizeBetween(min, max []byte, mininc, maxinc bool, use int) int {
 	if self == nil {
 		return 0
 	}
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	mincmp, maxcmp := cmps(mininc, maxinc)
-	return self.root.sizeBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, byteValue|treeValue)
+	return self.root.sizeBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, use)
+}
+func (self *Tree) RealSizeBetween(min, max []byte, mininc, maxinc bool) int {
+	return self.sizeBetween(min, max, mininc, maxinc, 0)
+}
+func (self *Tree) SizeBetween(min, max []byte, mininc, maxinc bool) int {
+	return self.sizeBetween(min, max, mininc, maxinc, byteValue|treeValue)
+}
+func (self *Tree) RealSize() int {
+	if self == nil {
+		return 0
+	}
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.root.realSize
 }
 func (self *Tree) Size() int {
 	if self == nil {
@@ -342,6 +356,11 @@ func (self *Tree) ReverseIndex(n int) (key []byte, byteValue []byte, timestamp i
 		return false
 	})
 	return
+}
+func (self *Tree) Clear(timestamp int64) int {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	return self.root.fakeClear(nil, byteValue, timestamp, self.timer.ContinuousTime())
 }
 func (self *Tree) Del(key []byte, timestamp int64) (oldBytes []byte, existed bool) {
 	self.lock.Lock()

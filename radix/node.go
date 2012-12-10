@@ -29,13 +29,14 @@ type node struct {
 	byteValue []byte
 	byteHash  []byte // cached hash of the byteValue
 	treeValue *Tree
-	timestamp int64  // only used in regard to byteValues. treeValues ignore them (since they have their own timestamps inside them)
+	timestamp int64  // only used in regard to byteValues. treeValues ignore them (since they have their own timestamps inside them). a timestamp of 0 will be considered REALLY empty
 	hash      []byte // cached hash of the entire node
 	children  []*node
 	empty     bool // this node only serves a structural purpose (ie remove it if it is no longer useful for that)
 	use       int  // the values in this node that are to be considered 'present'. even if this is a zero, do not remove the node if empty is false - it is still a delete marker.
 	treeSize  int  // size of the tree in this node and those of all of its children
 	byteSize  int  // number of byte values in this node and all of its children
+	realSize  int  // number of actual values, including delete markers
 }
 
 func newNode(segment []Nibble, byteValue []byte, treeValue *Tree, timestamp int64, empty bool, use int) *node {
@@ -59,6 +60,11 @@ func (self *node) setSegment(part []Nibble) {
 func (self *node) rehash(key []Nibble, now int64) {
 	self.treeSize = 0
 	self.byteSize = 0
+	self.realSize = 0
+	self.realSize += self.treeValue.Size()
+	if self.timestamp != 0 {
+		self.realSize++
+	}
 	if self.use&treeValue != 0 {
 		self.treeSize = self.treeValue.Size()
 	}
@@ -75,18 +81,22 @@ func (self *node) rehash(key []Nibble, now int64) {
 			}
 			self.treeSize += child.treeSize
 			self.byteSize += child.byteSize
+			self.realSize += child.realSize
 			h.Write(child.hash)
 		}
 	}
 	h.Extrude(&self.hash)
 }
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
+	if self == nil {
+		return
+	}
 	indentation := &bytes.Buffer{}
 	for i := 0; i < indent; i++ {
 		fmt.Fprint(indentation, " ")
 	}
 	encodedSegment := stringEncode(toBytes(self.segment))
-	keyHeader := fmt.Sprintf("%v%#v (%v/%v, %v, %v, %v, %v) => ", string(indentation.Bytes()), encodedSegment, self.byteSize, self.treeSize, self.empty, self.use, self.timestamp, hex.EncodeToString(self.hash))
+	keyHeader := fmt.Sprintf("%v%#v (%v/%v/%v, %v, %v, %v, %v) => ", string(indentation.Bytes()), encodedSegment, self.byteSize, self.treeSize, self.realSize, self.empty, self.use, self.timestamp, hex.EncodeToString(self.hash))
 	if self.empty {
 		fmt.Fprintf(buffer, "%v\n", keyHeader)
 	} else {
@@ -94,9 +104,7 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
 		fmt.Fprintf(buffer, "%v%v\n", keyHeader, self.byteValue)
 	}
 	for _, child := range self.children {
-		if child != nil {
-			child.describe(indent+len(encodedSegment), buffer)
-		}
+		child.describe(indent+len(encodedSegment), buffer)
 	}
 }
 func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
@@ -133,11 +141,15 @@ func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int
 		m = len(max)
 	}
 	if (min == nil || nComp(prefix[:m], min[:m]) > 0) && (max == nil || nComp(prefix[:m], max[:m]) < 0) {
-		if use&byteValue != 0 {
-			result += self.byteSize
-		}
-		if use&treeValue != 0 {
-			result += self.treeSize
+		if use == 0 {
+			result += self.realSize
+		} else {
+			if use&byteValue != 0 {
+				result += self.byteSize
+			}
+			if use&treeValue != 0 {
+				result += self.treeSize
+			}
 		}
 		return
 	}
@@ -185,11 +197,15 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
 				child = self.children[j]
 				if child != nil {
 					if (up && j < int(segment[i])) || (!up && j > int(segment[i])) {
-						if use&byteValue != 0 {
-							count += child.byteSize
-						}
-						if use&treeValue != 0 {
-							count += child.treeSize
+						if use == 0 {
+							count += child.realSize
+						} else {
+							if use&byteValue != 0 {
+								count += child.byteSize
+							}
+							if use&treeValue != 0 {
+								count += child.treeSize
+							}
 						}
 					} else {
 						index, existed = child.indexOf(count, segment[i:], use, up)
@@ -212,11 +228,15 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
 				} else {
 					for _, child := range self.children {
 						if child != nil {
-							if use&byteValue != 0 {
-								count += child.byteSize
-							}
-							if use&treeValue != 0 {
-								count += child.treeSize
+							if use == 0 {
+								count += child.realSize
+							} else {
+								if use&byteValue != 0 {
+									count += child.byteSize
+								}
+								if use&treeValue != 0 {
+									count += child.treeSize
+								}
 							}
 						}
 					}
@@ -324,6 +344,32 @@ func (self *node) del(prefix, segment []Nibble, use int, now int64) (result *nod
 		}
 	}
 	panic("Shouldn't happen")
+}
+func (self *node) fakeClear(prefix []Nibble, use int, timestamp, now int64) (removed int) {
+	if self == nil {
+		return
+	}
+	newPrefix := make([]Nibble, len(prefix)+len(self.segment))
+	copy(newPrefix, prefix)
+	copy(newPrefix[len(prefix):], self.segment)
+	for _, child := range self.children {
+		removed += child.fakeClear(newPrefix, use, timestamp, now)
+	}
+	if !self.empty {
+		if self.use&use&byteValue != 0 {
+			removed++
+			self.byteValue, self.byteHash = nil, murmur.HashBytes(nil)
+			self.use &^= byteValue
+		}
+		if self.use&use&treeValue != 0 {
+			removed += self.treeValue.Size()
+			self.treeValue = nil
+			self.use &^= treeValue
+		}
+		self.timestamp = timestamp
+	}
+	self.rehash(newPrefix, now)
+	return
 }
 func (self *node) fakeDel(prefix, segment []Nibble, use int, timestamp, now int64) (result *node, oldBytes []byte, oldTree *Tree, oldTimestamp int64, existed int) {
 	return self.insertHelp(prefix, newNode(segment, nil, nil, timestamp, false, 0), use, now)
