@@ -241,7 +241,7 @@ func (self *Node) subDel(data common.Item) error {
 			go self.forwardOperation(data, "DHash.SlaveSubDel")
 		}
 	}
-	self.tree.SubDel(data.Key, data.SubKey, data.Timestamp)
+	self.tree.SubFakeDel(data.Key, data.SubKey, data.Timestamp)
 	return nil
 }
 func (self *Node) subPut(data common.Item) error {
@@ -263,7 +263,7 @@ func (self *Node) del(data common.Item) error {
 			go self.forwardOperation(data, "DHash.SlaveDel")
 		}
 	}
-	self.tree.Del(data.Key, data.Timestamp)
+	self.tree.FakeDel(data.Key, data.Timestamp)
 	return nil
 }
 func (self *Node) put(data common.Item) error {

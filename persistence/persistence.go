@@ -34,6 +34,7 @@ type Op struct {
 type logfile struct {
 	timestamp time.Time
 	filename  string
+	suffix string
 	file      *os.File
 	encoder   *gob.Encoder
 	decoder   *gob.Decoder
@@ -42,6 +43,7 @@ type logfile struct {
 func createLogfile(dir, suffix string) (rval *logfile) {
 	rval = &logfile{}
 	rval.timestamp = time.Now()
+	rval.suffix = suffix
 	rval.filename = filepath.Join(dir, fmt.Sprintf("%v%v", rval.timestamp.UnixNano(), suffix))
 	return
 }
@@ -57,6 +59,7 @@ func parseLogfile(file string) (rval *logfile, err error) {
 		return
 	}
 	rval = &logfile{}
+	rval.suffix = match[2]
 	rval.timestamp = time.Unix(0, nanos)
 	rval.filename = file
 	return
@@ -100,8 +103,6 @@ func (self logfiles) Swap(i, j int) {
 
 type Operate func(o Op)
 
-type Snapshot func(p *Logger)
-
 type Logger struct {
 	ops      chan Op
 	stops    chan chan bool
@@ -109,7 +110,6 @@ type Logger struct {
 	state    int32
 	snapping int32
 	maxSize  int64
-	snapshot Snapshot
 	suffix   string
 	cond     *sync.Cond
 	lock     *sync.Mutex
@@ -142,8 +142,8 @@ func (self *Logger) setSuffix(s string) *Logger {
 	return self
 }
 
-func (self *Logger) Limit(maxSize int64, snapshot Snapshot) *Logger {
-	self.maxSize, self.snapshot = maxSize, snapshot
+func (self *Logger) Limit(maxSize int64) *Logger {
+	self.maxSize = maxSize
 	return self
 }
 
@@ -163,33 +163,37 @@ func (self *Logger) play(log *logfile, operate Operate) {
 	}
 }
 
-func (self *Logger) latest() (latestSnapshot *logfile, logs logfiles) {
+func (self *Logger) logfiles() (result logfiles {
 	dir, err := os.Open(self.dir)
 	if err != nil {
 		panic(err)
 	}
+	defer dir.Close()
 	files, err := dir.Readdirnames(0)
 	if err != nil {
 		panic(err)
 	}
-	var match []string
+	var err error
 	for _, file := range files {
-		if match = logfileReg.FindStringSubmatch(file); match != nil && match[2] == "snap" {
-			snapshot, err := parseLogfile(filepath.Join(self.dir, file))
-			if err != nil {
-				panic(err)
-			}
+		var logf *logfile
+		logf, err = parseLogfile(filepath.Join(self.dir, file))
+		if err != nil {
+			result = append(result, logf)
+		}
+	}
+	return
+}
+
+func (self *Logger) latest() (latestSnapshot *logfile, logs logfiles) {
+  for _, logf := range self.logfiles() {
+		if logf.suffix == "snapshot" {
 			if latestSnapshot == nil || latestSnapshot.timestamp.After(snapshot.timestamp) {
 				latestSnapshot = snapshot
 			}
 		}
 	}
-	for _, file := range files {
-		if match = logfileReg.FindStringSubmatch(file); match != nil && match[2] == "log" {
-			logf, err := parseLogfile(filepath.Join(self.dir, file))
-			if err != nil {
-				panic(err)
-			}
+	for _, logf := range self.logfiles() {
+		if logf.suffix == "log"
 			if latestSnapshot == nil || latestSnapshot.timestamp.Before(logf.timestamp) {
 				logs = append(logs, logf)
 			}
@@ -229,20 +233,10 @@ func (self *Logger) Stop() *Logger {
 }
 
 func (self *Logger) clearOlderThan(t time.Time) {
-	dir, err := os.Open(self.dir)
-	if err != nil {
-		panic(err)
-	}
-	files, err := dir.Readdirnames(0)
-	if err != nil {
-		panic(err)
-	}
-	for _, filename := range files {
-		if logf, err := parseLogfile(filepath.Join(self.dir, filename)); err == nil {
-			if logf.timestamp.Before(t) {
-				if err = os.Remove(filepath.Join(self.dir, filename)); err != nil {
-					log.Printf("failed removing %v: %v", filename, err)
-				}
+	for _, logf := range self.logfiles() {
+		if logf.timestamp.Before(t) {
+			if err = os.Remove(filepath.Join(self.dir, filename)); err != nil {
+				log.Printf("failed removing %v: %v", filename, err)
 			}
 		}
 	}

@@ -211,8 +211,10 @@ func (self *Tree) Describe() string {
 	return self.describeIndented(0, 0)
 }
 
-func (self *Tree) fakeDel(key []Nibble, use int, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
-	self.root, oldBytes, oldTree, _, existed = self.root.fakeDel(nil, key, use, timestamp, self.timer.ContinuousTime())
+func (self *Tree) FakeDel(key []byte, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.root, oldBytes, oldTree, _, existed = self.root.fakeDel(nil, Rip(key), byteValue, timestamp, self.timer.ContinuousTime())
 	return
 }
 func (self *Tree) put(key []Nibble, byteValue []byte, treeValue *Tree, use int, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
@@ -362,10 +364,11 @@ func (self *Tree) Clear(timestamp int64) int {
 	defer self.lock.Unlock()
 	return self.root.fakeClear(nil, byteValue, timestamp, self.timer.ContinuousTime())
 }
-func (self *Tree) Del(key []byte, timestamp int64) (oldBytes []byte, existed bool) {
+func (self *Tree) Del(key []byte) (oldBytes []byte, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	oldBytes, _, ex := self.fakeDel(Rip(key), byteValue, timestamp)
+	var ex int
+	self.root, oldBytes, _, _, ex = self.root.del(nil, Rip(key), byteValue, self.timer.ContinuousTime())
 	existed = ex&byteValue != 0
 	return
 }
@@ -499,12 +502,22 @@ func (self *Tree) SubPut(key, subKey []byte, byteValue []byte, timestamp int64) 
 	self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
 	return
 }
-func (self *Tree) SubDel(key, subKey []byte, timestamp int64) (oldBytes []byte, existed bool) {
+func (self *Tree) SubDel(key, subKey []byte) (oldBytes []byte, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	ripped := Rip(key)
 	if _, subTree, subTreeTimestamp, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
-		oldBytes, existed = subTree.Del(subKey, timestamp)
+		oldBytes, existed = subTree.Del(subKey)
+		self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
+	}
+	return
+}
+func (self *Tree) SubFakeDel(key, subKey []byte, timestamp int64) (oldBytes []byte, existed bool) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	ripped := Rip(key)
+	if _, subTree, subTreeTimestamp, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
+		oldBytes, _, existed = subTree.FakeDel(subKey, timestamp)
 		self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
 	}
 	return
