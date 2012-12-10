@@ -5,10 +5,7 @@ A Go database
 
 # TODO
 
-* Sync
- * Test if sync between newly cleared subtree and old full subtree works as intended (both are clear after)
 * Client API
- * Size
  * SubSize
  * SubClear
  * Inter/Union/Diff

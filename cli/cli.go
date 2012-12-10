@@ -37,6 +37,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("reverseSlice \\S+ \\S+ \\S+"):      reverseSlice,
 	newActionSpec("slice \\S+ \\S+ \\S+"):             slice,
 	newActionSpec("put \\S+ \\S+"):                    put,
+	newActionSpec("size"):                             size,
 	newActionSpec("count \\S+ \\S+ \\S+"):             count,
 	newActionSpec("get \\S+"):                         get,
 	newActionSpec("del \\S+"):                         del,
@@ -65,6 +66,10 @@ func mustAtoi(s string) *int {
 		panic(err)
 	}
 	return &i
+}
+
+func size(conn *client.Conn, args []string) {
+	fmt.Println(conn.Size())
 }
 
 func reverseSliceIndex(conn *client.Conn, args []string) {
