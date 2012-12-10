@@ -513,7 +513,7 @@ func (self *Tree) PutTimestamp(key []Nibble, bValue []byte, present bool, expect
 	return self.putTimestamp(key, bValue, nil, nodeUse, byteValue, expected, timestamp)
 }
 func (self *Tree) delTimestamp(key []Nibble, use int, expected int64) (result bool) {
-	if _, _, current, ex := self.root.get(key); ex&use != 0 && current == expected {
+	if _, _, current, _ := self.root.get(key); current == expected {
 		result = true
 		self.root, _, _, _, _ = self.root.del(nil, key, use, self.timer.ContinuousTime())
 	}

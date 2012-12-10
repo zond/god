@@ -116,10 +116,10 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, us
 		for _, child := range self.children {
 			if child != nil {
 				relevantChildSize = 0
-				if use&byteValue != 0 {
+				if use == 0 || use&byteValue != 0 {
 					relevantChildSize += child.byteSize
 				}
-				if use&treeValue != 0 {
+				if use == 0 || use&treeValue != 0 {
 					relevantChildSize += child.treeSize
 				}
 				if (min == nil || relevantChildSize+count > *min) && (max == nil || count <= *max) {
@@ -143,10 +143,10 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 		child = self.children[i]
 		if child != nil {
 			relevantChildSize = 0
-			if use&byteValue != 0 {
+			if use == 0 || use&byteValue != 0 {
 				relevantChildSize += child.byteSize
 			}
-			if use&treeValue != 0 {
+			if use == 0 || use&treeValue != 0 {
 				relevantChildSize += child.treeSize
 			}
 			if (min == nil || relevantChildSize+count > *min) && (max == nil || count <= *max) {
