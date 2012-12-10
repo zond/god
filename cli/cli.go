@@ -107,31 +107,31 @@ func show(conn *client.Conn) {
 	fmt.Println(conn.Describe())
 }
 
-func prev(conn *client.Conn, args []string) {
-	if key, existed := conn.Prev([]byte(args[1])); existed {
-		fmt.Println(string(key))
-	}
-}
-
 func count(conn *client.Conn, args []string) {
 	fmt.Println(conn.Count([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false))
 }
 
 func prevIndex(conn *client.Conn, args []string) {
-	if key, index, existed := conn.PrevIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
-		fmt.Printf("%v: %v\n", index, string(key))
+	if key, value, index, existed := conn.PrevIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
+		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
 	}
 }
 
 func nextIndex(conn *client.Conn, args []string) {
-	if key, index, existed := conn.NextIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
-		fmt.Printf("%v: %v\n", index, string(key))
+	if key, value, index, existed := conn.NextIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
+		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+	}
+}
+
+func prev(conn *client.Conn, args []string) {
+	if key, value, existed := conn.Prev([]byte(args[1])); existed {
+		fmt.Printf("%v => %v", string(key), string(value))
 	}
 }
 
 func next(conn *client.Conn, args []string) {
-	if key, existed := conn.Next([]byte(args[1])); existed {
-		fmt.Println(string(key))
+	if key, value, existed := conn.Next([]byte(args[1])); existed {
+		fmt.Printf("%v => %v", string(key), string(value))
 	}
 }
 
@@ -148,14 +148,14 @@ func last(conn *client.Conn, args []string) {
 }
 
 func subNext(conn *client.Conn, args []string) {
-	if key, existed := conn.SubNext([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Println(string(key))
+	if key, value, existed := conn.SubNext([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Printf("%v => %v", string(key), string(value))
 	}
 }
 
 func subPrev(conn *client.Conn, args []string) {
-	if key, existed := conn.SubPrev([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Println(string(key))
+	if key, value, existed := conn.SubPrev([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Printf("%v => %v", string(key), string(value))
 	}
 }
 

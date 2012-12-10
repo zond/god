@@ -252,7 +252,7 @@ func (self *Conn) IndexOf(key, subKey []byte) (index int, existed bool) {
 	index, existed = result.N, result.Existed
 	return
 }
-func (self *Conn) Next(key []byte) (nextKey []byte, existed bool) {
+func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
 	}
@@ -272,10 +272,10 @@ func (self *Conn) Next(key []byte) (nextKey []byte, existed bool) {
 			break
 		}
 	}
-	nextKey, existed = result.Key, result.Exists
+	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
 	return
 }
-func (self *Conn) Prev(key []byte) (prevKey []byte, existed bool) {
+func (self *Conn) Prev(key []byte) (prevKey, prevValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
 	}
@@ -295,7 +295,7 @@ func (self *Conn) Prev(key []byte) (prevKey []byte, existed bool) {
 			break
 		}
 	}
-	prevKey, existed = result.Key, result.Exists
+	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
 	return
 }
 func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) {
@@ -313,7 +313,7 @@ func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) 
 	}
 	return
 }
-func (self *Conn) NextIndex(key []byte, index int) (foundKey []byte, foundIndex int, existed bool) {
+func (self *Conn) NextIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
 	data := common.Item{
 		Key:   key,
 		Index: index,
@@ -324,10 +324,10 @@ func (self *Conn) NextIndex(key []byte, index int) (foundKey []byte, foundIndex 
 		self.removeNode(*successor)
 		return self.NextIndex(key, index)
 	}
-	foundKey, foundIndex, existed = result.Key, result.Index, result.Exists
+	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
 	return
 }
-func (self *Conn) PrevIndex(key []byte, index int) (foundKey []byte, foundIndex int, existed bool) {
+func (self *Conn) PrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
 	data := common.Item{
 		Key:   key,
 		Index: index,
@@ -338,7 +338,7 @@ func (self *Conn) PrevIndex(key []byte, index int) (foundKey []byte, foundIndex 
 		self.removeNode(*successor)
 		return self.NextIndex(key, index)
 	}
-	foundKey, foundIndex, existed = result.Key, result.Index, result.Exists
+	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
 	return
 }
 func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
@@ -385,22 +385,22 @@ func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []com
 	result = self.mergeRecent("DHash.Slice", r, true)
 	return
 }
-func (self *Conn) SubPrev(key, subKey []byte) (prevKey []byte, existed bool) {
+func (self *Conn) SubPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
 		SubKey: subKey,
 	}
 	result := self.findRecent("DHash.SubPrev", data)
-	prevKey, existed = result.Key, result.Exists
+	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
 	return
 }
-func (self *Conn) SubNext(key, subKey []byte) (nextKey []byte, existed bool) {
+func (self *Conn) SubNext(key, subKey []byte) (nextKey, nextValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
 		SubKey: subKey,
 	}
 	result := self.findRecent("DHash.SubNext", data)
-	nextKey, existed = result.Key, result.Exists
+	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
 	return
 }
 func (self *Conn) Last(key []byte) (lastKey, lastValue []byte, existed bool) {
