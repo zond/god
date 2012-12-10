@@ -26,7 +26,7 @@ func (self testmap) playback() {
 }
 
 func (self testmap) record() {
-	self.p.Limit(1024, self.snapshotter())
+	self.p.Limit(1024)
 	self.p.Record()
 }
 func (self testmap) put(k, v string) {
@@ -35,6 +35,7 @@ func (self testmap) put(k, v string) {
 	self.p.Dump(Op{
 		Key:   []byte(k),
 		Value: []byte(v),
+		Put:   true,
 	})
 	self.m[k] = v
 }
@@ -43,18 +44,6 @@ func (self testmap) operator() Operate {
 		self.l.Lock()
 		defer self.l.Unlock()
 		self.m[string(o.Key)] = string(o.Value)
-	}
-}
-func (self testmap) snapshotter() Snapshot {
-	return func(p *Logger) {
-		op := Op{}
-		self.l.RLock()
-		defer self.l.RUnlock()
-		for k, v := range self.m {
-			op.Key = []byte(k)
-			op.Value = []byte(v)
-			p.Dump(op)
-		}
 	}
 }
 
@@ -69,9 +58,9 @@ func TestRecordPlay(t *testing.T) {
 	p := NewLogger("test1")
 	p.Record()
 	op := Op{
-		Key:     []byte("a"),
-		Value:   []byte("1"),
-		Version: 1,
+		Key:       []byte("a"),
+		Value:     []byte("1"),
+		Timestamp: 1,
 	}
 	p.Dump(op)
 	p.Stop()
@@ -106,7 +95,7 @@ func TestSwap(t *testing.T) {
 	tm2 := newTestmap()
 	tm2.playback()
 	if !reflect.DeepEqual(tm.m, tm2.m) {
-		t.Errorf("%v should be equal to %v", tm.m, tm2.m)
+		t.Errorf("%v should be equal to %v", tm2.m, tm.m)
 	}
 }
 
@@ -116,9 +105,9 @@ func BenchmarkRecord(b *testing.B) {
 	p := NewLogger("test2")
 	p.Record()
 	op := Op{
-		Key:     []byte("a"),
-		Value:   []byte("1"),
-		Version: 1,
+		Key:       []byte("a"),
+		Value:     []byte("1"),
+		Timestamp: 1,
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {

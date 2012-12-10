@@ -23,18 +23,24 @@ const (
 	playing
 )
 
+const (
+	snapSuffix       = "snap"
+	logSuffix        = "log"
+	unfinishedSuffix = "unfinished"
+)
+
 type Op struct {
-	Key     []byte
-	SubKey  []byte
-	Value   []byte
-	Version int64
-	Put     bool
+	Key       []byte
+	SubKey    []byte
+	Value     []byte
+	Timestamp int64
+	Put       bool
 }
 
 type logfile struct {
 	timestamp time.Time
 	filename  string
-	suffix string
+	suffix    string
 	file      *os.File
 	encoder   *gob.Encoder
 	decoder   *gob.Decoder
@@ -44,7 +50,7 @@ func createLogfile(dir, suffix string) (rval *logfile) {
 	rval = &logfile{}
 	rval.timestamp = time.Now()
 	rval.suffix = suffix
-	rval.filename = filepath.Join(dir, fmt.Sprintf("%v%v", rval.timestamp.UnixNano(), suffix))
+	rval.filename = filepath.Join(dir, fmt.Sprintf("%v.%v", rval.timestamp.UnixNano(), suffix))
 	return
 }
 
@@ -63,6 +69,26 @@ func parseLogfile(file string) (rval *logfile, err error) {
 	rval.timestamp = time.Unix(0, nanos)
 	rval.filename = file
 	return
+}
+
+func (self *logfile) play(operate Operate) {
+	if self == nil {
+		return
+	}
+	self.read()
+	defer self.close()
+	var err error
+	for {
+		var op Op
+		err = self.decoder.Decode(&op)
+		if err != nil {
+			break
+		}
+		operate(op)
+	}
+	if err != io.EOF {
+		panic(err)
+	}
 }
 
 func (self *logfile) read() *logfile {
@@ -124,7 +150,7 @@ func NewLogger(dir string) *Logger {
 		ops:    make(chan Op),
 		stops:  make(chan chan bool),
 		dir:    dir,
-		suffix: ".log",
+		suffix: logSuffix,
 		lock:   lock,
 		cond:   sync.NewCond(lock),
 	}
@@ -147,23 +173,7 @@ func (self *Logger) Limit(maxSize int64) *Logger {
 	return self
 }
 
-func (self *Logger) play(log *logfile, operate Operate) {
-	log.read()
-	var err error
-	for {
-		var op Op
-		err = log.decoder.Decode(&op)
-		if err != nil {
-			break
-		}
-		operate(op)
-	}
-	if err != io.EOF {
-		panic(err)
-	}
-}
-
-func (self *Logger) logfiles() (result logfiles {
+func (self *Logger) logfiles() (result logfiles) {
 	dir, err := os.Open(self.dir)
 	if err != nil {
 		panic(err)
@@ -173,11 +183,10 @@ func (self *Logger) logfiles() (result logfiles {
 	if err != nil {
 		panic(err)
 	}
-	var err error
 	for _, file := range files {
 		var logf *logfile
 		logf, err = parseLogfile(filepath.Join(self.dir, file))
-		if err != nil {
+		if err == nil {
 			result = append(result, logf)
 		}
 	}
@@ -185,15 +194,15 @@ func (self *Logger) logfiles() (result logfiles {
 }
 
 func (self *Logger) latest() (latestSnapshot *logfile, logs logfiles) {
-  for _, logf := range self.logfiles() {
-		if logf.suffix == "snapshot" {
-			if latestSnapshot == nil || latestSnapshot.timestamp.After(snapshot.timestamp) {
-				latestSnapshot = snapshot
+	for _, logf := range self.logfiles() {
+		if logf.suffix == snapSuffix {
+			if latestSnapshot == nil || latestSnapshot.timestamp.After(logf.timestamp) {
+				latestSnapshot = logf
 			}
 		}
 	}
 	for _, logf := range self.logfiles() {
-		if logf.suffix == "log"
+		if logf.suffix == logSuffix {
 			if latestSnapshot == nil || latestSnapshot.timestamp.Before(logf.timestamp) {
 				logs = append(logs, logf)
 			}
@@ -207,11 +216,9 @@ func (self *Logger) Play(operate Operate) {
 	if self.changeState(stopped, playing) {
 		defer self.changeState(playing, stopped)
 		snapshot, logs := self.latest()
-		if snapshot != nil {
-			self.play(snapshot, operate)
-		}
+		snapshot.play(operate)
 		for _, logf := range logs {
-			self.play(logf, operate)
+			logf.play(operate)
 		}
 	}
 }
@@ -235,9 +242,54 @@ func (self *Logger) Stop() *Logger {
 func (self *Logger) clearOlderThan(t time.Time) {
 	for _, logf := range self.logfiles() {
 		if logf.timestamp.Before(t) {
-			if err = os.Remove(filepath.Join(self.dir, filename)); err != nil {
-				log.Printf("failed removing %v: %v", filename, err)
+			if err := os.Remove(logf.filename); err != nil {
+				log.Printf("failed removing %v: %v", logf.filename, err)
 			}
+		}
+	}
+}
+
+func (self *Logger) snapshot(snap *logfile, files logfiles) {
+	byteCompressor := make(map[string]Op)
+	treeCompressor := make(map[string]map[string]Op)
+	var subMap map[string]Op
+	var ok bool
+	operate := func(op Op) {
+		if op.Put {
+			if op.SubKey == nil {
+				byteCompressor[string(op.Key)] = op
+			} else {
+				subMap, ok = treeCompressor[string(op.Key)]
+				if !ok {
+					subMap = make(map[string]Op)
+					treeCompressor[string(op.Key)] = subMap
+				}
+				subMap[string(op.SubKey)] = op
+			}
+		} else {
+			if op.SubKey == nil {
+				delete(byteCompressor, string(op.Key))
+			} else {
+				subMap, ok = treeCompressor[string(op.Key)]
+				if ok {
+					delete(subMap, string(op.SubKey))
+					if len(subMap) == 0 {
+						delete(treeCompressor, string(op.Key))
+					}
+				}
+			}
+		}
+	}
+	snap.play(operate)
+	for _, logf := range files {
+		logf.play(operate)
+	}
+	for _, op := range byteCompressor {
+		self.Dump(op)
+	}
+	for _, subMap := range treeCompressor {
+		for _, op := range subMap {
+			self.Dump(op)
 		}
 	}
 }
@@ -245,15 +297,16 @@ func (self *Logger) clearOlderThan(t time.Time) {
 func (self *Logger) snapshotAndDelete(oldrec *logfile, p chan *logfile, snapping *int32) {
 	defer atomic.StoreInt32(snapping, 0)
 	defer self.cond.Broadcast()
-	snapshotter := NewLogger(self.dir).setSuffix(".unfinished")
-	newlogfile := <-snapshotter.Record()
-	p <- newlogfile
-	self.snapshot(snapshotter)
+	latestSnapshot, logfiles := self.latest()
+	snapshotter := NewLogger(self.dir).setSuffix(unfinishedSuffix)
+	snapshotfile := <-snapshotter.Record()
+	p <- snapshotfile
+	snapshotter.snapshot(latestSnapshot, logfiles)
 	snapshotter.Stop()
-	if err := os.Rename(newlogfile.filename, filepath.Join(self.dir, fmt.Sprintf("%v%v", newlogfile.timestamp.UnixNano(), ".snap"))); err != nil {
+	if err := os.Rename(snapshotfile.filename, filepath.Join(self.dir, fmt.Sprintf("%v.%v", snapshotfile.timestamp.UnixNano(), snapSuffix))); err != nil {
 		panic(err)
 	}
-	self.clearOlderThan(newlogfile.timestamp)
+	self.clearOlderThan(snapshotfile.timestamp)
 }
 
 func (self *Logger) swap(fi *os.FileInfo, err *error, rec *logfile) *logfile {
