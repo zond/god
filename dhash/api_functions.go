@@ -4,6 +4,7 @@ import (
 	"../client"
 	"../common"
 	"../radix"
+	"bytes"
 	"sync/atomic"
 	"time"
 )
@@ -17,7 +18,7 @@ func (self *Node) Description() common.DHashDescription {
 		LastMigrate:  time.Unix(0, atomic.LoadInt64(&self.lastMigrate)),
 		Timer:        self.timer.ActualTime(),
 		OwnedEntries: self.Owned(),
-		HeldEntries:  self.tree.Size(),
+		HeldEntries:  self.tree.RealSize(),
 		Nodes:        self.node.GetNodes(),
 	}
 }
@@ -29,10 +30,6 @@ func (self *Node) DescribeTree() string {
 }
 func (self *Node) client() *client.Conn {
 	return client.NewConnRing(common.NewRingNodes(self.node.Nodes()))
-}
-func (self *Node) SubSize(key []byte, result *int) error {
-	*result = self.tree.SubSize(key)
-	return nil
 }
 func (self *Node) SubFind(data common.Item, result *common.Item) error {
 	*result = data
@@ -258,5 +255,23 @@ func (self *Node) put(data common.Item) error {
 		}
 	}
 	self.tree.Put(data.Key, data.Value, data.Timestamp)
+	return nil
+}
+func (self *Node) Size() int {
+	pred := self.node.GetPredecessor()
+	me := self.node.Remote()
+	cmp := bytes.Compare(pred.Pos, me.Pos)
+	if cmp < 0 {
+		return self.tree.SizeBetween(pred.Pos, me.Pos, true, false)
+	} else if cmp > 0 {
+		return self.tree.SizeBetween(pred.Pos, nil, true, false) + self.tree.SizeBetween(nil, me.Pos, true, false)
+	}
+	if pred.Less(me) {
+		return 0
+	}
+	return self.tree.Size()
+}
+func (self *Node) SubSize(key []byte, result *int) error {
+	*result = self.tree.SubSize(key)
 	return nil
 }

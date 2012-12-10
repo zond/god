@@ -54,6 +54,10 @@ func (self *dhashServer) SubGet(data common.Item, result *common.Item) error {
 func (self *dhashServer) Get(data common.Item, result *common.Item) error {
 	return (*Node)(self).Get(data, result)
 }
+func (self *dhashServer) Size(x int, result *int) error {
+	*result = (*Node)(self).Size()
+	return nil
+}
 func (self *dhashServer) SubSize(key []byte, result *int) error {
 	return (*Node)(self).SubSize(key, result)
 }

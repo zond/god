@@ -174,17 +174,17 @@ func (self *Node) migrate() {
 				var wantedPos []byte
 				pred := self.node.GetPredecessor()
 				if bytes.Compare(pred.Pos, self.node.GetPosition()) < 1 {
-					if wantedPos, existed = self.tree.NextMarkerIndex(self.tree.SizeBetween(nil, self.node.GetPosition(), true, false) - wantedDelta); !existed {
+					if wantedPos, existed = self.tree.NextMarkerIndex(self.tree.RealSizeBetween(nil, self.node.GetPosition(), true, false) - wantedDelta); !existed {
 						return
 					}
 				} else {
-					ownedAfterNil := self.tree.SizeBetween(nil, succ.Pos, true, false)
+					ownedAfterNil := self.tree.RealSizeBetween(nil, succ.Pos, true, false)
 					if ownedAfterNil > wantedDelta {
 						if wantedPos, existed = self.tree.NextMarkerIndex(ownedAfterNil - wantedDelta); !existed {
 							return
 						}
 					} else {
-						if wantedPos, existed = self.tree.NextMarkerIndex(self.tree.Size() + ownedAfterNil - wantedDelta); !existed {
+						if wantedPos, existed = self.tree.NextMarkerIndex(self.tree.RealSize() + ownedAfterNil - wantedDelta); !existed {
 							return
 						}
 					}
@@ -263,12 +263,12 @@ func (self *Node) Owned() int {
 	me := self.node.Remote()
 	cmp := bytes.Compare(pred.Pos, me.Pos)
 	if cmp < 0 {
-		return self.tree.SizeBetween(pred.Pos, me.Pos, true, false)
+		return self.tree.RealSizeBetween(pred.Pos, me.Pos, true, false)
 	} else if cmp > 0 {
-		return self.tree.SizeBetween(pred.Pos, nil, true, false) + self.tree.SizeBetween(nil, me.Pos, true, false)
+		return self.tree.RealSizeBetween(pred.Pos, nil, true, false) + self.tree.RealSizeBetween(nil, me.Pos, true, false)
 	}
 	if pred.Less(me) {
 		return 0
 	}
-	return self.tree.Size()
+	return self.tree.RealSize()
 }
