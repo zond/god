@@ -476,11 +476,11 @@ func TestTreeHash(t *testing.T) {
 	}
 	var successes []bool
 	for i := 0; i < n/10; i++ {
-		_, ok := tree1.Del(keybackup[deletes[i]], 0)
+		_, ok := tree1.Del(keybackup[deletes[i]])
 		successes = append(successes, ok)
 	}
 	for i := 0; i < n/10; i++ {
-		if _, ok := tree2.Del(keybackup[deletes[i]], 0); ok != successes[i] {
+		if _, ok := tree2.Del(keybackup[deletes[i]]); ok != successes[i] {
 			t.Errorf("delete success should be %v", successes[i])
 		}
 	}
@@ -808,7 +808,7 @@ func TestTreeNilKey(t *testing.T) {
 	if value, _, existed := tree.Get(nil); value != nil || !existed {
 		t.Errorf("should exist")
 	}
-	if value, existed := tree.Del(nil, 0); value != nil || !existed {
+	if value, existed := tree.Del(nil); value != nil || !existed {
 		t.Errorf("should exist")
 	}
 	if value, _, existed := tree.Get(nil); value != nil || existed {
@@ -975,7 +975,7 @@ func benchTreeSync(b *testing.B, size, delta int) {
 	var s *Sync
 	for i := 0; i < b.N/delta; i++ {
 		for j := 0; j < delta; j++ {
-			tree2.Del(murmur.HashString(fmt.Sprint(j)), 0)
+			tree2.Del(murmur.HashString(fmt.Sprint(j)))
 		}
 		b.StartTimer()
 		s = NewSync(tree1, tree2)

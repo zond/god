@@ -211,10 +211,12 @@ func (self *Tree) Describe() string {
 	return self.describeIndented(0, 0)
 }
 
-func (self *Tree) FakeDel(key []byte, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
+func (self *Tree) FakeDel(key []byte, timestamp int64) (oldBytes []byte, oldTree *Tree, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	self.root, oldBytes, oldTree, _, existed = self.root.fakeDel(nil, Rip(key), byteValue, timestamp, self.timer.ContinuousTime())
+	var ex int
+	self.root, oldBytes, oldTree, _, ex = self.root.fakeDel(nil, Rip(key), byteValue, timestamp, self.timer.ContinuousTime())
+	existed = ex&byteValue != 0
 	return
 }
 func (self *Tree) put(key []Nibble, byteValue []byte, treeValue *Tree, use int, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
