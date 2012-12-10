@@ -44,7 +44,7 @@ func NewSync(source, destination HashTree) *Sync {
 Inclusive
 */
 func (self *Sync) From(from []byte) *Sync {
-	self.from = Rip(from)
+	self.from = rip(from)
 	return self
 }
 
@@ -52,7 +52,7 @@ func (self *Sync) From(from []byte) *Sync {
 Exclusive
 */
 func (self *Sync) To(to []byte) *Sync {
-	self.to = Rip(to)
+	self.to = rip(to)
 	return self
 }
 func (self *Sync) Destroy() *Sync {
