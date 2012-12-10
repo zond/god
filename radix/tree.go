@@ -14,9 +14,9 @@ func (self NaiveTimer) ContinuousTime() int64 {
 	return time.Now().UnixNano()
 }
 
-type TreeIterator func(key []byte, value []byte, timestamp int64) (cont bool)
+type TreeIterator func(key, value []byte, timestamp int64) (cont bool)
 
-type TreeIndexIterator func(key []byte, value []byte, timestamp int64, index int) (cont bool)
+type TreeIndexIterator func(key, value []byte, timestamp int64, index int) (cont bool)
 
 func cmps(mininc, maxinc bool) (mincmp, maxcmp int) {
 	if mininc {
@@ -29,13 +29,13 @@ func cmps(mininc, maxinc bool) (mincmp, maxcmp int) {
 }
 
 func newNodeIterator(f TreeIterator) nodeIterator {
-	return func(key []byte, bValue []byte, tValue *Tree, use int, timestamp int64) (cont bool) {
+	return func(key, bValue []byte, tValue *Tree, use int, timestamp int64) (cont bool) {
 		return f(key, bValue, timestamp)
 	}
 }
 
 func newNodeIndexIterator(f TreeIndexIterator) nodeIndexIterator {
-	return func(key []byte, bValue []byte, tValue *Tree, use int, timestamp int64, index int) (cont bool) {
+	return func(key, bValue []byte, tValue *Tree, use int, timestamp int64, index int) (cont bool) {
 		return f(key, bValue, timestamp, index)
 	}
 }
