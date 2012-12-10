@@ -3,7 +3,6 @@ package radix
 type subTreeWrapper struct {
 	parentTree HashTree
 	key        []Nibble
-	version    int64
 }
 
 func (self *subTreeWrapper) Hash() (hash []byte) {
@@ -13,26 +12,26 @@ func (self *subTreeWrapper) Hash() (hash []byte) {
 	return
 }
 func (self *subTreeWrapper) Finger(subKey []Nibble) *Print {
-	return self.parentTree.SubFinger(self.key, subKey, self.version)
+	return self.parentTree.SubFinger(self.key, subKey)
 }
 func (self *subTreeWrapper) GetTimestamp(subKey []Nibble) (byteValue []byte, version int64, present bool) {
-	return self.parentTree.SubGetTimestamp(self.key, subKey, self.version)
+	return self.parentTree.SubGetTimestamp(self.key, subKey)
 }
 func (self *subTreeWrapper) PutTimestamp(subKey []Nibble, byteValue []byte, present bool, expected, version int64) bool {
-	return self.parentTree.SubPutTimestamp(self.key, subKey, byteValue, present, self.version, expected, version)
+	return self.parentTree.SubPutTimestamp(self.key, subKey, byteValue, present, expected, version)
 }
 func (self *subTreeWrapper) DelTimestamp(subKey []Nibble, expected int64) bool {
-	return self.parentTree.SubDelTimestamp(self.key, subKey, self.version, expected)
+	return self.parentTree.SubDelTimestamp(self.key, subKey, expected)
 }
-func (self *subTreeWrapper) SubFinger(key, subKey []Nibble, expected int64) (result *Print) {
+func (self *subTreeWrapper) SubFinger(key, subKey []Nibble) (result *Print) {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubGetTimestamp(key, subKey []Nibble, expected int64) (byteValue []byte, version int64, present bool) {
+func (self *subTreeWrapper) SubGetTimestamp(key, subKey []Nibble) (byteValue []byte, version int64, present bool) {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubPutTimestamp(key, subKey []Nibble, byteValue []byte, present bool, expected, subExpected, subTimestamp int64) bool {
+func (self *subTreeWrapper) SubPutTimestamp(key, subKey []Nibble, byteValue []byte, present bool, subExpected, subTimestamp int64) bool {
 	panic(subTreeError)
 }
-func (self *subTreeWrapper) SubDelTimestamp(key, subKey []Nibble, expected, subExpected int64) bool {
+func (self *subTreeWrapper) SubDelTimestamp(key, subKey []Nibble, subExpected int64) bool {
 	panic(subTreeError)
 }

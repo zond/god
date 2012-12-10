@@ -17,10 +17,10 @@ type HashTree interface {
 	PutTimestamp(key []Nibble, byteValue []byte, present bool, expected, timestamp int64) bool
 	DelTimestamp(key []Nibble, expected int64) bool
 
-	SubFinger(key, subKey []Nibble, expected int64) (result *Print)
-	SubGetTimestamp(key, subKey []Nibble, expected int64) (byteValue []byte, timestamp int64, present bool)
-	SubPutTimestamp(key, subKey []Nibble, byteValue []byte, present bool, expected, subExpected, subTimestamp int64) bool
-	SubDelTimestamp(key, subKey []Nibble, expected, subExpected int64) bool
+	SubFinger(key, subKey []Nibble) (result *Print)
+	SubGetTimestamp(key, subKey []Nibble) (byteValue []byte, timestamp int64, present bool)
+	SubPutTimestamp(key, subKey []Nibble, byteValue []byte, present bool, subExpected, subTimestamp int64) bool
+	SubDelTimestamp(key, subKey []Nibble, subExpected int64) bool
 }
 
 type Sync struct {
@@ -101,22 +101,20 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 	if sourcePrint.Exists {
 		if !sourcePrint.Empty && self.withinLimits(sourcePrint.Key) {
 			// If there is a node at source	and it is within our limits	
-			var subPut int
-			if sourcePrint.SubTree && bytes.Compare(sourcePrint.TreeHash, destinationPrint.TreeHash) != 0 {
+			if sourcePrint.SubTree && (self.destructive || bytes.Compare(sourcePrint.TreeHash, destinationPrint.TreeHash) != 0) {
 				subSync := NewSync(&subTreeWrapper{
 					self.source,
 					sourcePrint.Key,
-					sourcePrint.timestamp(),
 				}, &subTreeWrapper{
 					self.destination,
 					sourcePrint.Key,
-					destinationPrint.timestamp(),
 				})
 				if self.destructive {
 					subSync.Destroy()
 				}
-				subPut += subSync.Run().PutCount()
-				self.putCount += subPut
+				subSync.Run()
+				self.putCount += subSync.PutCount()
+				self.delCount += subSync.DelCount()
 			}
 			// If the key at destination is missing or wrong				
 			if !sourcePrint.coveredBy(destinationPrint) {
@@ -128,9 +126,6 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 			}
 			if self.destructive && !sourcePrint.Empty {
 				if self.source.DelTimestamp(sourcePrint.Key, sourcePrint.timestamp()) {
-					if sourcePrint.SubTree {
-						self.delCount += subPut
-					}
 					self.delCount++
 				}
 			}

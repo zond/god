@@ -27,15 +27,15 @@ type nodeIterator func(key, byteValue []byte, treeValue *Tree, use int, timestam
 type node struct {
 	segment   []Nibble
 	byteValue []byte
-	byteHash  []byte
+	byteHash  []byte // cached hash of the byteValue
 	treeValue *Tree
-	timestamp int64
-	hash      []byte
+	timestamp int64  // only used in regard to byteValues. treeValues ignore them (since they have their own timestamps inside them)
+	hash      []byte // cached hash of the entire node
 	children  []*node
 	empty     bool // this node only serves a structural purpose (ie remove it if it is no longer useful for that)
 	use       int  // the values in this node that are to be considered 'present'. even if this is a zero, do not remove the node if empty is false - it is still a delete marker.
-	treeSize  int
-	byteSize  int
+	treeSize  int  // size of the tree in this node and those of all of its children
+	byteSize  int  // number of byte values in this node and all of its children
 }
 
 func newNode(segment []Nibble, byteValue []byte, treeValue *Tree, timestamp int64, empty bool, use int) *node {
