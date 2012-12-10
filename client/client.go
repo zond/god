@@ -473,7 +473,7 @@ func (self *Conn) SubSize(key []byte) (result int) {
 func (self *Conn) Size() (result int) {
 	var tmp int
 	for _, node := range self.ring.Nodes() {
-		if err := node.Call("DHash.Owned", 0, &tmp); err != nil {
+		if err := node.Call("DHash.Size", 0, &tmp); err != nil {
 			self.removeNode(node)
 			return self.Size()
 		}
