@@ -163,6 +163,15 @@ func (self *Node) SubGet(data common.Item, result *common.Item) error {
 	result.Value, result.Timestamp, result.Exists = self.tree.SubGet(data.Key, data.SubKey)
 	return nil
 }
+func (self *Node) SubClear(data common.Item) error {
+	successor := self.node.GetSuccessorFor(data.Key)
+	if successor.Addr != self.node.GetAddr() {
+		var x int
+		return successor.Call("DHash.SubClear", data, &x)
+	}
+	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
+	return self.subClear(data)
+}
 func (self *Node) SubDel(data common.Item) error {
 	successor := self.node.GetSuccessorFor(data.Key)
 	if successor.Addr != self.node.GetAddr() {
@@ -212,6 +221,17 @@ func (self *Node) forwardOperation(data common.Item, operation string) {
 }
 func (self *Node) clear() {
 	self.tree = radix.NewTreeTimer(self.timer)
+}
+func (self *Node) subClear(data common.Item) error {
+	if data.TTL > 1 {
+		if data.Sync {
+			self.forwardOperation(data, "DHash.SlaveSubClear")
+		} else {
+			go self.forwardOperation(data, "DHash.SlaveSubClear")
+		}
+	}
+	self.tree.SubClear(data.Key, data.Timestamp)
+	return nil
 }
 func (self *Node) subDel(data common.Item) error {
 	if data.TTL > 1 {
