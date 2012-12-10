@@ -103,7 +103,7 @@ func (self *Node) Start() (err error) {
 	self.timer.Start()
 	go self.syncPeriodically()
 	go self.cleanPeriodically()
-	go self.migratePeriodically()
+	//go self.migratePeriodically()
 	return
 }
 func (self *Node) sync() {

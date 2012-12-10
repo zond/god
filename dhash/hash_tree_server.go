@@ -7,14 +7,12 @@ import (
 )
 
 type HashTreeItem struct {
-	Key          []radix.Nibble
-	SubKey       []radix.Nibble
-	Timestamp    int64
-	SubTimestamp int64
-	Expected     int64
-	SubExpected  int64
-	Value        []byte
-	Exists       bool
+	Key       []radix.Nibble
+	SubKey    []radix.Nibble
+	Timestamp int64
+	Expected  int64
+	Value     []byte
+	Exists    bool
 }
 
 type hashTreeServer Node
@@ -34,7 +32,7 @@ func (self *hashTreeServer) GetTimestamp(key []radix.Nibble, result *HashTreeIte
 }
 func (self *hashTreeServer) PutTimestamp(data HashTreeItem, changed *bool) error {
 	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
-	*changed = (*Node)(self).tree.PutTimestamp(data.Key, data.Value, data.Expected, data.Timestamp)
+	*changed = (*Node)(self).tree.PutTimestamp(data.Key, data.Value, data.Exists, data.Expected, data.Timestamp)
 	return nil
 }
 func (self *hashTreeServer) DelTimestamp(data HashTreeItem, changed *bool) error {
@@ -43,21 +41,21 @@ func (self *hashTreeServer) DelTimestamp(data HashTreeItem, changed *bool) error
 	return nil
 }
 func (self *hashTreeServer) SubFinger(data HashTreeItem, result *radix.Print) error {
-	*result = *((*Node)(self).tree.SubFinger(data.Key, data.SubKey, data.Expected))
+	*result = *((*Node)(self).tree.SubFinger(data.Key, data.SubKey))
 	return nil
 }
 func (self *hashTreeServer) SubGetTimestamp(data HashTreeItem, result *HashTreeItem) error {
 	*result = data
-	result.Value, result.SubTimestamp, result.Exists = (*Node)(self).tree.SubGetTimestamp(data.Key, data.SubKey, data.Expected)
+	result.Value, result.Timestamp, result.Exists = (*Node)(self).tree.SubGetTimestamp(data.Key, data.SubKey)
 	return nil
 }
 func (self *hashTreeServer) SubPutTimestamp(data HashTreeItem, changed *bool) error {
 	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
-	*changed = (*Node)(self).tree.SubPutTimestamp(data.Key, data.SubKey, data.Value, data.Expected, data.SubExpected, data.SubTimestamp)
+	*changed = (*Node)(self).tree.SubPutTimestamp(data.Key, data.SubKey, data.Value, data.Exists, data.Expected, data.Timestamp)
 	return nil
 }
 func (self *hashTreeServer) SubDelTimestamp(data HashTreeItem, changed *bool) error {
 	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
-	*changed = (*Node)(self).tree.SubDelTimestamp(data.Key, data.SubKey, data.Expected, data.SubExpected)
+	*changed = (*Node)(self).tree.SubDelTimestamp(data.Key, data.SubKey, data.Expected)
 	return nil
 }

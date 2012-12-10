@@ -16,16 +16,17 @@ func (self remoteHashTree) Finger(key []radix.Nibble) (result *radix.Print) {
 	common.Remote(self).Call("HashTree.Finger", key, result)
 	return
 }
-func (self remoteHashTree) GetTimestamp(key []radix.Nibble) (value []byte, timestamp int64, existed bool) {
+func (self remoteHashTree) GetTimestamp(key []radix.Nibble) (value []byte, timestamp int64, present bool) {
 	result := HashTreeItem{}
 	common.Remote(self).Call("HashTree.GetTimestamp", key, &result)
-	value, timestamp, existed = result.Value, result.Timestamp, result.Exists
+	value, timestamp, present = result.Value, result.Timestamp, result.Exists
 	return
 }
-func (self remoteHashTree) PutTimestamp(key []radix.Nibble, value []byte, expected, timestamp int64) (changed bool) {
+func (self remoteHashTree) PutTimestamp(key []radix.Nibble, value []byte, present bool, expected, timestamp int64) (changed bool) {
 	data := HashTreeItem{
 		Key:       key,
 		Value:     value,
+		Exists:    present,
 		Expected:  expected,
 		Timestamp: timestamp,
 	}
@@ -40,44 +41,41 @@ func (self remoteHashTree) DelTimestamp(key []radix.Nibble, expected int64) (cha
 	common.Remote(self).Call("HashTree.DelTimestamp", data, &changed)
 	return
 }
-func (self remoteHashTree) SubFinger(key, subKey []radix.Nibble, expected int64) (result *radix.Print) {
+func (self remoteHashTree) SubFinger(key, subKey []radix.Nibble) (result *radix.Print) {
 	data := HashTreeItem{
-		Key:      key,
-		SubKey:   subKey,
-		Expected: expected,
+		Key:    key,
+		SubKey: subKey,
 	}
 	result = &radix.Print{}
 	common.Remote(self).Call("HashTree.SubFinger", data, result)
 	return
 }
-func (self remoteHashTree) SubGetTimestamp(key, subKey []radix.Nibble, expected int64) (value []byte, timestamp int64, existed bool) {
+func (self remoteHashTree) SubGetTimestamp(key, subKey []radix.Nibble) (value []byte, timestamp int64, present bool) {
 	data := HashTreeItem{
-		Key:      key,
-		SubKey:   subKey,
-		Expected: expected,
+		Key:    key,
+		SubKey: subKey,
 	}
 	common.Remote(self).Call("HashTree.SubGetTimestamp", data, &data)
-	value, timestamp, existed = data.Value, data.SubTimestamp, data.Exists
+	value, timestamp, present = data.Value, data.Timestamp, data.Exists
 	return
 }
-func (self remoteHashTree) SubPutTimestamp(key, subKey []radix.Nibble, value []byte, expected, subExpected, subTimestamp int64) (changed bool) {
+func (self remoteHashTree) SubPutTimestamp(key, subKey []radix.Nibble, value []byte, present bool, subExpected, subTimestamp int64) (changed bool) {
 	data := HashTreeItem{
-		Key:          key,
-		SubKey:       subKey,
-		Value:        value,
-		Expected:     expected,
-		SubExpected:  subExpected,
-		SubTimestamp: subTimestamp,
+		Key:       key,
+		SubKey:    subKey,
+		Value:     value,
+		Exists:    present,
+		Expected:  subExpected,
+		Timestamp: subTimestamp,
 	}
 	common.Remote(self).Call("HashTree.SubPutTimestamp", data, &changed)
 	return
 }
-func (self remoteHashTree) SubDelTimestamp(key, subKey []radix.Nibble, expected, subExpected int64) (changed bool) {
+func (self remoteHashTree) SubDelTimestamp(key, subKey []radix.Nibble, subExpected int64) (changed bool) {
 	data := HashTreeItem{
-		Key:         key,
-		SubKey:      subKey,
-		Expected:    expected,
-		SubExpected: subExpected,
+		Key:      key,
+		SubKey:   subKey,
+		Expected: subExpected,
 	}
 	common.Remote(self).Call("HashTree.SubDelTimestamp", data, &changed)
 	return
