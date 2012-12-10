@@ -267,6 +267,30 @@ func (self *Tree) Next(key []byte) (nextKey, nextValue []byte, nextTimestamp int
 	})
 	return
 }
+func (self *Tree) NextMarkerIndex(index int) (key []byte, existed bool) {
+	if self == nil {
+		return
+	}
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	self.root.eachBetweenIndex(nil, 0, &index, nil, 0, func(k, b []byte, t *Tree, u int, v int64, i int) bool {
+		key, existed = k, true
+		return false
+	})
+	return
+}
+func (self *Tree) PrevMarkerIndex(index int) (key []byte, existed bool) {
+	if self == nil {
+		return
+	}
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	self.root.reverseEachBetweenIndex(nil, 0, nil, &index, 0, func(k, b []byte, t *Tree, u int, v int64, i int) bool {
+		key, existed = k, true
+		return false
+	})
+	return
+}
 func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
 	if self == nil {
 		return
