@@ -39,11 +39,23 @@ func (self testmap) put(k, v string) {
 	})
 	self.m[k] = v
 }
+func (self testmap) del(k string) {
+	self.l.Lock()
+	defer self.l.Unlock()
+	self.p.Dump(Op{
+		Key: []byte(k),
+	})
+	delete(self.m, k)
+}
 func (self testmap) operator() Operate {
 	return func(o Op) {
 		self.l.Lock()
 		defer self.l.Unlock()
-		self.m[string(o.Key)] = string(o.Value)
+		if o.Put {
+			self.m[string(o.Key)] = string(o.Value)
+		} else {
+			delete(self.m, string(o.Key))
+		}
 	}
 }
 
@@ -77,6 +89,9 @@ func TestSwap(t *testing.T) {
 	tm.record()
 	for i := 0; i < 1000; i++ {
 		tm.put(fmt.Sprint(i), fmt.Sprint(i))
+	}
+	for i := 0; i < 1000; i += 3 {
+		tm.del(fmt.Sprint(i))
 	}
 	tm.p.Stop()
 
