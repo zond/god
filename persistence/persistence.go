@@ -35,6 +35,7 @@ type Op struct {
 	Value     []byte
 	Timestamp int64
 	Put       bool
+	Clear     bool
 }
 
 type logfile struct {
@@ -249,6 +250,12 @@ func (self *Logger) clearOlderThan(t time.Time) {
 	}
 }
 
+func (self *Logger) Clear() {
+	self.Stop()
+	self.clearOlderThan(time.Now())
+	<-self.Record()
+}
+
 func (self *Logger) snapshot(snap *logfile, files logfiles) {
 	byteCompressor := make(map[string]Op)
 	treeCompressor := make(map[string]map[string]Op)
@@ -268,7 +275,11 @@ func (self *Logger) snapshot(snap *logfile, files logfiles) {
 			}
 		} else {
 			if op.SubKey == nil {
-				delete(byteCompressor, string(op.Key))
+				if op.Clear {
+					delete(treeCompressor, string(op.Key))
+				} else {
+					delete(byteCompressor, string(op.Key))
+				}
 			} else {
 				subMap, ok = treeCompressor[string(op.Key)]
 				if ok {
