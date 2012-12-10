@@ -53,7 +53,7 @@ func NewNode(addr string) (result *Node) {
 		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
 	})
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
-	result.tree = radix.NewTreeTimer(result.timer)
+	result.tree = radix.NewTreeTimer(result.timer).Log(addr).Restore()
 	result.node.Export("Timenet", (*timerServer)(result.timer))
 	result.node.Export("DHash", (*dhashServer)(result))
 	result.node.Export("HashTree", (*hashTreeServer)(result))

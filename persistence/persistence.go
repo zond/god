@@ -213,6 +213,10 @@ func (self *Logger) latest() (latestSnapshot *logfile, logs logfiles) {
 	return
 }
 
+func (self *Logger) Recording() bool {
+	return self.hasState(recording)
+}
+
 func (self *Logger) Play(operate Operate) {
 	if self.changeState(stopped, playing) {
 		defer self.changeState(playing, stopped)

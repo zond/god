@@ -63,10 +63,35 @@ func NewTreeTimer(timer Timer) (result *Tree) {
 }
 func (self *Tree) Log(dir string) *Tree {
 	self.logger = persistence.NewLogger(dir)
+	<-self.logger.Record()
+	return self
+}
+func (self *Tree) Restore() *Tree {
+	self.logger.Stop()
+	self.logger.Play(func(op persistence.Op) {
+		if op.Put {
+			if op.SubKey == nil {
+				self.Put(op.Key, op.Value, op.Timestamp)
+			} else {
+				self.SubPut(op.Key, op.SubKey, op.Value, op.Timestamp)
+			}
+		} else {
+			if op.SubKey == nil {
+				if op.Clear {
+					self.root, _, _, _, _ = self.root.del(nil, rip(op.Key), treeValue, self.timer.ContinuousTime())
+				} else {
+					self.Del(op.Key)
+				}
+			} else {
+				self.SubDel(op.Key, op.SubKey)
+			}
+		}
+	})
+	<-self.logger.Record()
 	return self
 }
 func (self *Tree) log(op persistence.Op) {
-	if self.logger != nil {
+	if self.logger != nil && self.logger.Recording() {
 		self.logger.Dump(op)
 	}
 }

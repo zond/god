@@ -9,7 +9,6 @@ A Go database
  * Inter/Union/Diff
  * StoreInter/StoreUnion/StoreDiff
 * Persistence
- * Put logging inside radix.Tree lock
  * Automatic tests
 * Web interface
  * Functionality
