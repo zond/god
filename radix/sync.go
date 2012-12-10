@@ -13,13 +13,13 @@ type HashTree interface {
 	Hash() []byte
 
 	Finger(key []Nibble) *Print
-	GetTimestamp(key []Nibble) (byteValue []byte, timestamp int64, existed bool)
-	PutTimestamp(key []Nibble, byteValue []byte, expected, timestamp int64) bool
+	GetTimestamp(key []Nibble) (byteValue []byte, timestamp int64, present bool)
+	PutTimestamp(key []Nibble, byteValue []byte, present bool, expected, timestamp int64) bool
 	DelTimestamp(key []Nibble, expected int64) bool
 
 	SubFinger(key, subKey []Nibble, expected int64) (result *Print)
-	SubGetTimestamp(key, subKey []Nibble, expected int64) (byteValue []byte, timestamp int64, existed bool)
-	SubPutTimestamp(key, subKey []Nibble, byteValue []byte, expected, subExpected, subTimestamp int64) bool
+	SubGetTimestamp(key, subKey []Nibble, expected int64) (byteValue []byte, timestamp int64, present bool)
+	SubPutTimestamp(key, subKey []Nibble, byteValue []byte, present bool, expected, subExpected, subTimestamp int64) bool
 	SubDelTimestamp(key, subKey []Nibble, expected, subExpected int64) bool
 }
 
@@ -102,26 +102,26 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
 		if !sourcePrint.Empty && self.withinLimits(sourcePrint.Key) {
 			// If there is a node at source	and it is within our limits	
 			var subPut int
-			if !sourcePrint.coveredBy(destinationPrint) {
-				// If the key at destination is missing or wrong				
-				if sourcePrint.SubTree {
-					subSync := NewSync(&subTreeWrapper{
-						self.source,
-						sourcePrint.Key,
-						sourcePrint.timestamp(),
-					}, &subTreeWrapper{
-						self.destination,
-						sourcePrint.Key,
-						destinationPrint.timestamp(),
-					})
-					if self.destructive {
-						subSync.Destroy()
-					}
-					subPut += subSync.Run().PutCount()
-					self.putCount += subPut
+			if sourcePrint.SubTree && bytes.Compare(sourcePrint.TreeHash, destinationPrint.TreeHash) != 0 {
+				subSync := NewSync(&subTreeWrapper{
+					self.source,
+					sourcePrint.Key,
+					sourcePrint.timestamp(),
+				}, &subTreeWrapper{
+					self.destination,
+					sourcePrint.Key,
+					destinationPrint.timestamp(),
+				})
+				if self.destructive {
+					subSync.Destroy()
 				}
-				if value, timestamp, existed := self.source.GetTimestamp(sourcePrint.Key); existed && timestamp == sourcePrint.timestamp() {
-					if self.destination.PutTimestamp(sourcePrint.Key, value, destinationPrint.timestamp(), sourcePrint.timestamp()) {
+				subPut += subSync.Run().PutCount()
+				self.putCount += subPut
+			}
+			// If the key at destination is missing or wrong				
+			if !sourcePrint.coveredBy(destinationPrint) {
+				if value, timestamp, present := self.source.GetTimestamp(sourcePrint.Key); timestamp == sourcePrint.timestamp() {
+					if self.destination.PutTimestamp(sourcePrint.Key, value, present, destinationPrint.timestamp(), sourcePrint.timestamp()) {
 						self.putCount++
 					}
 				}

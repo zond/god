@@ -83,7 +83,7 @@ func (self *Print) coveredBy(other *Print) bool {
 	if self == nil {
 		return other == nil
 	}
-	return other != nil && (other.Timestamp > self.Timestamp || (bytes.Compare(self.ByteHash, other.ByteHash) == 0 && bytes.Compare(self.TreeHash, other.TreeHash) == 0))
+	return other != nil && (other.Timestamp > self.Timestamp || bytes.Compare(self.ByteHash, other.ByteHash) == 0)
 }
 func (self *Print) push(n *node) {
 	self.Key = append(self.Key, n.segment...)
