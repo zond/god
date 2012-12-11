@@ -9,6 +9,31 @@ import (
 	"time"
 )
 
+func (self *Node) setUpIters(op common.SetOp) (s1, s2 *setIter, lt int) {
+	rem1 := self.node.GetSuccessorFor(op.Key1)
+	rem2 := self.node.GetSuccessorFor(op.Key2)
+	s1 = &setIter{
+		key:    op.Key1,
+		remote: rem1,
+	}
+	if rem1.Addr == self.node.GetAddr() {
+		s1.tree = self.tree
+	}
+	s2 = &setIter{
+		key:    op.Key2,
+		remote: rem2,
+	}
+	if rem2.Addr == self.node.GetAddr() {
+		s2.tree = self.tree
+	}
+	s1.refill(op.Min, op.MinInc)
+	s2.refill(op.Min, op.MinInc)
+	if op.MaxInc {
+		lt = 1
+	}
+	return
+}
+
 func (self *Node) Description() common.DHashDescription {
 	return common.DHashDescription{
 		Addr:         self.GetAddr(),
@@ -316,4 +341,34 @@ func (self *Node) Size() int {
 func (self *Node) SubSize(key []byte, result *int) error {
 	*result = self.tree.SubSize(key)
 	return nil
+}
+func (self *Node) SubUnion(op common.SetOp, items *[]common.Item) error {
+	s1, s2, lt := self.setUpIters(op)
+	return eachUnion(s1, s2, func(key, value []byte) bool {
+		*items = append(*items, common.Item{
+			Key:   key,
+			Value: value,
+		})
+		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(key, op.Max) < lt)
+	})
+}
+func (self *Node) SubInter(op common.SetOp, items *[]common.Item) error {
+	s1, s2, lt := self.setUpIters(op)
+	return eachInter(s1, s2, func(key, value []byte) bool {
+		*items = append(*items, common.Item{
+			Key:   key,
+			Value: value,
+		})
+		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(key, op.Max) < lt)
+	})
+}
+func (self *Node) SubDiff(op common.SetOp, items *[]common.Item) error {
+	s1, s2, lt := self.setUpIters(op)
+	return eachDiff(s1, s2, func(key, value []byte) bool {
+		*items = append(*items, common.Item{
+			Key:   key,
+			Value: value,
+		})
+		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(key, op.Max) < lt)
+	})
 }

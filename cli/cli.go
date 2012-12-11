@@ -37,6 +37,9 @@ var actions = map[*actionSpec]action{
 	newActionSpec("reverseSlice \\S+ \\S+ \\S+"):      reverseSlice,
 	newActionSpec("slice \\S+ \\S+ \\S+"):             slice,
 	newActionSpec("sliceLen \\S+ \\S+ \\d+"):          sliceLen,
+	newActionSpec("subUnion \\S+ \\S+"):               subUnion,
+	newActionSpec("subInter \\S+ \\S+"):               subInter,
+	newActionSpec("subDiff \\S+ \\S+"):                subDiff,
 	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):   reverseSliceLen,
 	newActionSpec("put \\S+ \\S+"):                    put,
 	newActionSpec("subSize \\S+"):                     subSize,
@@ -113,6 +116,24 @@ func sliceLen(conn *client.Conn, args []string) {
 func reverseSliceLen(conn *client.Conn, args []string) {
 	for _, item := range conn.ReverseSliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
 		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
+	}
+}
+
+func subUnion(conn *client.Conn, args []string) {
+	for _, pair := range conn.SubUnion([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+		fmt.Printf("%v => %v\n", string(pair[0]), string(pair[1]))
+	}
+}
+
+func subInter(conn *client.Conn, args []string) {
+	for _, pair := range conn.SubInter([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+		fmt.Printf("%v => %v\n", string(pair[0]), string(pair[1]))
+	}
+}
+
+func subDiff(conn *client.Conn, args []string) {
+	for _, pair := range conn.SubDiff([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+		fmt.Printf("%v => %v\n", string(pair[0]), string(pair[1]))
 	}
 }
 
