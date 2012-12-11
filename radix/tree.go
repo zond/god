@@ -417,12 +417,17 @@ func (self *Tree) Clear(timestamp int64) (result int) {
 	}
 	return
 }
+func (self *Tree) del(key []Nibble) (oldBytes []byte, existed bool) {
+	var ex int
+	self.root, oldBytes, _, _, ex = self.root.del(nil, key, byteValue, self.timer.ContinuousTime())
+	existed = ex&byteValue != 0
+	return
+}
+
 func (self *Tree) Del(key []byte) (oldBytes []byte, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	var ex int
-	self.root, oldBytes, _, _, ex = self.root.del(nil, rip(key), byteValue, self.timer.ContinuousTime())
-	existed = ex&byteValue != 0
+	oldBytes, existed = self.del(rip(key))
 	if existed {
 		self.log(persistence.Op{
 			Key: key,
@@ -574,7 +579,7 @@ func (self *Tree) SubDel(key, subKey []byte) (oldBytes []byte, existed bool) {
 	if _, subTree, subTreeTimestamp, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
 		oldBytes, existed = subTree.Del(subKey)
 		if subTree.RealSize() == 0 {
-			self.Del(key)
+			self.del(ripped)
 		} else {
 			self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
 		}
