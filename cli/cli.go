@@ -36,6 +36,8 @@ var actions = map[*actionSpec]action{
 	newActionSpec("sliceIndex \\S+ \\d+ \\d+"):        sliceIndex,
 	newActionSpec("reverseSlice \\S+ \\S+ \\S+"):      reverseSlice,
 	newActionSpec("slice \\S+ \\S+ \\S+"):             slice,
+	newActionSpec("sliceLen \\S+ \\S+ \\d+"):          sliceLen,
+	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):   reverseSliceLen,
 	newActionSpec("put \\S+ \\S+"):                    put,
 	newActionSpec("subSize \\S+"):                     subSize,
 	newActionSpec("size"):                             size,
@@ -99,6 +101,18 @@ func reverseSlice(conn *client.Conn, args []string) {
 func slice(conn *client.Conn, args []string) {
 	for i, item := range conn.Slice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
 		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	}
+}
+
+func sliceLen(conn *client.Conn, args []string) {
+	for _, item := range conn.SliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
+		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
+	}
+}
+
+func reverseSliceLen(conn *client.Conn, args []string) {
+	for _, item := range conn.ReverseSliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
+		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
 	}
 }
 

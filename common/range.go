@@ -8,4 +8,5 @@ type Range struct {
 	MaxInc   bool
 	MinIndex int
 	MaxIndex int
+	Len      int
 }

@@ -115,3 +115,9 @@ func (self *dhashServer) SliceIndex(r common.Range, result *[]common.Item) error
 func (self *dhashServer) ReverseSliceIndex(r common.Range, result *[]common.Item) error {
 	return (*Node)(self).ReverseSliceIndex(r, result)
 }
+func (self *dhashServer) SliceLen(r common.Range, result *[]common.Item) error {
+	return (*Node)(self).SliceLen(r, result)
+}
+func (self *dhashServer) ReverseSliceLen(r common.Range, result *[]common.Item) error {
+	return (*Node)(self).SliceLen(r, result)
+}

@@ -403,6 +403,26 @@ func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []com
 	result = self.mergeRecent("DHash.Slice", r, true)
 	return
 }
+func (self *Conn) SliceLen(key, min []byte, mininc bool, maxRes int) (result []common.Item) {
+	r := common.Range{
+		Key:    key,
+		Min:    min,
+		MinInc: mininc,
+		Len:    maxRes,
+	}
+	result = self.mergeRecent("DHash.SliceLen", r, true)
+	return
+}
+func (self *Conn) ReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (result []common.Item) {
+	r := common.Range{
+		Key:    key,
+		Max:    max,
+		MaxInc: maxinc,
+		Len:    maxRes,
+	}
+	result = self.mergeRecent("DHash.ReverseSliceLen", r, true)
+	return
+}
 func (self *Conn) SubPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,

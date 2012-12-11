@@ -150,6 +150,28 @@ func (self *Node) Slice(r common.Range, items *[]common.Item) error {
 	})
 	return nil
 }
+func (self *Node) SliceLen(r common.Range, items *[]common.Item) error {
+	self.tree.SubEachBetween(r.Key, r.Min, nil, r.MinInc, false, func(key []byte, value []byte, version int64) bool {
+		*items = append(*items, common.Item{
+			Key:       key,
+			Value:     value,
+			Timestamp: version,
+		})
+		return len(*items) < r.Len
+	})
+	return nil
+}
+func (self *Node) ReverseSliceLen(r common.Range, items *[]common.Item) error {
+	self.tree.SubReverseEachBetween(r.Key, nil, r.Max, false, r.MaxInc, func(key []byte, value []byte, version int64) bool {
+		*items = append(*items, common.Item{
+			Key:       key,
+			Value:     value,
+			Timestamp: version,
+		})
+		return len(*items) < r.Len
+	})
+	return nil
+}
 func (self *Node) ReverseIndexOf(data common.Item, result *common.Index) error {
 	result.N, result.Existed = self.tree.SubReverseIndexOf(data.Key, data.SubKey)
 	return nil
