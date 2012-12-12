@@ -10,9 +10,9 @@ const (
 	bufferSize = 128
 )
 
-type KeyValueIterator func(key, value []byte) (cont bool)
+type KeyValuesIterator func(res common.SetOpResult) (cont bool)
 
-func eachUnion(s1, s2 *setIter, f KeyValueIterator) (err error) {
+func eachUnion(s1, s2 *setIter, f KeyValuesIterator) (err error) {
 	var d1, d2 [2][]byte
 	var ok1, ok2 bool
 	if d1, ok1, err = s1.skip(nil, true); err != nil {
@@ -25,21 +25,21 @@ func eachUnion(s1, s2 *setIter, f KeyValueIterator) (err error) {
 	for ok1 && ok2 {
 		cmp = bytes.Compare(d1[0], d2[0])
 		if cmp < 0 {
-			if !f(d1[0], d1[1]) {
+			if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
 				return
 			}
 			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
 				return
 			}
 		} else if cmp > 0 {
-			if !f(d2[0], d2[1]) {
+			if !f(common.SetOpResult{d2[0], [][]byte{d2[1]}}) {
 				return
 			}
 			if d2, ok2, err = s2.skip(d2[0], false); err != nil {
 				return
 			}
 		} else {
-			if !f(d1[0], d1[1]) {
+			if !f(common.SetOpResult{d1[0], [][]byte{d1[1], d2[1]}}) {
 				return
 			}
 			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
@@ -51,7 +51,7 @@ func eachUnion(s1, s2 *setIter, f KeyValueIterator) (err error) {
 		}
 	}
 	for ok1 {
-		if !f(d1[0], d1[1]) {
+		if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
 			return
 		}
 		if d1, ok1, err = s1.skip(d1[0], false); err != nil {
@@ -59,7 +59,7 @@ func eachUnion(s1, s2 *setIter, f KeyValueIterator) (err error) {
 		}
 	}
 	for ok2 {
-		if !f(d2[0], d2[1]) {
+		if !f(common.SetOpResult{d2[0], [][]byte{d2[1]}}) {
 			return
 		}
 		if d2, ok2, err = s2.skip(d2[0], false); err != nil {
@@ -69,7 +69,7 @@ func eachUnion(s1, s2 *setIter, f KeyValueIterator) (err error) {
 	return
 }
 
-func eachInter(s1, s2 *setIter, f KeyValueIterator) (err error) {
+func eachInter(s1, s2 *setIter, f KeyValuesIterator) (err error) {
 	var d1, d2 [2][]byte
 	var ok1, ok2 bool
 	if d1, ok1, err = s1.skip(nil, true); err != nil {
@@ -90,7 +90,7 @@ func eachInter(s1, s2 *setIter, f KeyValueIterator) (err error) {
 				return
 			}
 		} else {
-			if !f(d1[0], d1[1]) {
+			if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
 				return
 			}
 			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
@@ -104,7 +104,7 @@ func eachInter(s1, s2 *setIter, f KeyValueIterator) (err error) {
 	return
 }
 
-func eachDiff(s1, s2 *setIter, f KeyValueIterator) (err error) {
+func eachDiff(s1, s2 *setIter, f KeyValuesIterator) (err error) {
 	var d1, d2 [2][]byte
 	var ok1, ok2 bool
 	if d1, ok1, err = s1.skip(nil, true); err != nil {
@@ -121,7 +121,7 @@ func eachDiff(s1, s2 *setIter, f KeyValueIterator) (err error) {
 				return
 			}
 		} else if cmp < 0 {
-			if !f(d1[0], d1[1]) {
+			if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
 				return
 			}
 			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
@@ -137,7 +137,7 @@ func eachDiff(s1, s2 *setIter, f KeyValueIterator) (err error) {
 		}
 	}
 	for ok1 {
-		if !f(d1[0], d1[1]) {
+		if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
 			return
 		}
 		if d1, ok1, err = s1.skip(d1[0], false); err != nil {

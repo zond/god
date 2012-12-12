@@ -119,21 +119,29 @@ func reverseSliceLen(conn *client.Conn, args []string) {
 	}
 }
 
+func printSetOpRes(res common.SetOpResult) {
+	var vals []string
+	for _, val := range res.Values {
+		vals = append(vals, string(val))
+	}
+	fmt.Printf("%v => %v\n", string(res.Key), vals)
+}
+
 func subUnion(conn *client.Conn, args []string) {
-	for _, pair := range conn.SubUnion([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
-		fmt.Printf("%v => %v\n", string(pair[0]), string(pair[1]))
+	for _, res := range conn.SubUnion([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+		printSetOpRes(res)
 	}
 }
 
 func subInter(conn *client.Conn, args []string) {
-	for _, pair := range conn.SubInter([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
-		fmt.Printf("%v => %v\n", string(pair[0]), string(pair[1]))
+	for _, res := range conn.SubInter([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+		printSetOpRes(res)
 	}
 }
 
 func subDiff(conn *client.Conn, args []string) {
-	for _, pair := range conn.SubDiff([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
-		fmt.Printf("%v => %v\n", string(pair[0]), string(pair[1]))
+	for _, res := range conn.SubDiff([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+		printSetOpRes(res)
 	}
 }
 

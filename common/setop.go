@@ -9,3 +9,8 @@ type SetOp struct {
 	MaxInc bool
 	Len    int
 }
+
+type SetOpResult struct {
+	Key    []byte
+	Values [][]byte
+}

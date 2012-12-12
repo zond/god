@@ -342,33 +342,24 @@ func (self *Node) SubSize(key []byte, result *int) error {
 	*result = self.tree.SubSize(key)
 	return nil
 }
-func (self *Node) SubUnion(op common.SetOp, items *[]common.Item) error {
+func (self *Node) SubUnion(op common.SetOp, items *[]common.SetOpResult) error {
 	s1, s2, lt := self.setUpIters(op)
-	return eachUnion(s1, s2, func(key, value []byte) bool {
-		*items = append(*items, common.Item{
-			Key:   key,
-			Value: value,
-		})
-		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(key, op.Max) < lt)
+	return eachUnion(s1, s2, func(res common.SetOpResult) bool {
+		*items = append(*items, res)
+		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
 	})
 }
-func (self *Node) SubInter(op common.SetOp, items *[]common.Item) error {
+func (self *Node) SubInter(op common.SetOp, items *[]common.SetOpResult) error {
 	s1, s2, lt := self.setUpIters(op)
-	return eachInter(s1, s2, func(key, value []byte) bool {
-		*items = append(*items, common.Item{
-			Key:   key,
-			Value: value,
-		})
-		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(key, op.Max) < lt)
+	return eachInter(s1, s2, func(res common.SetOpResult) bool {
+		*items = append(*items, res)
+		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
 	})
 }
-func (self *Node) SubDiff(op common.SetOp, items *[]common.Item) error {
+func (self *Node) SubDiff(op common.SetOp, items *[]common.SetOpResult) error {
 	s1, s2, lt := self.setUpIters(op)
-	return eachDiff(s1, s2, func(key, value []byte) bool {
-		*items = append(*items, common.Item{
-			Key:   key,
-			Value: value,
-		})
-		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(key, op.Max) < lt)
+	return eachDiff(s1, s2, func(res common.SetOpResult) bool {
+		*items = append(*items, res)
+		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
 	})
 }
