@@ -5,13 +5,11 @@ A Go database
 
 # TODO
 
-* Consider the Redis case
- * Set intersection with scores instead of keys
-  * Provides lots of mathematically interesting options
-	* Can possibly be implemented by the client just as well?
-	 * Fetch one set
-	 * Iterate pagewise over the other set and union, inter or diff on your own
- * Scores are not even possible here (same score = same key conflict)
+* Add a mirror tree for all trees
+ * Let all Puts and Deletes affect the mirror if the proper argument is set
+ * Put value|key => key in the mirror tree
+ * Add functions using the mirror tree to find ranges or matches to the value
+ * Add DHash API endpoints for all this
 * Client API
  * Inter/Union/Diff
   * Automated tests
