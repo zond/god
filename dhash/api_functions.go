@@ -344,22 +344,22 @@ func (self *Node) SubSize(key []byte, result *int) error {
 }
 func (self *Node) SubUnion(op common.SetOp, items *[]common.SetOpResult) error {
 	s1, s2, lt := self.setUpIters(op)
-	return eachUnion(s1, s2, func(res common.SetOpResult) bool {
+	return eachUnion(func(res common.SetOpResult) bool {
 		*items = append(*items, res)
 		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	})
+	}, s1, s2)
 }
 func (self *Node) SubInter(op common.SetOp, items *[]common.SetOpResult) error {
 	s1, s2, lt := self.setUpIters(op)
-	return eachInter(s1, s2, func(res common.SetOpResult) bool {
+	return eachInter(func(res common.SetOpResult) bool {
 		*items = append(*items, res)
 		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	})
+	}, s1, s2)
 }
 func (self *Node) SubDiff(op common.SetOp, items *[]common.SetOpResult) error {
 	s1, s2, lt := self.setUpIters(op)
-	return eachDiff(s1, s2, func(res common.SetOpResult) bool {
+	return eachDiff(func(res common.SetOpResult) bool {
 		*items = append(*items, res)
 		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	})
+	}, s1, s2)
 }

@@ -10,137 +10,141 @@ const (
 	bufferSize = 128
 )
 
+func skipAll(newPair *[2][]byte, newOk *bool, from []byte, inc bool, sets ...*setIter) (pairs [][2][]byte, oks []bool, err error) {
+	for _, set := range sets {
+		if *newPair, *newOk, err = set.skip(from, inc); err != nil {
+			return
+		}
+		pairs = append(pairs, *newPair)
+		oks = append(oks, *newOk)
+	}
+	return
+}
+
+func newSetOpResult(cmp *int, pairs [][2][]byte) (indices []int, result common.SetOpResult) {
+	for index, pair := range pairs {
+		if result.Key == nil {
+			indices = []int{index}
+			result.Key = pair[0]
+			result.Values = [][]byte{pair[1]}
+		} else {
+			*cmp = bytes.Compare(pair[0], result.Key)
+			if *cmp < 0 {
+				indices = []int{index}
+				result.Key = pair[0]
+				result.Values = [][]byte{pair[1]}
+			} else if *cmp == 0 {
+				indices = append(indices, index)
+				result.Values = append(result.Values, pair[1])
+			}
+		}
+	}
+	return
+}
+
+func skipIndices(indices []int, from []byte, sets []*setIter, pairs [][2][]byte, oks []bool) (newSets []*setIter, newPairs [][2][]byte, newOks []bool, skippedFirst bool, err error) {
+	newSets = make([]*setIter, 0, len(sets))
+	newPairs = make([][2][]byte, 0, len(pairs))
+	newOks = make([]bool, 0, len(oks))
+	for _, index := range indices {
+		if pairs[index], oks[index], err = sets[index].skip(from, false); err != nil {
+			return
+		}
+	}
+	for index, ok := range oks {
+		if ok {
+			newSets = append(newSets, sets[index])
+			newPairs = append(newPairs, pairs[index])
+			newOks = append(newOks, oks[index])
+		} else if index == 0 {
+			skippedFirst = true
+		}
+	}
+	return
+}
+
 type KeyValuesIterator func(res common.SetOpResult) (cont bool)
 
-func eachUnion(s1, s2 *setIter, f KeyValuesIterator) (err error) {
-	var d1, d2 [2][]byte
-	var ok1, ok2 bool
-	if d1, ok1, err = s1.skip(nil, true); err != nil {
+func eachUnion(f KeyValuesIterator, sets ...*setIter) (err error) {
+	var preAllocPair [2][]byte
+	var preAllocOk bool
+	var preAllocCmp int
+
+	var indices []int
+	var setOpResult common.SetOpResult
+	var pairs [][2][]byte
+	var oks []bool
+
+	if pairs, oks, err = skipAll(&preAllocPair, &preAllocOk, nil, true, sets...); err != nil {
 		return
 	}
-	if d2, ok2, err = s2.skip(nil, true); err != nil {
-		return
-	}
-	cmp := 0
-	for ok1 && ok2 {
-		cmp = bytes.Compare(d1[0], d2[0])
-		if cmp < 0 {
-			if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
-				return
-			}
-			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
-				return
-			}
-		} else if cmp > 0 {
-			if !f(common.SetOpResult{d2[0], [][]byte{d2[1]}}) {
-				return
-			}
-			if d2, ok2, err = s2.skip(d2[0], false); err != nil {
-				return
-			}
-		} else {
-			if !f(common.SetOpResult{d1[0], [][]byte{d1[1], d2[1]}}) {
-				return
-			}
-			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
-				return
-			}
-			if d2, ok2, err = s2.skip(d2[0], false); err != nil {
-				return
-			}
-		}
-	}
-	for ok1 {
-		if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
+	for len(oks) > 0 {
+		indices, setOpResult = newSetOpResult(&preAllocCmp, pairs)
+		if !f(setOpResult) {
 			return
 		}
-		if d1, ok1, err = s1.skip(d1[0], false); err != nil {
-			return
-		}
-	}
-	for ok2 {
-		if !f(common.SetOpResult{d2[0], [][]byte{d2[1]}}) {
-			return
-		}
-		if d2, ok2, err = s2.skip(d2[0], false); err != nil {
+		if sets, pairs, oks, _, err = skipIndices(indices, setOpResult.Key, sets, pairs, oks); err != nil {
 			return
 		}
 	}
 	return
 }
 
-func eachInter(s1, s2 *setIter, f KeyValuesIterator) (err error) {
-	var d1, d2 [2][]byte
-	var ok1, ok2 bool
-	if d1, ok1, err = s1.skip(nil, true); err != nil {
+func eachInter(f KeyValuesIterator, sets ...*setIter) (err error) {
+	var preAllocPair [2][]byte
+	var preAllocOk bool
+	var preAllocCmp int
+
+	var indices []int
+	var setOpResult common.SetOpResult
+	var pairs [][2][]byte
+	var oks []bool
+
+	originalSetLen := len(sets)
+
+	if pairs, oks, err = skipAll(&preAllocPair, &preAllocOk, nil, true, sets...); err != nil {
 		return
 	}
-	if d2, ok2, err = s2.skip(nil, true); err != nil {
-		return
-	}
-	cmp := 0
-	for ok1 && ok2 {
-		cmp = bytes.Compare(d1[0], d2[0])
-		if cmp < 0 {
-			if d1, ok1, err = s1.skip(d2[0], true); err != nil {
+	for len(oks) == originalSetLen {
+		indices, setOpResult = newSetOpResult(&preAllocCmp, pairs)
+		if len(indices) == len(sets) {
+			if !f(setOpResult) {
 				return
 			}
-		} else if cmp > 0 {
-			if d2, ok2, err = s2.skip(d1[0], true); err != nil {
-				return
-			}
-		} else {
-			if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
-				return
-			}
-			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
-				return
-			}
-			if d2, ok2, err = s2.skip(d2[0], false); err != nil {
-				return
-			}
+		}
+		if sets, pairs, oks, _, err = skipIndices(indices, setOpResult.Key, sets, pairs, oks); err != nil {
+			return
 		}
 	}
 	return
 }
 
-func eachDiff(s1, s2 *setIter, f KeyValuesIterator) (err error) {
-	var d1, d2 [2][]byte
-	var ok1, ok2 bool
-	if d1, ok1, err = s1.skip(nil, true); err != nil {
+func eachDiff(f KeyValuesIterator, sets ...*setIter) (err error) {
+	var preAllocPair [2][]byte
+	var preAllocOk bool
+	var preAllocCmp int
+
+	var indices []int
+	var setOpResult common.SetOpResult
+	var pairs [][2][]byte
+	var oks []bool
+
+	var skippedFirst bool
+
+	if pairs, oks, err = skipAll(&preAllocPair, &preAllocOk, nil, true, sets...); err != nil {
 		return
 	}
-	if d2, ok2, err = s2.skip(nil, true); err != nil {
-		return
-	}
-	cmp := 0
-	for ok1 && ok2 {
-		cmp = bytes.Compare(d1[0], d2[0])
-		if cmp > 0 {
-			if d2, ok2, err = s2.skip(d2[0], false); err != nil {
-				return
-			}
-		} else if cmp < 0 {
-			if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
-				return
-			}
-			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
-				return
-			}
-		} else {
-			if d1, ok1, err = s1.skip(d1[0], false); err != nil {
-				return
-			}
-			if d2, ok2, err = s2.skip(d2[0], false); err != nil {
+	for {
+		indices, setOpResult = newSetOpResult(&preAllocCmp, pairs)
+		if len(indices) == 1 && indices[0] == 0 {
+			if !f(setOpResult) {
 				return
 			}
 		}
-	}
-	for ok1 {
-		if !f(common.SetOpResult{d1[0], [][]byte{d1[1]}}) {
+		if sets, pairs, oks, skippedFirst, err = skipIndices(indices, setOpResult.Key, sets, pairs, oks); err != nil {
 			return
 		}
-		if d1, ok1, err = s1.skip(d1[0], false); err != nil {
+		if skippedFirst {
 			return
 		}
 	}
