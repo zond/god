@@ -10,6 +10,8 @@ const (
 	bufferSize = 128
 )
 
+// skipAll skips all given sets to new posistions.
+// It allocates as little as possible, and therefore gets pre allocated values as arguments.
 func skipAll(newPair *[2][]byte, newOk *bool, from []byte, inc bool, sets []*setIter, pairs *[][2][]byte, oks *[]bool, err *error) {
 	for _, set := range sets {
 		if *newPair, *newOk, *err = set.skip(from, inc); *err != nil {
@@ -21,6 +23,11 @@ func skipAll(newPair *[2][]byte, newOk *bool, from []byte, inc bool, sets []*set
 	return
 }
 
+// newSetOpResult creates a new common.SetOpResult based the lowest keys in the given pairs
+// It also sets whether the lowest keys include the key from the first set, 
+// the indices in the set slice that had the lowest key,
+// the indices in the set that didn't have the last key
+// It allocates as little as possible, and therefore gets pre allocated values as arguments.
 func newSetOpResult(cmp *int, pairs [][2][]byte, includesFirst *bool, last *[]byte, firstIndices, notLastIndices *[]int) (result common.SetOpResult) {
 	for index, pair := range pairs {
 		if *last == nil {
@@ -54,6 +61,9 @@ func newSetOpResult(cmp *int, pairs [][2][]byte, includesFirst *bool, last *[]by
 	return
 }
 
+// skipIndices skips the given indices at the given sets to new positions.
+// It also updates the sets, pairs and oks provided to only include those that returned ok.
+// It allocates as little as possible, and therefore gets pre allocated values as arguments.
 func skipIndices(indices []int, from []byte, inc bool, sets, newSets *[]*setIter, pairs, newPairs *[][2][]byte, oks, newOks *[]bool, err *error) {
 	if indices == nil {
 		for index, set := range *sets {
@@ -86,6 +96,7 @@ func skipIndices(indices []int, from []byte, inc bool, sets, newSets *[]*setIter
 
 type KeyValuesIterator func(res common.SetOpResult) (cont bool)
 
+// eachUnion will call a KeyValuesIterator with all keys and values in all provided sets, once per unique key.
 func eachUnion(f KeyValuesIterator, sets ...*setIter) (err error) {
 	var preAllocPair [2][]byte
 	var preAllocOk bool
@@ -118,6 +129,7 @@ func eachUnion(f KeyValuesIterator, sets ...*setIter) (err error) {
 	return
 }
 
+// eachInter will call a KeyValuesIterator once per key that is present in all provided sets.
 func eachInter(f KeyValuesIterator, sets ...*setIter) (err error) {
 	var preAllocPair [2][]byte
 	var preAllocOk bool
@@ -158,6 +170,7 @@ func eachInter(f KeyValuesIterator, sets ...*setIter) (err error) {
 	return
 }
 
+// eachDiff will call a KeyValuesIterator once per key present in the first provided set that is not present in the second and up.
 func eachDiff(f KeyValuesIterator, sets ...*setIter) (err error) {
 	var preAllocPair [2][]byte
 	var preAllocOk bool
