@@ -522,43 +522,40 @@ func (self *Conn) Size() (result int) {
 func (self *Conn) Describe() string {
 	return self.ring.Describe()
 }
-func (self *Conn) setOp(opname string, key1, key2, min, max []byte, minInc, maxInc bool, maxRes int) (result []common.SetOpResult) {
+func (self *Conn) setOp(opname string, keys [][]byte, min, max []byte, minInc, maxInc bool, maxRes int) (result []common.SetOpResult) {
 	op := common.SetOp{
-		Key1:   key1,
-		Key2:   key2,
+		Keys:   keys,
 		Min:    min,
 		Max:    max,
 		MinInc: minInc,
 		MaxInc: maxInc,
 		Len:    maxRes,
 	}
-	size1 := self.SubSize(key1)
-	size2 := self.SubSize(key2)
-	var successor *common.Remote
-	if size2 > size1 {
-		_, _, successor = self.ring.Remotes(key2)
-	} else {
-		_, _, successor = self.ring.Remotes(key1)
+	biggestKey := keys[0]
+	biggestSize := self.SubSize(keys[0])
+	var thisSize int
+	for _, key := range keys[1:] {
+		if thisSize = self.SubSize(key); thisSize > biggestSize {
+			biggestSize = thisSize
+			biggestKey = key
+		}
 	}
+	_, _, successor := self.ring.Remotes(biggestKey)
 	var results []common.SetOpResult
 	err := successor.Call(opname, op, &results)
 	for err != nil {
 		self.removeNode(*successor)
-		if size2 > size1 {
-			_, _, successor = self.ring.Remotes(key2)
-		} else {
-			_, _, successor = self.ring.Remotes(key1)
-		}
+		_, _, successor = self.ring.Remotes(biggestKey)
 		err = successor.Call(opname, op, &results)
 	}
 	return results
 }
-func (self *Conn) SubUnion(key1, key2, min, max []byte, minInc, maxInc bool, maxRes int) (result []common.SetOpResult) {
-	return self.setOp("DHash.SubUnion", key1, key2, min, max, minInc, maxInc, maxRes)
+func (self *Conn) SubUnion(min, max []byte, minInc, maxInc bool, maxRes int, keys ...[]byte) (result []common.SetOpResult) {
+	return self.setOp("DHash.SubUnion", keys, min, max, minInc, maxInc, maxRes)
 }
-func (self *Conn) SubInter(key1, key2, min, max []byte, minInc, maxInc bool, maxRes int) (result []common.SetOpResult) {
-	return self.setOp("DHash.SubInter", key1, key2, min, max, minInc, maxInc, maxRes)
+func (self *Conn) SubInter(min, max []byte, minInc, maxInc bool, maxRes int, keys ...[]byte) (result []common.SetOpResult) {
+	return self.setOp("DHash.SubInter", keys, min, max, minInc, maxInc, maxRes)
 }
-func (self *Conn) SubDiff(key1, key2, min, max []byte, minInc, maxInc bool, maxRes int) (result []common.SetOpResult) {
-	return self.setOp("DHash.SubDiff", key1, key2, min, max, minInc, maxInc, maxRes)
+func (self *Conn) SubDiff(min, max []byte, minInc, maxInc bool, maxRes int, keys ...[]byte) (result []common.SetOpResult) {
+	return self.setOp("DHash.SubDiff", keys, min, max, minInc, maxInc, maxRes)
 }

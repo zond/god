@@ -9,25 +9,20 @@ import (
 	"time"
 )
 
-func (self *Node) setUpIters(op common.SetOp) (s1, s2 *setIter, lt int) {
-	rem1 := self.node.GetSuccessorFor(op.Key1)
-	rem2 := self.node.GetSuccessorFor(op.Key2)
-	s1 = &setIter{
-		key:    op.Key1,
-		remote: rem1,
+func (self *Node) setUpIters(op common.SetOp) (sets []*setIter, lt int) {
+	var rem common.Remote
+	var iter *setIter
+	for _, key := range op.Keys {
+		iter = &setIter{
+			key:    key,
+			remote: self.node.GetSuccessorFor(key),
+		}
+		if rem.Addr == self.node.GetAddr() {
+			iter.tree = self.tree
+		}
+		iter.refill(op.Min, op.MinInc)
+		sets = append(sets, iter)
 	}
-	if rem1.Addr == self.node.GetAddr() {
-		s1.tree = self.tree
-	}
-	s2 = &setIter{
-		key:    op.Key2,
-		remote: rem2,
-	}
-	if rem2.Addr == self.node.GetAddr() {
-		s2.tree = self.tree
-	}
-	s1.refill(op.Min, op.MinInc)
-	s2.refill(op.Min, op.MinInc)
 	if op.MaxInc {
 		lt = 1
 	}
@@ -343,23 +338,23 @@ func (self *Node) SubSize(key []byte, result *int) error {
 	return nil
 }
 func (self *Node) SubUnion(op common.SetOp, items *[]common.SetOpResult) error {
-	s1, s2, lt := self.setUpIters(op)
+	sets, lt := self.setUpIters(op)
 	return eachUnion(func(res common.SetOpResult) bool {
 		*items = append(*items, res)
 		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	}, s1, s2)
+	}, sets...)
 }
 func (self *Node) SubInter(op common.SetOp, items *[]common.SetOpResult) error {
-	s1, s2, lt := self.setUpIters(op)
+	sets, lt := self.setUpIters(op)
 	return eachInter(func(res common.SetOpResult) bool {
 		*items = append(*items, res)
 		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	}, s1, s2)
+	}, sets...)
 }
 func (self *Node) SubDiff(op common.SetOp, items *[]common.SetOpResult) error {
-	s1, s2, lt := self.setUpIters(op)
+	sets, lt := self.setUpIters(op)
 	return eachDiff(func(res common.SetOpResult) bool {
 		*items = append(*items, res)
 		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	}, s1, s2)
+	}, sets...)
 }

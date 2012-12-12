@@ -128,19 +128,19 @@ func printSetOpRes(res common.SetOpResult) {
 }
 
 func subUnion(conn *client.Conn, args []string) {
-	for _, res := range conn.SubUnion([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+	for _, res := range conn.SubUnion(nil, nil, true, false, 0, []byte(args[1]), []byte(args[2])) {
 		printSetOpRes(res)
 	}
 }
 
 func subInter(conn *client.Conn, args []string) {
-	for _, res := range conn.SubInter([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+	for _, res := range conn.SubInter(nil, nil, true, false, 0, []byte(args[1]), []byte(args[2])) {
 		printSetOpRes(res)
 	}
 }
 
 func subDiff(conn *client.Conn, args []string) {
-	for _, res := range conn.SubDiff([]byte(args[1]), []byte(args[2]), nil, nil, true, false, 0) {
+	for _, res := range conn.SubDiff(nil, nil, true, false, 0, []byte(args[1]), []byte(args[2])) {
 		printSetOpRes(res)
 	}
 }
