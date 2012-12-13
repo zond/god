@@ -121,12 +121,6 @@ func (self *dhashServer) SliceLen(r common.Range, result *[]common.Item) error {
 func (self *dhashServer) ReverseSliceLen(r common.Range, result *[]common.Item) error {
 	return (*Node)(self).SliceLen(r, result)
 }
-func (self *dhashServer) SubUnion(op common.SetOp, items *[]common.SetOpResult) error {
-	return (*Node)(self).SubUnion(op, items)
-}
-func (self *dhashServer) SubInter(op common.SetOp, items *[]common.SetOpResult) error {
-	return (*Node)(self).SubInter(op, items)
-}
-func (self *dhashServer) SubDiff(op common.SetOp, items *[]common.SetOpResult) error {
-	return (*Node)(self).SubDiff(op, items)
+func (self *dhashServer) SetExpression(expr common.SetExpression, items *[]common.SetOpResult) error {
+	return (*Node)(self).SetExpression(expr, items)
 }

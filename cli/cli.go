@@ -37,9 +37,9 @@ var actions = map[*actionSpec]action{
 	newActionSpec("reverseSlice \\S+ \\S+ \\S+"):      reverseSlice,
 	newActionSpec("slice \\S+ \\S+ \\S+"):             slice,
 	newActionSpec("sliceLen \\S+ \\S+ \\d+"):          sliceLen,
-	newActionSpec("subUnion \\S+ \\S+"):               subUnion,
-	newActionSpec("subInter \\S+ \\S+"):               subInter,
-	newActionSpec("subDiff \\S+ \\S+"):                subDiff,
+	newActionSpec("union \\S+ \\S+"):                  union,
+	newActionSpec("inter \\S+ \\S+"):                  inter,
+	newActionSpec("diff \\S+ \\S+"):                   diff,
 	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):   reverseSliceLen,
 	newActionSpec("put \\S+ \\S+"):                    put,
 	newActionSpec("subSize \\S+"):                     subSize,
@@ -127,20 +127,35 @@ func printSetOpRes(res common.SetOpResult) {
 	fmt.Printf("%v => %v\n", string(res.Key), vals)
 }
 
-func subUnion(conn *client.Conn, args []string) {
-	for _, res := range conn.SubUnion(nil, nil, true, false, 0, []byte(args[1]), []byte(args[2])) {
+func union(conn *client.Conn, args []string) {
+	for _, res := range conn.SetExpression(common.SetExpression{
+		Op: common.SetOp{
+			Type:    common.Union,
+			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
+		},
+	}) {
 		printSetOpRes(res)
 	}
 }
 
-func subInter(conn *client.Conn, args []string) {
-	for _, res := range conn.SubInter(nil, nil, true, false, 0, []byte(args[1]), []byte(args[2])) {
+func inter(conn *client.Conn, args []string) {
+	for _, res := range conn.SetExpression(common.SetExpression{
+		Op: common.SetOp{
+			Type:    common.Intersection,
+			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
+		},
+	}) {
 		printSetOpRes(res)
 	}
 }
 
-func subDiff(conn *client.Conn, args []string) {
-	for _, res := range conn.SubDiff(nil, nil, true, false, 0, []byte(args[1]), []byte(args[2])) {
+func diff(conn *client.Conn, args []string) {
+	for _, res := range conn.SetExpression(common.SetExpression{
+		Op: common.SetOp{
+			Type:    common.Difference,
+			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
+		},
+	}) {
 		printSetOpRes(res)
 	}
 }

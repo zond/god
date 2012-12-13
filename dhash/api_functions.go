@@ -9,26 +9,6 @@ import (
 	"time"
 )
 
-func (self *Node) setUpIters(op common.SetOp) (sets []*setIter, lt int) {
-	var rem common.Remote
-	var iter *setIter
-	for _, key := range op.Keys {
-		iter = &setIter{
-			key:    key,
-			remote: self.node.GetSuccessorFor(key),
-		}
-		if rem.Addr == self.node.GetAddr() {
-			iter.tree = self.tree
-		}
-		iter.refill(op.Min, op.MinInc)
-		sets = append(sets, iter)
-	}
-	if op.MaxInc {
-		lt = 1
-	}
-	return
-}
-
 func (self *Node) Description() common.DHashDescription {
 	return common.DHashDescription{
 		Addr:         self.GetAddr(),
@@ -337,24 +317,13 @@ func (self *Node) SubSize(key []byte, result *int) error {
 	*result = self.tree.SubSize(key)
 	return nil
 }
-func (self *Node) SubUnion(op common.SetOp, items *[]common.SetOpResult) error {
-	sets, lt := self.setUpIters(op)
-	return eachUnion(func(res common.SetOpResult) bool {
-		*items = append(*items, res)
-		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	}, sets...)
-}
-func (self *Node) SubInter(op common.SetOp, items *[]common.SetOpResult) error {
-	sets, lt := self.setUpIters(op)
-	return eachInter(func(res common.SetOpResult) bool {
-		*items = append(*items, res)
-		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	}, sets...)
-}
-func (self *Node) SubDiff(op common.SetOp, items *[]common.SetOpResult) error {
-	sets, lt := self.setUpIters(op)
-	return eachDiff(func(res common.SetOpResult) bool {
-		*items = append(*items, res)
-		return (op.Len == 0 || len(*items) < op.Len) && (op.Max == nil || bytes.Compare(res.Key, op.Max) < lt)
-	}, sets...)
+func (self *Node) SetExpression(expr common.SetExpression, items *[]common.SetOpResult) (err error) {
+	skipper := self.createSkipper(expr.Op)
+	var res *common.SetOpResult
+	for res, err = skipper.skip(expr.Min, expr.MinInc); res != nil && err == nil; res, err = skipper.skip(expr.Min, expr.MinInc) {
+		expr.Min = res.Key
+		expr.MinInc = false
+		*items = append(*items, *res)
+	}
+	return
 }
