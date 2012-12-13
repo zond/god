@@ -42,6 +42,8 @@ func (self *Node) createSkipper(op common.SetOp) (result skipper) {
 		result = &interOp{skippers: self.createSkippers(op.Sources)}
 	case common.Difference:
 		result = &diffOp{skippers: self.createSkippers(op.Sources)}
+	case common.Xor:
+		result = &xorOp{skippers: self.createSkippers(op.Sources)}
 	default:
 		panic(fmt.Errorf("Unknown SetOp Type %v", op.Type))
 	}
@@ -52,6 +54,70 @@ type skipper interface {
 	// skip returns a value matching the min and inclusive criteria.
 	// If the last yielded value matches the criteria the same value will be returned again.
 	skip(min []byte, inc bool) (result *common.SetOpResult, err error)
+}
+
+type xorOp struct {
+	skippers []skipper
+	curr     *common.SetOpResult
+}
+
+func (self *xorOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
+	gt := 0
+	if inc {
+		gt = -1
+	}
+
+	if self.curr != nil && bytes.Compare(self.curr.Key, min) > gt {
+		result = self.curr
+		return
+	}
+
+	newSkippers := make([]skipper, 0, len(self.skippers))
+
+	var res *common.SetOpResult
+	var cmp int
+	for result == nil {
+		for _, thisSkipper := range self.skippers {
+			if res, err = thisSkipper.skip(min, inc); err != nil {
+				result = nil
+				self.curr = nil
+				return
+			}
+			if res != nil {
+				newSkippers = append(newSkippers, thisSkipper)
+				if result == nil {
+					result = res.ShallowCopy()
+				} else {
+					cmp = bytes.Compare(res.Key, result.Key)
+					if cmp < 0 {
+						result = res.ShallowCopy()
+					} else if cmp == 0 {
+						result.Values = append(result.Values, res.Values...)
+					}
+				}
+			}
+		}
+
+		if len(newSkippers) == 0 {
+			result = nil
+			self.curr = nil
+			return
+		}
+
+		if result != nil && len(result.Values) != 1 {
+			min = result.Key
+			inc = false
+			result = nil
+		}
+
+		self.skippers = newSkippers
+		newSkippers = newSkippers[:0]
+
+	}
+
+	self.curr = result
+
+	return
 }
 
 type unionOp struct {

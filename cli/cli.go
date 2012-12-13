@@ -40,6 +40,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("union \\S+ \\S+"):                  union,
 	newActionSpec("inter \\S+ \\S+"):                  inter,
 	newActionSpec("diff \\S+ \\S+"):                   diff,
+	newActionSpec("xor \\S+ \\S+"):                    xor,
 	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):   reverseSliceLen,
 	newActionSpec("put \\S+ \\S+"):                    put,
 	newActionSpec("subSize \\S+"):                     subSize,
@@ -153,6 +154,17 @@ func diff(conn *client.Conn, args []string) {
 	for _, res := range conn.SetExpression(common.SetExpression{
 		Op: common.SetOp{
 			Type:    common.Difference,
+			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
+		},
+	}) {
+		printSetOpRes(res)
+	}
+}
+
+func xor(conn *client.Conn, args []string) {
+	for _, res := range conn.SetExpression(common.SetExpression{
+		Op: common.SetOp{
+			Type:    common.Xor,
 			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
 		},
 	}) {

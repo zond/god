@@ -4,6 +4,7 @@ const (
 	Union = iota
 	Intersection
 	Difference
+	Xor
 )
 
 type SetOp struct {
