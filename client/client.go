@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/rpc"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -120,19 +121,24 @@ func (self *Conn) subDel(key, subKey []byte, sync bool) {
 		self.subDel(key, subKey, sync)
 	}
 }
-func (self *Conn) subPut(key, subKey, value []byte, sync bool) {
+func (self *Conn) subPutVia(succ *common.Remote, key, subKey, value []byte, sync bool) {
 	data := common.Item{
 		Key:    key,
 		SubKey: subKey,
 		Value:  value,
 		Sync:   sync,
 	}
-	_, _, successor := self.ring.Remotes(key)
 	var x int
-	if err := successor.Call("DHash.SubPut", data, &x); err != nil {
-		self.removeNode(*successor)
-		self.subPut(key, subKey, value, sync)
+	if err := succ.Call("DHash.SubPut", data, &x); err != nil {
+		self.removeNode(*succ)
+		_, _, newSuccessor := self.ring.Remotes(key)
+		*succ = *newSuccessor
+		self.subPutVia(succ, key, subKey, value, sync)
 	}
+}
+func (self *Conn) subPut(key, subKey, value []byte, sync bool) {
+	_, _, successor := self.ring.Remotes(key)
+	self.subPutVia(successor, key, subKey, value, sync)
 }
 func (self *Conn) del(key []byte, sync bool) {
 	data := common.Item{
@@ -146,18 +152,23 @@ func (self *Conn) del(key []byte, sync bool) {
 		self.del(key, sync)
 	}
 }
-func (self *Conn) put(key, value []byte, sync bool) {
+func (self *Conn) putVia(succ *common.Remote, key, value []byte, sync bool) {
 	data := common.Item{
 		Key:   key,
 		Value: value,
 		Sync:  sync,
 	}
-	_, _, successor := self.ring.Remotes(key)
 	var x int
-	if err := successor.Call("DHash.Put", data, &x); err != nil {
-		self.removeNode(*successor)
-		self.put(key, value, sync)
+	if err := succ.Call("DHash.Put", data, &x); err != nil {
+		self.removeNode(*succ)
+		_, _, newSuccessor := self.ring.Remotes(key)
+		*succ = *newSuccessor
+		self.putVia(succ, key, value, sync)
 	}
+}
+func (self *Conn) put(key, value []byte, sync bool) {
+	_, _, successor := self.ring.Remotes(key)
+	self.putVia(successor, key, value, sync)
 }
 func (self *Conn) mergeRecent(operation string, r common.Range, up bool) (result []common.Item) {
 	currentRedundancy := self.ring.Redundancy()
@@ -224,6 +235,35 @@ func findKeys(op common.SetOp) (result map[string]bool) {
 	}
 	return
 }
+func (self *Conn) consume(c chan [2][]byte, wait *sync.WaitGroup, successor *common.Remote, key []byte) {
+	for pair := range c {
+		if key == nil {
+			self.putVia(successor, pair[0], pair[1], false)
+		} else {
+			self.subPutVia(successor, key, pair[0], pair[1], false)
+		}
+	}
+	wait.Done()
+}
+func (self *Conn) dump(c chan [2][]byte, wait *sync.WaitGroup, key []byte) {
+	var succ *common.Remote
+	dumps := make(map[string]chan [2][]byte)
+	for pair := range c {
+		_, _, succ = self.ring.Remotes(pair[0])
+		if dump, ok := dumps[succ.Addr]; ok {
+			dump <- pair
+		} else {
+			newDump := make(chan [2][]byte, 16)
+			wait.Add(1)
+			go self.consume(newDump, wait, succ, key)
+			newDump <- pair
+			dumps[succ.Addr] = newDump
+		}
+	}
+	for _, dump := range dumps {
+		close(dump)
+	}
+}
 
 func (self *Conn) SSubPut(key, subKey, value []byte) {
 	self.subPut(key, subKey, value, true)
@@ -236,6 +276,18 @@ func (self *Conn) SPut(key, value []byte) {
 }
 func (self *Conn) Put(key, value []byte) {
 	self.put(key, value, false)
+}
+func (self *Conn) Dump() (c chan [2][]byte, wait *sync.WaitGroup) {
+	wait = new(sync.WaitGroup)
+	c = make(chan [2][]byte, 16)
+	go self.dump(c, wait, nil)
+	return
+}
+func (self *Conn) SubDump(key []byte) (c chan [2][]byte, wait *sync.WaitGroup) {
+	wait = new(sync.WaitGroup)
+	c = make(chan [2][]byte, 16)
+	go self.dump(c, wait, key)
+	return
 }
 func (self *Conn) SubClear(key []byte) {
 	self.subClear(key, false)

@@ -3,9 +3,12 @@ package main
 import (
 	"../client"
 	"../common"
+	"bufio"
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,6 +43,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("setOp .+"):                         setOp,
 	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):   reverseSliceLen,
 	newActionSpec("put \\S+ \\S+"):                    put,
+	newActionSpec("dump"):                             dump,
 	newActionSpec("subSize \\S+"):                     subSize,
 	newActionSpec("size"):                             size,
 	newActionSpec("count \\S+ \\S+ \\S+"):             count,
@@ -259,6 +263,29 @@ func get(conn *client.Conn, args []string) {
 func subGet(conn *client.Conn, args []string) {
 	if value, existed := conn.SubGet([]byte(args[1]), []byte(args[2])); existed {
 		fmt.Printf("%v\n", string(value))
+	}
+}
+
+func dump(conn *client.Conn, args []string) {
+	dump, wait := conn.Dump()
+	defer func() {
+		close(dump)
+		wait.Wait()
+	}()
+	reader := bufio.NewReader(os.Stdin)
+	var pair []string
+	var line string
+	var err error
+	for line, err = reader.ReadString('\n'); err == nil; line, err = reader.ReadString('\n') {
+		pair = strings.Split(strings.TrimSpace(line), "=")
+		if len(pair) == 2 {
+			dump <- [2][]byte{[]byte(pair[0]), []byte(pair[1])}
+		} else {
+			return
+		}
+	}
+	if err != io.EOF {
+		fmt.Println(err)
 	}
 }
 
