@@ -11,24 +11,22 @@ const (
 	bufferSize = 128
 )
 
-func (self *Node) createSkippers(sources []interface{}) (result []skipper) {
+func (self *Node) createSkippers(sources []common.SetOpSource) (result []skipper) {
 	result = make([]skipper, len(sources))
 	for index, source := range sources {
-		if op, ok := source.(common.SetOp); ok {
-			result[index] = self.createSkipper(op)
-		} else if key, ok := source.([]byte); ok {
-			remote := self.node.GetSuccessorFor(key)
+		if source.Key != nil {
+			remote := self.node.GetSuccessorFor(source.Key)
 			var tree *radix.Tree
 			if remote.Addr == self.node.GetAddr() {
 				tree = self.tree
 			}
 			result[index] = &treeSkipper{
-				key:    key,
+				key:    source.Key,
 				tree:   tree,
 				remote: remote,
 			}
 		} else {
-			panic(fmt.Errorf("Unknown SetOp Source type: %+v", source))
+			result[index] = self.createSkipper(*source.SetOp)
 		}
 	}
 	return

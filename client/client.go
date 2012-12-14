@@ -214,14 +214,12 @@ func (self *Conn) findRecent(operation string, data common.Item) (result *common
 func findKeys(op common.SetOp) (result map[string]bool) {
 	result = make(map[string]bool)
 	for _, source := range op.Sources {
-		if key, ok := source.([]byte); ok {
-			result[string(key)] = true
-		} else if subOp, ok := source.(common.SetOp); ok {
-			for key, _ := range findKeys(subOp) {
+		if source.Key != nil {
+			result[string(source.Key)] = true
+		} else {
+			for key, _ := range findKeys(*source.SetOp) {
 				result[key] = true
 			}
-		} else {
-			panic(fmt.Errorf("Unknown SetOp Source type %+v", source))
 		}
 	}
 	return

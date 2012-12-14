@@ -85,7 +85,7 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 					return
 				}
 				if self.nextName.Len() > 0 {
-					result.Sources = append(result.Sources, self.nextName.Bytes())
+					result.Sources = append(result.Sources, SetOpSource{Key: self.nextName.Bytes()})
 					self.nextName = new(bytes.Buffer)
 				}
 				state = finished
@@ -95,7 +95,7 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 					return
 				}
 				self.pos--
-				result.Sources = append(result.Sources, nested)
+				result.Sources = append(result.Sources, SetOpSource{SetOp: nested})
 			default:
 				state = param
 				self.nextName.WriteByte(self.in[self.pos])
@@ -104,19 +104,21 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 			switch self.in[self.pos] {
 			case ' ':
 				if self.nextName.Len() > 0 {
-					result.Sources = append(result.Sources, self.nextName.Bytes())
+					result.Sources = append(result.Sources, SetOpSource{Key: self.nextName.Bytes()})
 					self.nextName = new(bytes.Buffer)
 				}
 				state = params
 			case ')':
 				if self.nextName.Len() > 0 {
-					result.Sources = append(result.Sources, self.nextName.Bytes())
+					result.Sources = append(result.Sources, SetOpSource{Key: self.nextName.Bytes()})
 					self.nextName = new(bytes.Buffer)
 				}
 				state = finished
 			case '(':
 				err = fmt.Errorf("Unexpected ( at %v in %v", self.pos, self.in)
 				return
+			default:
+				self.nextName.WriteByte(self.in[self.pos])
 			}
 		}
 		self.pos++

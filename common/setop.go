@@ -28,18 +28,23 @@ func (self SetOpType) String() string {
 	panic(fmt.Errorf("Unknown SetOpType %v", self))
 }
 
+type SetOpSource struct {
+	Key   []byte
+	SetOp *SetOp
+}
+
 type SetOp struct {
-	Sources []interface{}
+	Sources []SetOpSource
 	Type    SetOpType
 }
 
 func (self SetOp) String() string {
 	sources := make([]string, len(self.Sources))
 	for index, source := range self.Sources {
-		if bytes, ok := source.([]byte); ok {
-			sources[index] = string(bytes)
+		if source.Key != nil {
+			sources[index] = string(source.Key)
 		} else {
-			sources[index] = fmt.Sprint(source)
+			sources[index] = fmt.Sprint(source.SetOp)
 		}
 	}
 	return fmt.Sprintf("(%v %v)", self.Type, strings.Join(sources, " "))

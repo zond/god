@@ -37,10 +37,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("reverseSlice \\S+ \\S+ \\S+"):      reverseSlice,
 	newActionSpec("slice \\S+ \\S+ \\S+"):             slice,
 	newActionSpec("sliceLen \\S+ \\S+ \\d+"):          sliceLen,
-	newActionSpec("union \\S+ \\S+"):                  union,
-	newActionSpec("inter \\S+ \\S+"):                  inter,
-	newActionSpec("diff \\S+ \\S+"):                   diff,
-	newActionSpec("xor \\S+ \\S+"):                    xor,
+	newActionSpec("setOp .+"):                         setOp,
 	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):   reverseSliceLen,
 	newActionSpec("put \\S+ \\S+"):                    put,
 	newActionSpec("subSize \\S+"):                     subSize,
@@ -128,46 +125,12 @@ func printSetOpRes(res common.SetOpResult) {
 	fmt.Printf("%v => %v\n", string(res.Key), vals)
 }
 
-func union(conn *client.Conn, args []string) {
-	for _, res := range conn.SetExpression(common.SetExpression{
-		Op: common.SetOp{
-			Type:    common.Union,
-			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
-		},
-	}) {
-		printSetOpRes(res)
+func setOp(conn *client.Conn, args []string) {
+	op, err := common.NewSetOpParser(args[1]).Parse()
+	if err != nil {
+		fmt.Println(err)
 	}
-}
-
-func inter(conn *client.Conn, args []string) {
-	for _, res := range conn.SetExpression(common.SetExpression{
-		Op: common.SetOp{
-			Type:    common.Intersection,
-			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
-		},
-	}) {
-		printSetOpRes(res)
-	}
-}
-
-func diff(conn *client.Conn, args []string) {
-	for _, res := range conn.SetExpression(common.SetExpression{
-		Op: common.SetOp{
-			Type:    common.Difference,
-			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
-		},
-	}) {
-		printSetOpRes(res)
-	}
-}
-
-func xor(conn *client.Conn, args []string) {
-	for _, res := range conn.SetExpression(common.SetExpression{
-		Op: common.SetOp{
-			Type:    common.Xor,
-			Sources: []interface{}{[]byte(args[1]), []byte(args[2])},
-		},
-	}) {
+	for _, res := range conn.SetExpression(common.SetExpression{Op: *op}) {
 		printSetOpRes(res)
 	}
 }

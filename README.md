@@ -5,6 +5,7 @@ A Go database
 
 # TODO
 
+* Dump function in cli.go to quickly create large test sets
 * Add a mirror tree for all trees
  * Let all Puts and Deletes affect the mirror if the proper argument is set
  * Put value|key => key in the mirror tree

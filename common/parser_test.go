@@ -6,39 +6,47 @@ import (
 )
 
 func TestSetOpParser(t *testing.T) {
-	op, err := NewSetOpParser("(U (I c a (D f g)) (I c b) (X d e))").Parse()
+	op, err := NewSetOpParser("(U (I ccc aa (D ffff gg)) (I c23 b_ff) (X dbla e&44))").Parse()
 	if err != nil {
 		t.Error(err)
 	}
 	cmp := &SetOp{
 		Type: Union,
-		Sources: []interface{}{
-			&SetOp{
-				Type: Intersection,
-				Sources: []interface{}{
-					[]byte("c"),
-					[]byte("a"),
-					&SetOp{
-						Type: Difference,
-						Sources: []interface{}{
-							[]byte("f"),
-							[]byte("g"),
+		Sources: []SetOpSource{
+			SetOpSource{
+				SetOp: &SetOp{
+					Type: Intersection,
+					Sources: []SetOpSource{
+						SetOpSource{Key: []byte("ccc")},
+						SetOpSource{Key: []byte("aa")},
+						SetOpSource{
+							SetOp: &SetOp{
+								Type: Difference,
+								Sources: []SetOpSource{
+									SetOpSource{Key: []byte("ffff")},
+									SetOpSource{Key: []byte("gg")},
+								},
+							},
 						},
 					},
 				},
 			},
-			&SetOp{
-				Type: Intersection,
-				Sources: []interface{}{
-					[]byte("c"),
-					[]byte("b"),
+			SetOpSource{
+				SetOp: &SetOp{
+					Type: Intersection,
+					Sources: []SetOpSource{
+						SetOpSource{Key: []byte("c23")},
+						SetOpSource{Key: []byte("b_ff")},
+					},
 				},
 			},
-			&SetOp{
-				Type: Xor,
-				Sources: []interface{}{
-					[]byte("d"),
-					[]byte("e"),
+			SetOpSource{
+				SetOp: &SetOp{
+					Type: Xor,
+					Sources: []SetOpSource{
+						SetOpSource{Key: []byte("dbla")},
+						SetOpSource{Key: []byte("e&44")},
+					},
 				},
 			},
 		},
