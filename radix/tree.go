@@ -30,6 +30,18 @@ func cmps(mininc, maxinc bool) (mincmp, maxcmp int) {
 	return
 }
 
+func newMirrorIterator(f TreeIterator) TreeIterator {
+	return func(key, value []byte, timestamp int64) bool {
+		return f(key[:len(key)-len(value)], value, timestamp)
+	}
+}
+
+func newMirrorIndexIterator(f TreeIndexIterator) TreeIndexIterator {
+	return func(key, value []byte, timestamp int64, index int) bool {
+		return f(key[:len(key)-len(value)], value, timestamp, index)
+	}
+}
+
 func newNodeIterator(f TreeIterator) nodeIterator {
 	return func(key, bValue []byte, tValue *Tree, use int, timestamp int64) (cont bool) {
 		return f(key, bValue, timestamp)
@@ -196,6 +208,12 @@ func (self *Tree) ReverseEach(f TreeIterator) {
 	defer self.lock.RUnlock()
 	self.root.reverseEach(nil, byteValue, newNodeIterator(f))
 }
+func (self *Tree) MirrorEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	self.mirror.EachBetween(min, max, mininc, maxinc, newMirrorIterator(f))
+}
 func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	if self == nil {
 		return
@@ -205,6 +223,12 @@ func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterat
 	mincmp, maxcmp := cmps(mininc, maxinc)
 	self.root.eachBetween(nil, rip(min), rip(max), mincmp, maxcmp, byteValue, newNodeIterator(f))
 }
+func (self *Tree) MirrorReverseEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	self.mirror.ReverseEachBetween(min, max, mininc, maxinc, newMirrorIterator(f))
+}
 func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	if self == nil {
 		return
@@ -213,6 +237,12 @@ func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f Tre
 	defer self.lock.RUnlock()
 	mincmp, maxcmp := cmps(mininc, maxinc)
 	self.root.reverseEachBetween(nil, rip(min), rip(max), mincmp, maxcmp, byteValue, newNodeIterator(f))
+}
+func (self *Tree) MirrorIndexOf(key []byte) (index int, existed bool) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	return self.mirror.IndexOf(key)
 }
 func (self *Tree) IndexOf(key []byte) (index int, existed bool) {
 	if self == nil {
@@ -224,6 +254,12 @@ func (self *Tree) IndexOf(key []byte) (index int, existed bool) {
 	existed = ex&byteValue != 0
 	return
 }
+func (self *Tree) MirrorReverseIndexOf(key []byte) (index int, existed bool) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	return self.mirror.ReverseIndexOf(key)
+}
 func (self *Tree) ReverseIndexOf(key []byte) (index int, existed bool) {
 	if self == nil {
 		return
@@ -234,6 +270,12 @@ func (self *Tree) ReverseIndexOf(key []byte) (index int, existed bool) {
 	existed = ex&byteValue != 0
 	return
 }
+func (self *Tree) MirrorEachBetweenIndex(min, max *int, f TreeIndexIterator) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	self.mirror.EachBetweenIndex(min, max, newMirrorIndexIterator(f))
+}
 func (self *Tree) EachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	if self == nil {
 		return
@@ -241,6 +283,12 @@ func (self *Tree) EachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	self.root.eachBetweenIndex(nil, 0, min, max, byteValue, newNodeIndexIterator(f))
+}
+func (self *Tree) MirrorReverseEachBetweenIndex(min, max *int, f TreeIndexIterator) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	self.mirror.ReverseEachBetweenIndex(min, max, newMirrorIndexIterator(f))
 }
 func (self *Tree) ReverseEachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	if self == nil {
@@ -287,6 +335,12 @@ func (self *Tree) sizeBetween(min, max []byte, mininc, maxinc bool, use int) int
 }
 func (self *Tree) RealSizeBetween(min, max []byte, mininc, maxinc bool) int {
 	return self.sizeBetween(min, max, mininc, maxinc, 0)
+}
+func (self *Tree) MirrorSizeBetween(min, max []byte, mininc, maxinc bool) (i int) {
+	if self == nil || self.mirror != nil {
+		return
+	}
+	return self.mirror.SizeBetween(min, max, mininc, maxinc)
 }
 func (self *Tree) SizeBetween(min, max []byte, mininc, maxinc bool) int {
 	return self.sizeBetween(min, max, mininc, maxinc, byteValue|treeValue)
@@ -401,26 +455,28 @@ func (self *Tree) NextMarker(key []byte) (nextKey []byte, existed bool) {
 	})
 	return
 }
-func (self *Tree) Prev(key []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
-	if self == nil {
+func (self *Tree) MirrorPrev(key []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
+	if self == nil || self.mirror == nil {
 		return
 	}
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	self.root.reverseEachBetween(nil, nil, rip(key), 0, 0, byteValue, func(k, b []byte, t *Tree, u int, v int64) bool {
-		prevKey, prevValue, prevTimestamp, existed = k, b, v, u != 0
+	return self.mirror.Prev(key)
+}
+func (self *Tree) MirrorNext(key []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	return self.mirror.Next(key)
+}
+func (self *Tree) Prev(key []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
+	self.ReverseEachBetween(nil, key, false, false, func(k, v []byte, timestamp int64) bool {
+		prevKey, prevValue, prevTimestamp, existed = k, v, timestamp, true
 		return false
 	})
 	return
 }
 func (self *Tree) Next(key []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
-	if self == nil {
-		return
-	}
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	self.root.eachBetween(nil, rip(key), nil, 0, 0, byteValue, func(k, b []byte, t *Tree, u int, v int64) bool {
-		nextKey, nextValue, nextTimestamp, existed = k, b, v, u != 0
+	self.EachBetween(key, nil, false, false, func(k, v []byte, timestamp int64) bool {
+		nextKey, nextValue, nextTimestamp, existed = k, v, timestamp, true
 		return false
 	})
 	return
@@ -449,29 +505,43 @@ func (self *Tree) PrevMarkerIndex(index int) (key []byte, existed bool) {
 	})
 	return
 }
-func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
-	if self == nil {
+func (self *Tree) MirrorNextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
+	if self == nil || self.mirror == nil {
 		return
 	}
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	self.root.eachBetweenIndex(nil, 0, &index, nil, byteValue, func(k, b []byte, t *Tree, u int, v int64, i int) bool {
-		key, value, timestamp, ind, existed = k, b, v, i, u != 0
+	return self.mirror.NextIndex(index)
+}
+func (self *Tree) MirrorPrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	return self.mirror.PrevIndex(index)
+}
+func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
+	self.EachBetweenIndex(&index, nil, func(k, v []byte, t int64, i int) bool {
+		key, value, timestamp, ind, existed = k, v, t, i, true
 		return false
 	})
 	return
 }
 func (self *Tree) PrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
-	if self == nil {
-		return
-	}
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	self.root.reverseEachBetweenIndex(nil, 0, nil, &index, byteValue, func(k, b []byte, t *Tree, u int, v int64, i int) bool {
-		key, value, timestamp, ind, existed = k, b, v, i, u != 0
+	self.ReverseEachBetweenIndex(nil, &index, func(k, v []byte, t int64, i int) bool {
+		key, value, timestamp, ind, existed = k, v, t, i, true
 		return false
 	})
 	return
+}
+func (self *Tree) MirrorFirst() (key []byte, byteValue []byte, timestamp int64, existed bool) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	return self.mirror.First()
+}
+func (self *Tree) MirrorLast() (key []byte, byteValue []byte, timestamp int64, existed bool) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	return self.mirror.Last()
 }
 func (self *Tree) First() (key []byte, byteValue []byte, timestamp int64, existed bool) {
 	self.Each(func(k []byte, b []byte, ver int64) bool {
@@ -486,6 +556,18 @@ func (self *Tree) Last() (key []byte, byteValue []byte, timestamp int64, existed
 		return false
 	})
 	return
+}
+func (self *Tree) MirrorIndex(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	return self.mirror.Index(n)
+}
+func (self *Tree) MirrorReverseIndex(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
+	if self == nil || self.mirror == nil {
+		return
+	}
+	return self.mirror.Index(n)
 }
 func (self *Tree) Index(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
 	self.EachBetweenIndex(&n, &n, func(k []byte, b []byte, ver int64, index int) bool {
@@ -531,6 +613,22 @@ func (self *Tree) Del(key []byte) (oldBytes []byte, existed bool) {
 	return
 }
 
+func (self *Tree) SubMirrorReverseIndexOf(key, subKey []byte) (index int, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		index, existed = subTree.MirrorReverseIndexOf(subKey)
+	}
+	return
+}
+func (self *Tree) SubMirrorIndexOf(key, subKey []byte) (index int, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		index, existed = subTree.MirrorIndexOf(subKey)
+	}
+	return
+}
 func (self *Tree) SubReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -544,6 +642,22 @@ func (self *Tree) SubIndexOf(key, subKey []byte) (index int, existed bool) {
 	defer self.lock.RUnlock()
 	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
 		index, existed = subTree.IndexOf(subKey)
+	}
+	return
+}
+func (self *Tree) SubMirrorPrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundTimestamp int64, foundIndex int, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		foundKey, foundValue, foundTimestamp, foundIndex, existed = subTree.MirrorPrevIndex(index)
+	}
+	return
+}
+func (self *Tree) SubMirrorNextIndex(key []byte, index int) (foundKey, foundValue []byte, foundTimestamp int64, foundIndex int, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		foundKey, foundValue, foundTimestamp, foundIndex, existed = subTree.MirrorNextIndex(index)
 	}
 	return
 }
@@ -563,6 +677,22 @@ func (self *Tree) SubNextIndex(key []byte, index int) (foundKey, foundValue []by
 	}
 	return
 }
+func (self *Tree) SubMirrorFirst(key []byte) (firstKey []byte, firstBytes []byte, firstTimestamp int64, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		firstKey, firstBytes, firstTimestamp, existed = subTree.MirrorFirst()
+	}
+	return
+}
+func (self *Tree) SubMirrorLast(key []byte) (lastKey []byte, lastBytes []byte, lastTimestamp int64, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		lastKey, lastBytes, lastTimestamp, existed = subTree.MirrorLast()
+	}
+	return
+}
 func (self *Tree) SubFirst(key []byte) (firstKey []byte, firstBytes []byte, firstTimestamp int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -576,6 +706,22 @@ func (self *Tree) SubLast(key []byte) (lastKey []byte, lastBytes []byte, lastTim
 	defer self.lock.RUnlock()
 	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
 		lastKey, lastBytes, lastTimestamp, existed = subTree.Last()
+	}
+	return
+}
+func (self *Tree) SubMirrorPrev(key, subKey []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		prevKey, prevValue, prevTimestamp, existed = subTree.MirrorPrev(subKey)
+	}
+	return
+}
+func (self *Tree) SubMirrorNext(key, subKey []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		nextKey, nextValue, nextTimestamp, existed = subTree.MirrorNext(subKey)
 	}
 	return
 }
@@ -603,6 +749,14 @@ func (self *Tree) SubSize(key []byte) (result int) {
 	}
 	return
 }
+func (self *Tree) SubMirrorSizeBetween(key, min, max []byte, mininc, maxinc bool) (result int) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		result = subTree.MirrorSizeBetween(min, max, mininc, maxinc)
+	}
+	return
+}
 func (self *Tree) SubSizeBetween(key, min, max []byte, mininc, maxinc bool) (result int) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -618,6 +772,34 @@ func (self *Tree) SubGet(key, subKey []byte) (byteValue []byte, timestamp int64,
 		byteValue, timestamp, existed = subTree.Get(subKey)
 	}
 	return
+}
+func (self *Tree) SubMirrorReverseEachBetween(key, min, max []byte, mininc, maxinc bool, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		subTree.MirrorReverseEachBetween(min, max, mininc, maxinc, f)
+	}
+}
+func (self *Tree) SubMirrorEachBetween(key, min, max []byte, mininc, maxinc bool, f TreeIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		subTree.MirrorEachBetween(min, max, mininc, maxinc, f)
+	}
+}
+func (self *Tree) SubMirrorReverseEachBetweenIndex(key []byte, min, max *int, f TreeIndexIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		subTree.MirrorReverseEachBetweenIndex(min, max, f)
+	}
+}
+func (self *Tree) SubMirrorEachBetweenIndex(key []byte, min, max *int, f TreeIndexIterator) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		subTree.MirrorEachBetweenIndex(min, max, f)
+	}
 }
 func (self *Tree) SubReverseEachBetween(key, min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	self.lock.RLock()
