@@ -19,7 +19,9 @@ func toBytes(n []Nibble) []byte {
 }
 
 const (
-	parts = 2
+	parts    = 2
+	mirrored = "mirrored"
+	yes      = "yes"
 )
 
 func nComp(a, b []Nibble) int {

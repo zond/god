@@ -49,6 +49,7 @@ type Tree struct {
 	timer                  Timer
 	logger                 *persistence.Logger
 	root                   *node
+	mirror                 *Tree
 	configuration          map[string]string
 	configurationTimestamp int64
 }
@@ -73,7 +74,48 @@ func (self *Tree) Configuration() (map[string]string, int64) {
 	defer self.lock.RUnlock()
 	return self.conf()
 }
+func (self *Tree) mirrorClear(timestamp int64) {
+	if self.mirror != nil {
+		self.mirror.Clear(timestamp)
+	}
+}
+func (self *Tree) mirrorPut(key, value []byte, timestamp int64) {
+	if self.mirror != nil {
+		newKey := make([]byte, len(key)+len(value))
+		copy(newKey, value)
+		copy(newKey[len(value):], key)
+		self.mirror.Put(newKey, key, timestamp)
+	}
+}
+func (self *Tree) mirrorFakeDel(key, value []byte, timestamp int64) {
+	if self.mirror != nil {
+		newKey := make([]byte, len(key)+len(value))
+		copy(newKey, value)
+		copy(newKey[len(value):], key)
+		self.mirror.FakeDel(newKey, timestamp)
+	}
+}
+func (self *Tree) mirrorDel(key, value []byte) {
+	if self.mirror != nil {
+		newKey := make([]byte, len(key)+len(value))
+		copy(newKey, value)
+		copy(newKey[len(value):], key)
+		self.mirror.Del(newKey)
+	}
+}
+func (self *Tree) startMirroring() {
+	self.mirror = NewTreeTimer(self.timer)
+	self.root.each(nil, byteValue, func(key, byteValue []byte, treeValue *Tree, use int, timestamp int64) bool {
+		self.mirrorPut(key, byteValue, timestamp)
+		return true
+	})
+}
 func (self *Tree) configure(conf map[string]string, ts int64) {
+	if conf[mirrored] == yes && self.configuration[mirrored] != yes {
+		self.startMirroring()
+	} else if conf[mirrored] != yes && self.configuration[mirrored] == yes {
+		self.mirror = nil
+	}
 	self.configuration = conf
 	self.configurationTimestamp = ts
 	self.log(persistence.Op{
@@ -275,6 +317,13 @@ func (self *Tree) describeIndented(first, indent int) string {
 	}
 	buffer := bytes.NewBufferString(fmt.Sprintf("%v<Radix size:%v hash:%v>\n", indentation, self.Size(), hex.EncodeToString(self.Hash())))
 	self.root.describe(indent+2, buffer)
+	if self.mirror != nil {
+		for i := 0; i < indent+first; i++ {
+			fmt.Fprint(buffer, " ")
+		}
+		fmt.Fprint(buffer, "<mirror>\n")
+		self.mirror.root.describe(indent+2, buffer)
+	}
 	return string(buffer.Bytes())
 }
 func (self *Tree) Describe() string {
@@ -293,6 +342,7 @@ func (self *Tree) FakeDel(key []byte, timestamp int64) (oldBytes []byte, oldTree
 	self.root, oldBytes, oldTree, _, ex = self.root.fakeDel(nil, rip(key), byteValue, timestamp, self.timer.ContinuousTime())
 	existed = ex&byteValue != 0
 	if existed {
+		self.mirrorFakeDel(key, oldBytes, timestamp)
 		self.log(persistence.Op{
 			Key: key,
 		})
@@ -308,6 +358,10 @@ func (self *Tree) Put(key []byte, bValue []byte, timestamp int64) (oldBytes []by
 	defer self.lock.Unlock()
 	oldBytes, _, ex := self.put(rip(key), bValue, nil, byteValue, timestamp)
 	existed = ex*byteValue != 0
+	if existed {
+		self.mirrorDel(key, oldBytes)
+	}
+	self.mirrorPut(key, bValue, timestamp)
 	self.log(persistence.Op{
 		Key:       key,
 		Value:     bValue,
@@ -451,6 +505,7 @@ func (self *Tree) Clear(timestamp int64) (result int) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	result = self.root.fakeClear(nil, byteValue, timestamp, self.timer.ContinuousTime())
+	self.mirrorClear(timestamp)
 	if self.logger != nil {
 		self.logger.Clear()
 	}
@@ -468,6 +523,7 @@ func (self *Tree) Del(key []byte) (oldBytes []byte, existed bool) {
 	defer self.lock.Unlock()
 	oldBytes, existed = self.del(rip(key))
 	if existed {
+		self.mirrorDel(key, oldBytes)
 		self.log(persistence.Op{
 			Key: key,
 		})
@@ -676,10 +732,10 @@ func (self *Tree) GetTimestamp(key []Nibble) (bValue []byte, timestamp int64, pr
 	present = ex&byteValue != 0
 	return
 }
-func (self *Tree) putTimestamp(key []Nibble, bValue []byte, treeValue *Tree, nodeUse, insertUse int, expected, timestamp int64) (result bool) {
+func (self *Tree) putTimestamp(key []Nibble, bValue []byte, treeValue *Tree, nodeUse, insertUse int, expected, timestamp int64) (result bool, oldBytes []byte) {
 	if _, _, current, _ := self.root.get(key); current == expected {
 		result = true
-		self.root, _, _, _, _ = self.root.insertHelp(nil, newNode(key, bValue, treeValue, timestamp, false, nodeUse), insertUse, self.timer.ContinuousTime())
+		self.root, oldBytes, _, _, _ = self.root.insertHelp(nil, newNode(key, bValue, treeValue, timestamp, false, nodeUse), insertUse, self.timer.ContinuousTime())
 	}
 	return
 }
@@ -690,8 +746,12 @@ func (self *Tree) PutTimestamp(key []Nibble, bValue []byte, present bool, expect
 	if present {
 		nodeUse = byteValue
 	}
-	result = self.putTimestamp(key, bValue, nil, nodeUse, byteValue, expected, timestamp)
+	var oldBytes []byte
+	result, oldBytes = self.putTimestamp(key, bValue, nil, nodeUse, byteValue, expected, timestamp)
 	if result {
+		stitched := stitch(key)
+		self.mirrorDel(stitched, oldBytes)
+		self.mirrorPut(stitched, bValue, timestamp)
 		self.log(persistence.Op{
 			Key:       stitch(key),
 			Value:     bValue,
@@ -701,18 +761,20 @@ func (self *Tree) PutTimestamp(key []Nibble, bValue []byte, present bool, expect
 	}
 	return
 }
-func (self *Tree) delTimestamp(key []Nibble, use int, expected int64) (result bool) {
+func (self *Tree) delTimestamp(key []Nibble, use int, expected int64) (result bool, oldBytes []byte) {
 	if _, _, current, _ := self.root.get(key); current == expected {
 		result = true
-		self.root, _, _, _, _ = self.root.del(nil, key, use, self.timer.ContinuousTime())
+		self.root, oldBytes, _, _, _ = self.root.del(nil, key, use, self.timer.ContinuousTime())
 	}
 	return
 }
 func (self *Tree) DelTimestamp(key []Nibble, expected int64) (result bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
-	result = self.delTimestamp(key, byteValue, expected)
+	var oldBytes []byte
+	result, oldBytes = self.delTimestamp(key, byteValue, expected)
 	if result {
+		self.mirrorDel(stitch(key), oldBytes)
 		self.log(persistence.Op{
 			Key: stitch(key),
 		})
