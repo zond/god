@@ -124,3 +124,12 @@ func (self *dhashServer) ReverseSliceLen(r common.Range, result *[]common.Item) 
 func (self *dhashServer) SetExpression(expr common.SetExpression, items *[]common.SetOpResult) error {
 	return (*Node)(self).SetExpression(expr, items)
 }
+
+func (self *dhashServer) AddConfiguration(c common.ConfItem, x *int) error {
+	(*Node)(self).AddConfiguration(c)
+	return nil
+}
+func (self *dhashServer) SubAddConfiguration(c common.ConfItem, x *int) error {
+	(*Node)(self).SubAddConfiguration(c)
+	return nil
+}

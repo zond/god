@@ -327,3 +327,9 @@ func (self *Node) SetExpression(expr common.SetExpression, items *[]common.SetOp
 	}
 	return
 }
+func (self *Node) AddConfiguration(c common.ConfItem) {
+	self.tree.AddConfiguration(c.Key, c.Value)
+}
+func (self *Node) SubAddConfiguration(c common.ConfItem) {
+	self.tree.SubAddConfiguration(c.TreeKey, c.Key, c.Value)
+}

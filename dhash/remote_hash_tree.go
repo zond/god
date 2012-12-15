@@ -7,6 +7,39 @@ import (
 
 type remoteHashTree common.Remote
 
+func (self remoteHashTree) Configuration() (conf map[string]string, timestamp int64) {
+	var result common.Conf
+	if err := common.Remote(self).Call("HashTree.Configuration", 0, &result); err != nil {
+		conf = make(map[string]string)
+	} else {
+		conf, timestamp = result.Data, result.Timestamp
+	}
+	return
+}
+func (self remoteHashTree) SubConfiguration(key []byte) (conf map[string]string, timestamp int64) {
+	var result common.Conf
+	if err := common.Remote(self).Call("HashTree.SubConfiguration", key, &result); err != nil {
+		conf = make(map[string]string)
+	} else {
+		conf, timestamp = result.Data, result.Timestamp
+	}
+	return
+}
+func (self remoteHashTree) Configure(conf map[string]string, timestamp int64) {
+	var x int
+	common.Remote(self).Call("HashTree.Configure", common.Conf{
+		Data:      conf,
+		Timestamp: timestamp,
+	}, &x)
+}
+func (self remoteHashTree) SubConfigure(key []byte, conf map[string]string, timestamp int64) {
+	var x int
+	common.Remote(self).Call("HashTree.SubConfigure", common.Conf{
+		TreeKey:   key,
+		Data:      conf,
+		Timestamp: timestamp,
+	}, &x)
+}
 func (self remoteHashTree) Hash() (result []byte) {
 	common.Remote(self).Call("HashTree.Hash", 0, &result)
 	return
