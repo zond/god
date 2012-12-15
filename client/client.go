@@ -612,3 +612,47 @@ func (self *Conn) SetExpression(expr common.SetExpression) (result []common.SetO
 	}
 	return results
 }
+
+func (self *Conn) Configuration() (conf map[string]string) {
+	var result common.Conf
+	_, _, successor := self.ring.Remotes(nil)
+	if err := successor.Call("HashTree.Configuration", 0, &result); err != nil {
+		self.removeNode(*successor)
+		return self.Configuration()
+	}
+	return result.Data
+}
+func (self *Conn) SubConfiguration(key []byte) (conf map[string]string) {
+	var result common.Conf
+	_, _, successor := self.ring.Remotes(nil)
+	if err := successor.Call("HashTree.SubConfiguration", key, &result); err != nil {
+		self.removeNode(*successor)
+		return self.Configuration()
+	}
+	return result.Data
+}
+func (self *Conn) AddConfiguration(key, value string) {
+	conf := common.ConfItem{
+		Key:   key,
+		Value: value,
+	}
+	_, _, successor := self.ring.Remotes(nil)
+	var x int
+	if err := successor.Call("DHash.AddConfiguration", conf, &x); err != nil {
+		self.removeNode(*successor)
+		self.AddConfiguration(key, value)
+	}
+}
+func (self *Conn) SubAddConfiguration(treeKey []byte, key, value string) {
+	conf := common.ConfItem{
+		TreeKey: treeKey,
+		Key:     key,
+		Value:   value,
+	}
+	_, _, successor := self.ring.Remotes(nil)
+	var x int
+	if err := successor.Call("DHash.SubAddConfiguration", conf, &x); err != nil {
+		self.removeNode(*successor)
+		self.AddConfiguration(key, value)
+	}
+}

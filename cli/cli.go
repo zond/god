@@ -69,6 +69,10 @@ var actions = map[*actionSpec]action{
 	newActionSpec("subPrev \\S+ \\S+"):                subPrev,
 	newActionSpec("indexOf \\S+ \\S+"):                indexOf,
 	newActionSpec("reverseIndexOf \\S+ \\S+"):         reverseIndexOf,
+	newActionSpec("configuration"):                    configuration,
+	newActionSpec("subConfiguration \\S+"):            subConfiguration,
+	newActionSpec("configure \\S+ \\S+"):              configure,
+	newActionSpec("subConfigure \\S+ \\S+ \\S+"):      subConfigure,
 }
 
 func mustAtoi(s string) *int {
@@ -77,6 +81,22 @@ func mustAtoi(s string) *int {
 		panic(err)
 	}
 	return &i
+}
+
+func configuration(conn *client.Conn, args []string) {
+	fmt.Println(conn.Configuration())
+}
+
+func subConfiguration(conn *client.Conn, args []string) {
+	fmt.Println(conn.SubConfiguration([]byte(args[1])))
+}
+
+func configure(conn *client.Conn, args []string) {
+	conn.AddConfiguration(args[1], args[2])
+}
+
+func subConfigure(conn *client.Conn, args []string) {
+	conn.SubAddConfiguration([]byte(args[1]), args[2], args[3])
 }
 
 func subSize(conn *client.Conn, args []string) {
