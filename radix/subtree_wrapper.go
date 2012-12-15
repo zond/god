@@ -5,6 +5,12 @@ type subTreeWrapper struct {
 	key        []Nibble
 }
 
+func (self *subTreeWrapper) Configuration() (map[string]string, int64) {
+	return self.parentTree.SubConfiguration(stitch(self.key))
+}
+func (self *subTreeWrapper) Configure(conf map[string]string, ts int64) {
+	self.parentTree.SubConfigure(stitch(self.key), conf, ts)
+}
 func (self *subTreeWrapper) Hash() (hash []byte) {
 	if p := self.parentTree.Finger(self.key); p != nil {
 		hash = p.TreeHash
@@ -22,6 +28,12 @@ func (self *subTreeWrapper) PutTimestamp(subKey []Nibble, byteValue []byte, pres
 }
 func (self *subTreeWrapper) DelTimestamp(subKey []Nibble, expected int64) bool {
 	return self.parentTree.SubDelTimestamp(self.key, subKey, expected)
+}
+func (self *subTreeWrapper) SubConfiguration(key []byte) (map[string]string, int64) {
+	panic(subTreeError)
+}
+func (self *subTreeWrapper) SubConfigure(key []byte, conf map[string]string, ts int64) {
+	panic(subTreeError)
 }
 func (self *subTreeWrapper) SubFinger(key, subKey []Nibble) (result *Print) {
 	panic(subTreeError)

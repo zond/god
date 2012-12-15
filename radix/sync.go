@@ -12,10 +12,16 @@ const (
 type HashTree interface {
 	Hash() []byte
 
+	Configuration() (conf map[string]string, timestamp int64)
+	Configure(conf map[string]string, timestamp int64)
+
 	Finger(key []Nibble) *Print
 	GetTimestamp(key []Nibble) (byteValue []byte, timestamp int64, present bool)
 	PutTimestamp(key []Nibble, byteValue []byte, present bool, expected, timestamp int64) bool
 	DelTimestamp(key []Nibble, expected int64) bool
+
+	SubConfiguration(key []byte) (conf map[string]string, timestamp int64)
+	SubConfigure(key []byte, conf map[string]string, timestamp int64)
 
 	SubFinger(key, subKey []Nibble) (result *Print)
 	SubGetTimestamp(key, subKey []Nibble) (byteValue []byte, timestamp int64, present bool)
@@ -71,6 +77,11 @@ func (self *Sync) Run() *Sync {
 		return self
 	}
 	if self.destructive || bytes.Compare(self.source.Hash(), self.destination.Hash()) != 0 {
+		sourceConf, sourceTs := self.source.Configuration()
+		_, destTs := self.destination.Configuration()
+		if sourceTs > destTs {
+			self.destination.Configure(sourceConf, sourceTs)
+		}
 		self.synchronize(self.source.Finger(nil), self.destination.Finger(nil))
 	}
 	return self

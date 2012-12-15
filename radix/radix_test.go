@@ -431,6 +431,32 @@ func TestSyncPartial(t *testing.T) {
 	}
 }
 
+func TestSyncSubConf(t *testing.T) {
+	tree1 := NewTree()
+	tree2 := NewTree()
+	tree1.SubAddConfiguration([]byte("a"), "blapp", "blepp")
+	s := NewSync(tree1, tree2)
+	s.Run()
+	c1, _ := tree1.SubConfiguration([]byte("a"))
+	c2, _ := tree2.SubConfiguration([]byte("a"))
+	if !reflect.DeepEqual(c1, c2) {
+		t.Errorf("%v and %v should be equal", c1, c2)
+	}
+}
+
+func TestSyncConf(t *testing.T) {
+	tree1 := NewTree()
+	tree2 := NewTree()
+	tree1.AddConfiguration("blapp", "blepp")
+	s := NewSync(tree1, tree2)
+	s.Run()
+	c1, _ := tree1.Configuration()
+	c2, _ := tree2.Configuration()
+	if !reflect.DeepEqual(c1, c2) {
+		t.Errorf("%v and %v should be equal", c1, c2)
+	}
+}
+
 func TestTreeHash(t *testing.T) {
 	tree1 := NewTree()
 	var keys [][]byte

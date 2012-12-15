@@ -1,6 +1,7 @@
 package radix
 
 import (
+	"../murmur"
 	"../persistence"
 	"bytes"
 	"encoding/hex"
@@ -44,10 +45,12 @@ func newNodeIndexIterator(f TreeIndexIterator) nodeIndexIterator {
 // Tree defines a more specialized wrapper around the node structure.
 // It contains an RWMutex to make it thread safe, and it defines a simplified and limited access API.
 type Tree struct {
-	lock   *sync.RWMutex
-	timer  Timer
-	logger *persistence.Logger
-	root   *node
+	lock                   *sync.RWMutex
+	timer                  Timer
+	logger                 *persistence.Logger
+	root                   *node
+	configuration          map[string]string
+	configurationTimestamp int64
 }
 
 func NewTree() *Tree {
@@ -55,11 +58,40 @@ func NewTree() *Tree {
 }
 func NewTreeTimer(timer Timer) (result *Tree) {
 	result = &Tree{
-		lock:  new(sync.RWMutex),
-		timer: timer,
+		lock:          new(sync.RWMutex),
+		timer:         timer,
+		configuration: make(map[string]string),
 	}
 	result.root, _, _, _, _ = result.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), result.timer.ContinuousTime())
 	return
+}
+func (self *Tree) conf() (map[string]string, int64) {
+	return self.configuration, self.configurationTimestamp
+}
+func (self *Tree) Configuration() (map[string]string, int64) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.conf()
+}
+func (self *Tree) configure(conf map[string]string, ts int64) {
+	self.configuration = conf
+	self.configurationTimestamp = ts
+	self.log(persistence.Op{
+		Configuration: conf,
+		Timestamp:     ts,
+	})
+}
+func (self *Tree) Configure(conf map[string]string, ts int64) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.configure(conf, ts)
+}
+func (self *Tree) AddConfiguration(key, value string) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	oldConf, _ := self.conf()
+	oldConf[key] = value
+	self.configure(oldConf, self.timer.ContinuousTime())
 }
 func (self *Tree) Log(dir string) *Tree {
 	self.logger = persistence.NewLogger(dir)
@@ -69,7 +101,13 @@ func (self *Tree) Log(dir string) *Tree {
 func (self *Tree) Restore() *Tree {
 	self.logger.Stop()
 	self.logger.Play(func(op persistence.Op) {
-		if op.Put {
+		if op.Configuration != nil {
+			if op.Key == nil {
+				self.Configure(op.Configuration, op.Timestamp)
+			} else {
+				self.SubConfigure(op.Key, op.Configuration, op.Timestamp)
+			}
+		} else if op.Put {
 			if op.SubKey == nil {
 				self.Put(op.Key, op.Value, op.Timestamp)
 			} else {
@@ -176,7 +214,8 @@ func (self *Tree) Hash() []byte {
 	}
 	self.lock.RLock()
 	defer self.lock.RUnlock()
-	return self.root.hash
+	hash := murmur.NewString(fmt.Sprint(self.configuration))
+	return hash.Sum(self.root.hash)
 }
 func (self *Tree) ToMap() (result map[string][]byte) {
 	if self == nil {
@@ -681,6 +720,47 @@ func (self *Tree) DelTimestamp(key []Nibble, expected int64) (result bool) {
 	return
 }
 
+func (self *Tree) subConfiguration(key []byte) (conf map[string]string, timestamp int64) {
+	if _, subTree, _, ex := self.root.get(rip(key)); ex&treeValue != 0 && subTree != nil {
+		conf, timestamp = subTree.Configuration()
+	} else {
+		conf = make(map[string]string)
+	}
+	return
+}
+func (self *Tree) SubConfiguration(key []byte) (conf map[string]string, timestamp int64) {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.subConfiguration(key)
+}
+func (self *Tree) subConfigure(key []byte, conf map[string]string, timestamp int64) {
+	ripped := rip(key)
+	_, subTree, subTreeTimestamp, ex := self.root.get(ripped)
+	if ex&treeValue == 0 || subTree == nil {
+		subTree = NewTreeTimer(self.timer)
+	}
+	subTree.Configure(conf, timestamp)
+	self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
+	self.log(persistence.Op{
+		Key:           key,
+		Configuration: conf,
+		Timestamp:     timestamp,
+	})
+	return
+}
+func (self *Tree) SubConfigure(key []byte, conf map[string]string, timestamp int64) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.subConfigure(key, conf, timestamp)
+}
+func (self *Tree) SubAddConfiguration(treeKey []byte, key, value string) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	oldConf, _ := self.subConfiguration(treeKey)
+	oldConf[key] = value
+	self.subConfigure(treeKey, oldConf, self.timer.ContinuousTime())
+	return
+}
 func (self *Tree) SubFinger(key, subKey []Nibble) (result *Print) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
