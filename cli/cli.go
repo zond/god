@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type action func(conn *client.Conn, args []string)
@@ -44,6 +45,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):   reverseSliceLen,
 	newActionSpec("put \\S+ \\S+"):                    put,
 	newActionSpec("dump"):                             dump,
+	newActionSpec("subDump \\S+"):                     subDump,
 	newActionSpec("subSize \\S+"):                     subSize,
 	newActionSpec("size"):                             size,
 	newActionSpec("count \\S+ \\S+ \\S+"):             count,
@@ -133,9 +135,10 @@ func setOp(conn *client.Conn, args []string) {
 	op, err := common.NewSetOpParser(args[1]).Parse()
 	if err != nil {
 		fmt.Println(err)
-	}
-	for _, res := range conn.SetExpression(common.SetExpression{Op: *op}) {
-		printSetOpRes(res)
+	} else {
+		for _, res := range conn.SetExpression(common.SetExpression{Op: *op}) {
+			printSetOpRes(res)
+		}
 	}
 }
 
@@ -268,6 +271,15 @@ func subGet(conn *client.Conn, args []string) {
 
 func dump(conn *client.Conn, args []string) {
 	dump, wait := conn.Dump()
+	linedump(dump, wait)
+}
+
+func subDump(conn *client.Conn, args []string) {
+	dump, wait := conn.SubDump([]byte(args[1]))
+	linedump(dump, wait)
+}
+
+func linedump(dump chan [2][]byte, wait *sync.WaitGroup) {
 	defer func() {
 		close(dump)
 		wait.Wait()

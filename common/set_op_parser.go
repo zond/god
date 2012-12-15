@@ -42,6 +42,10 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 	state := empty
 	result = &SetOp{}
 	for state != finished {
+		if self.pos >= len(self.in) {
+			err = fmt.Errorf("Unexpected EOF at %v in %v", self.pos, self.in)
+			return
+		}
 		switch state {
 		case empty:
 			switch self.in[self.pos] {
