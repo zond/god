@@ -30,12 +30,13 @@ const (
 )
 
 type Op struct {
-	Key       []byte
-	SubKey    []byte
-	Value     []byte
-	Timestamp int64
-	Put       bool
-	Clear     bool
+	Key           []byte
+	SubKey        []byte
+	Value         []byte
+	Timestamp     int64
+	Put           bool
+	Clear         bool
+	Configuration map[string]string
 }
 
 type logfile struct {
@@ -263,10 +264,18 @@ func (self *Logger) Clear() {
 func (self *Logger) snapshot(snap *logfile, files logfiles) {
 	byteCompressor := make(map[string]Op)
 	treeCompressor := make(map[string]map[string]Op)
+	var latestConf *Op
+	confCompressor := make(map[string]Op)
 	var subMap map[string]Op
 	var ok bool
 	operate := func(op Op) {
-		if op.Put {
+		if op.Configuration != nil {
+			if op.Key == nil {
+				latestConf = &op
+			} else {
+				confCompressor[string(op.Key)] = op
+			}
+		} else if op.Put {
 			if op.SubKey == nil {
 				byteCompressor[string(op.Key)] = op
 			} else {
@@ -298,6 +307,12 @@ func (self *Logger) snapshot(snap *logfile, files logfiles) {
 	snap.play(operate)
 	for _, logf := range files {
 		logf.play(operate)
+	}
+	if latestConf != nil {
+		self.Dump(*latestConf)
+	}
+	for _, op := range confCompressor {
+		self.Dump(op)
 	}
 	for _, op := range byteCompressor {
 		self.Dump(op)
