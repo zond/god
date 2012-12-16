@@ -5,8 +5,10 @@ A Go database
 
 # TODO
 
+* Mirror trees
+ * Check sync?!??!
 * Store results of setops
- * Extract the set op code from dhash, client and common
+ * Test it
 * jsonrpc API
  * Functionality
   * Export the DHash.[METHODNAME] over jsonrpc as well as gob-rpc
