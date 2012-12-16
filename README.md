@@ -20,4 +20,3 @@ A Go database
 * Example app
  * Implementation
  * Documentation
-

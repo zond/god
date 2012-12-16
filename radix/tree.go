@@ -31,6 +31,18 @@ func cmps(mininc, maxinc bool) (mincmp, maxcmp int) {
 	return
 }
 
+func escapeBytes(b []byte) (result []byte) {
+	result = make([]byte, 0, len(b))
+	for _, c := range b {
+		if c == 0 {
+			result = append(result, 0, 0)
+		} else {
+			result = append(result, c)
+		}
+	}
+	return
+}
+
 func incrementBytes(b []byte) []byte {
 	return new(big.Int).Add(new(big.Int).SetBytes(b), big.NewInt(1)).Bytes()
 }
@@ -45,7 +57,7 @@ func newMirrorIterator(min, max []byte, mininc, maxinc bool, f TreeIterator) Tre
 		if maxinc {
 			lt = 1
 		}
-		k := key[:len(key)-len(value)-1]
+		k := key[:len(key)-len(escapeBytes(value))-1]
 		if bytes.Compare(k, min) > gt && bytes.Compare(k, max) < lt {
 			return f(k, value, timestamp)
 		}
@@ -55,7 +67,7 @@ func newMirrorIterator(min, max []byte, mininc, maxinc bool, f TreeIterator) Tre
 
 func newMirrorIndexIterator(f TreeIndexIterator) TreeIndexIterator {
 	return func(key, value []byte, timestamp int64, index int) bool {
-		return f(key[:len(key)-len(value)-1], value, timestamp, index)
+		return f(key[:len(key)-len(escapeBytes(value))-1], value, timestamp, index)
 	}
 }
 
@@ -114,25 +126,28 @@ func (self *Tree) mirrorClear(timestamp int64) {
 }
 func (self *Tree) mirrorPut(key, value []byte, timestamp int64) {
 	if self.mirror != nil {
-		newKey := make([]byte, len(key)+len(value)+1)
+		escapedKey := escapeBytes(key)
+		newKey := make([]byte, len(escapedKey)+len(value)+1)
 		copy(newKey, value)
-		copy(newKey[len(value)+1:], key)
+		copy(newKey[len(value)+1:], escapedKey)
 		self.mirror.Put(newKey, key, timestamp)
 	}
 }
 func (self *Tree) mirrorFakeDel(key, value []byte, timestamp int64) {
 	if self.mirror != nil {
-		newKey := make([]byte, len(key)+len(value)+1)
+		escapedKey := escapeBytes(key)
+		newKey := make([]byte, len(escapedKey)+len(value)+1)
 		copy(newKey, value)
-		copy(newKey[len(value)+1:], key)
+		copy(newKey[len(value)+1:], escapedKey)
 		self.mirror.FakeDel(newKey, timestamp)
 	}
 }
 func (self *Tree) mirrorDel(key, value []byte) {
 	if self.mirror != nil {
-		newKey := make([]byte, len(key)+len(value)+1)
+		escapedKey := escapeBytes(key)
+		newKey := make([]byte, len(escapedKey)+len(value)+1)
 		copy(newKey, value)
-		copy(newKey[len(value)+1:], key)
+		copy(newKey[len(value)+1:], escapedKey)
 		self.mirror.Del(newKey)
 	}
 }
@@ -489,7 +504,7 @@ func (self *Tree) MirrorPrev(key []byte) (prevKey, prevValue []byte, prevTimesta
 		return
 	}
 	prevKey, prevValue, prevTimestamp, existed = self.mirror.Prev(key)
-	prevKey = prevKey[:len(prevKey)-len(prevValue)-1]
+	prevKey = prevKey[:len(prevKey)-len(escapeBytes(prevValue))-1]
 	return
 }
 func (self *Tree) MirrorNext(key []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
@@ -497,7 +512,7 @@ func (self *Tree) MirrorNext(key []byte) (nextKey, nextValue []byte, nextTimesta
 		return
 	}
 	nextKey, nextValue, nextTimestamp, existed = self.mirror.Next(key)
-	nextKey = nextKey[:len(nextKey)-len(nextValue)-1]
+	nextKey = nextKey[:len(nextKey)-len(escapeBytes(nextValue))-1]
 	return
 }
 func (self *Tree) Prev(key []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
@@ -543,7 +558,7 @@ func (self *Tree) MirrorNextIndex(index int) (key, value []byte, timestamp int64
 		return
 	}
 	key, value, timestamp, ind, existed = self.mirror.NextIndex(index)
-	key = key[:len(key)-len(value)-1]
+	key = key[:len(key)-len(escapeBytes(value))-1]
 	return
 }
 func (self *Tree) MirrorPrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
@@ -551,7 +566,7 @@ func (self *Tree) MirrorPrevIndex(index int) (key, value []byte, timestamp int64
 		return
 	}
 	key, value, timestamp, ind, existed = self.mirror.PrevIndex(index)
-	key = key[:len(key)-len(value)-1]
+	key = key[:len(key)-len(escapeBytes(value))-1]
 	return
 }
 func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
@@ -573,7 +588,7 @@ func (self *Tree) MirrorFirst() (key, byteValue []byte, timestamp int64, existed
 		return
 	}
 	key, byteValue, timestamp, existed = self.mirror.First()
-	key = key[:len(key)-len(byteValue)-1]
+	key = key[:len(key)-len(escapeBytes(byteValue))-1]
 	return
 }
 func (self *Tree) MirrorLast() (key, byteValue []byte, timestamp int64, existed bool) {
@@ -581,7 +596,7 @@ func (self *Tree) MirrorLast() (key, byteValue []byte, timestamp int64, existed 
 		return
 	}
 	key, byteValue, timestamp, existed = self.mirror.Last()
-	key = key[:len(key)-len(byteValue)-1]
+	key = key[:len(key)-len(escapeBytes(byteValue))-1]
 	return
 }
 func (self *Tree) First() (key, byteValue []byte, timestamp int64, existed bool) {
@@ -603,7 +618,7 @@ func (self *Tree) MirrorIndex(n int) (key, byteValue []byte, timestamp int64, ex
 		return
 	}
 	key, byteValue, timestamp, existed = self.mirror.Index(n)
-	key = key[:len(key)-len(byteValue)-1]
+	key = key[:len(key)-len(escapeBytes(byteValue))-1]
 	return
 }
 func (self *Tree) MirrorReverseIndex(n int) (key, byteValue []byte, timestamp int64, existed bool) {
@@ -611,7 +626,7 @@ func (self *Tree) MirrorReverseIndex(n int) (key, byteValue []byte, timestamp in
 		return
 	}
 	key, byteValue, timestamp, existed = self.mirror.Index(n)
-	key = key[:len(key)-len(byteValue)-1]
+	key = key[:len(key)-len(escapeBytes(byteValue))-1]
 	return
 }
 func (self *Tree) Index(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
