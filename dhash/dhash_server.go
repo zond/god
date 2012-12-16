@@ -45,6 +45,9 @@ func (self *dhashServer) SubFind(data common.Item, result *common.Item) error {
 func (self *dhashServer) Find(data common.Item, result *common.Item) error {
 	return (*Node)(self).Find(data, result)
 }
+func (self *dhashServer) MirrorCount(r common.Range, result *int) error {
+	return (*Node)(self).MirrorCount(r, result)
+}
 func (self *dhashServer) Count(r common.Range, result *int) error {
 	return (*Node)(self).Count(r, result)
 }
@@ -85,11 +88,23 @@ func (self *dhashServer) PrevIndex(data common.Item, result *common.Item) error 
 func (self *dhashServer) NextIndex(data common.Item, result *common.Item) error {
 	return (*Node)(self).NextIndex(data, result)
 }
+func (self *dhashServer) MirrorReverseIndexOf(data common.Item, result *common.Index) error {
+	return (*Node)(self).MirrorReverseIndexOf(data, result)
+}
+func (self *dhashServer) MirrorIndexOf(data common.Item, result *common.Index) error {
+	return (*Node)(self).MirrorIndexOf(data, result)
+}
 func (self *dhashServer) ReverseIndexOf(data common.Item, result *common.Index) error {
 	return (*Node)(self).ReverseIndexOf(data, result)
 }
 func (self *dhashServer) IndexOf(data common.Item, result *common.Index) error {
 	return (*Node)(self).IndexOf(data, result)
+}
+func (self *dhashServer) SubMirrorPrev(data common.Item, result *common.Item) error {
+	return (*Node)(self).SubMirrorPrev(data, result)
+}
+func (self *dhashServer) SubMirrorNext(data common.Item, result *common.Item) error {
+	return (*Node)(self).SubMirrorNext(data, result)
 }
 func (self *dhashServer) SubPrev(data common.Item, result *common.Item) error {
 	return (*Node)(self).SubPrev(data, result)
@@ -102,6 +117,24 @@ func (self *dhashServer) First(data common.Item, result *common.Item) error {
 }
 func (self *dhashServer) Last(data common.Item, result *common.Item) error {
 	return (*Node)(self).Last(data, result)
+}
+func (self *dhashServer) MirrorReverseSlice(r common.Range, result *[]common.Item) error {
+	return (*Node)(self).MirrorReverseSlice(r, result)
+}
+func (self *dhashServer) MirrorSlice(r common.Range, result *[]common.Item) error {
+	return (*Node)(self).MirrorSlice(r, result)
+}
+func (self *dhashServer) MirrorSliceIndex(r common.Range, result *[]common.Item) error {
+	return (*Node)(self).MirrorSliceIndex(r, result)
+}
+func (self *dhashServer) MirrorReverseSliceIndex(r common.Range, result *[]common.Item) error {
+	return (*Node)(self).MirrorReverseSliceIndex(r, result)
+}
+func (self *dhashServer) MirrorSliceLen(r common.Range, result *[]common.Item) error {
+	return (*Node)(self).MirrorSliceLen(r, result)
+}
+func (self *dhashServer) MirrorReverseSliceLen(r common.Range, result *[]common.Item) error {
+	return (*Node)(self).MirrorSliceLen(r, result)
 }
 func (self *dhashServer) ReverseSlice(r common.Range, result *[]common.Item) error {
 	return (*Node)(self).ReverseSlice(r, result)

@@ -60,6 +60,10 @@ func (self *Node) RingHash(x int, ringHash *[]byte) error {
 	*ringHash = self.node.RingHash()
 	return nil
 }
+func (self *Node) MirrorCount(r common.Range, result *int) error {
+	*result = self.tree.SubMirrorSizeBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc)
+	return nil
+}
 func (self *Node) Count(r common.Range, result *int) error {
 	*result = self.tree.SubSizeBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc)
 	return nil
@@ -72,12 +76,28 @@ func (self *Node) First(data common.Item, result *common.Item) error {
 	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.SubFirst(data.Key)
 	return nil
 }
+func (self *Node) MirrorPrevIndex(data common.Item, result *common.Item) error {
+	result.Key, result.Value, result.Timestamp, result.Index, result.Exists = self.tree.SubMirrorPrevIndex(data.Key, data.Index)
+	return nil
+}
+func (self *Node) MirrorNextIndex(data common.Item, result *common.Item) error {
+	result.Key, result.Value, result.Timestamp, result.Index, result.Exists = self.tree.SubMirrorNextIndex(data.Key, data.Index)
+	return nil
+}
 func (self *Node) PrevIndex(data common.Item, result *common.Item) error {
 	result.Key, result.Value, result.Timestamp, result.Index, result.Exists = self.tree.SubPrevIndex(data.Key, data.Index)
 	return nil
 }
 func (self *Node) NextIndex(data common.Item, result *common.Item) error {
 	result.Key, result.Value, result.Timestamp, result.Index, result.Exists = self.tree.SubNextIndex(data.Key, data.Index)
+	return nil
+}
+func (self *Node) SubMirrorPrev(data common.Item, result *common.Item) error {
+	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.SubMirrorPrev(data.Key, data.SubKey)
+	return nil
+}
+func (self *Node) SubMirrorNext(data common.Item, result *common.Item) error {
+	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.SubMirrorNext(data.Key, data.SubKey)
 	return nil
 }
 func (self *Node) SubPrev(data common.Item, result *common.Item) error {
@@ -170,6 +190,98 @@ func (self *Node) ReverseSliceLen(r common.Range, items *[]common.Item) error {
 		})
 		return len(*items) < r.Len
 	})
+	return nil
+}
+func (self *Node) MirrorSliceIndex(r common.Range, items *[]common.Item) error {
+	min := &r.MinIndex
+	max := &r.MaxIndex
+	if !r.MinInc {
+		min = nil
+	}
+	if !r.MaxInc {
+		max = nil
+	}
+	self.tree.SubMirrorEachBetweenIndex(r.Key, min, max, func(key []byte, value []byte, version int64, index int) bool {
+		*items = append(*items, common.Item{
+			Key:       key,
+			Value:     value,
+			Timestamp: version,
+			Index:     index,
+		})
+		return true
+	})
+	return nil
+}
+func (self *Node) MirrorReverseSliceIndex(r common.Range, items *[]common.Item) error {
+	min := &r.MinIndex
+	max := &r.MaxIndex
+	if !r.MinInc {
+		min = nil
+	}
+	if !r.MaxInc {
+		max = nil
+	}
+	self.tree.SubMirrorReverseEachBetweenIndex(r.Key, min, max, func(key []byte, value []byte, version int64, index int) bool {
+		*items = append(*items, common.Item{
+			Key:       key,
+			Value:     value,
+			Timestamp: version,
+			Index:     index,
+		})
+		return true
+	})
+	return nil
+}
+func (self *Node) MirrorReverseSlice(r common.Range, items *[]common.Item) error {
+	self.tree.SubMirrorReverseEachBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc, func(key []byte, value []byte, version int64) bool {
+		*items = append(*items, common.Item{
+			Key:       key,
+			Value:     value,
+			Timestamp: version,
+		})
+		return true
+	})
+	return nil
+}
+func (self *Node) MirrorSlice(r common.Range, items *[]common.Item) error {
+	self.tree.SubMirrorEachBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc, func(key []byte, value []byte, version int64) bool {
+		*items = append(*items, common.Item{
+			Key:       key,
+			Value:     value,
+			Timestamp: version,
+		})
+		return true
+	})
+	return nil
+}
+func (self *Node) MirrorSliceLen(r common.Range, items *[]common.Item) error {
+	self.tree.SubMirrorEachBetween(r.Key, r.Min, nil, r.MinInc, false, func(key []byte, value []byte, version int64) bool {
+		*items = append(*items, common.Item{
+			Key:       key,
+			Value:     value,
+			Timestamp: version,
+		})
+		return len(*items) < r.Len
+	})
+	return nil
+}
+func (self *Node) MirrorReverseSliceLen(r common.Range, items *[]common.Item) error {
+	self.tree.SubMirrorReverseEachBetween(r.Key, nil, r.Max, false, r.MaxInc, func(key []byte, value []byte, version int64) bool {
+		*items = append(*items, common.Item{
+			Key:       key,
+			Value:     value,
+			Timestamp: version,
+		})
+		return len(*items) < r.Len
+	})
+	return nil
+}
+func (self *Node) MirrorReverseIndexOf(data common.Item, result *common.Index) error {
+	result.N, result.Existed = self.tree.SubMirrorReverseIndexOf(data.Key, data.SubKey)
+	return nil
+}
+func (self *Node) MirrorIndexOf(data common.Item, result *common.Index) error {
+	result.N, result.Existed = self.tree.SubMirrorIndexOf(data.Key, data.SubKey)
 	return nil
 }
 func (self *Node) ReverseIndexOf(data common.Item, result *common.Index) error {
