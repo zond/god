@@ -1124,3 +1124,29 @@ func BenchmarkTreePut1000000(b *testing.B) {
 func BenchmarkTreeGet1000000(b *testing.B) {
 	benchTree(b, 1000000, false, true)
 }
+
+func BenchmarkTreeMirrorPut10(b *testing.B) {
+	benchmarkTestTree = NewTree()
+	benchmarkTestTree.AddConfiguration(mirrored, yes)
+	benchTree(b, 10, true, false)
+}
+
+func BenchmarkTreeMirrorPut100(b *testing.B) {
+	benchTree(b, 100, true, false)
+}
+
+func BenchmarkTreeMirrorPut1000(b *testing.B) {
+	benchTree(b, 1000, true, false)
+}
+
+func BenchmarkTreeMirrorPut10000(b *testing.B) {
+	benchTree(b, 10000, true, false)
+}
+
+func BenchmarkTreeMirrorPut100000(b *testing.B) {
+	benchTree(b, 100000, true, false)
+}
+
+func BenchmarkTreeMirrorPut1000000(b *testing.B) {
+	benchTree(b, 1000000, true, false)
+}
