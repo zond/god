@@ -7,6 +7,8 @@ import (
 	"fmt"
 )
 
+type mergeFunc func(oldValues [][]byte, newValues [][]byte) (result [][]byte)
+
 const (
 	bufferSize = 128
 )
@@ -35,13 +37,25 @@ func (self *Node) createSkippers(sources []common.SetOpSource) (result []skipper
 func (self *Node) createSkipper(op common.SetOp) (result skipper) {
 	switch op.Type {
 	case common.Union:
-		result = &unionOp{skippers: self.createSkippers(op.Sources)}
+		result = &unionOp{
+			skippers: self.createSkippers(op.Sources),
+			merger:   self.getMerger(op.Merge),
+		}
 	case common.Intersection:
-		result = &interOp{skippers: self.createSkippers(op.Sources)}
+		result = &interOp{
+			skippers: self.createSkippers(op.Sources),
+			merger:   self.getMerger(op.Merge),
+		}
 	case common.Difference:
-		result = &diffOp{skippers: self.createSkippers(op.Sources)}
+		result = &diffOp{
+			skippers: self.createSkippers(op.Sources),
+			merger:   self.getMerger(op.Merge),
+		}
 	case common.Xor:
-		result = &xorOp{skippers: self.createSkippers(op.Sources)}
+		result = &xorOp{
+			skippers: self.createSkippers(op.Sources),
+			merger:   self.getMerger(op.Merge),
+		}
 	default:
 		panic(fmt.Errorf("Unknown SetOp Type %v", op.Type))
 	}
@@ -57,6 +71,7 @@ type skipper interface {
 type xorOp struct {
 	skippers []skipper
 	curr     *common.SetOpResult
+	merger   mergeFunc
 }
 
 func (self *xorOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
@@ -90,7 +105,7 @@ func (self *xorOp) skip(min []byte, inc bool) (result *common.SetOpResult, err e
 					if cmp < 0 {
 						result = res.ShallowCopy()
 					} else if cmp == 0 {
-						result.Values = append(result.Values, res.Values...)
+						result.Values = self.merger(result.Values, res.Values)
 					}
 				}
 			}
@@ -121,6 +136,7 @@ func (self *xorOp) skip(min []byte, inc bool) (result *common.SetOpResult, err e
 type unionOp struct {
 	skippers []skipper
 	curr     *common.SetOpResult
+	merger   mergeFunc
 }
 
 func (self *unionOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
@@ -153,7 +169,7 @@ func (self *unionOp) skip(min []byte, inc bool) (result *common.SetOpResult, err
 				if cmp < 0 {
 					result = res.ShallowCopy()
 				} else if cmp == 0 {
-					result.Values = append(result.Values, res.Values...)
+					result.Values = self.merger(result.Values, res.Values)
 				}
 			}
 		}
@@ -169,6 +185,7 @@ func (self *unionOp) skip(min []byte, inc bool) (result *common.SetOpResult, err
 type interOp struct {
 	skippers []skipper
 	curr     *common.SetOpResult
+	merger   mergeFunc
 }
 
 func (self *interOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
@@ -197,7 +214,7 @@ func (self *interOp) skip(min []byte, inc bool) (result *common.SetOpResult, err
 				maxKey = results[index].Key
 				result = results[index].ShallowCopy()
 			} else {
-				result.Values = append(result.Values, results[index].Values...)
+				result.Values = self.merger(result.Values, results[index].Values)
 				if bytes.Compare(results[index].Key, maxKey) > 0 {
 					result = nil
 					maxKey = results[index].Key
@@ -225,6 +242,7 @@ func (self *interOp) skip(min []byte, inc bool) (result *common.SetOpResult, err
 type diffOp struct {
 	skippers []skipper
 	curr     *common.SetOpResult
+	merger   mergeFunc
 }
 
 func (self *diffOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {

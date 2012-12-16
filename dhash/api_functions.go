@@ -5,6 +5,7 @@ import (
 	"../common"
 	"../radix"
 	"bytes"
+	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -438,12 +439,33 @@ func (self *Node) SubSize(key []byte, result *int) error {
 	return nil
 }
 func (self *Node) SetExpression(expr common.SetExpression, items *[]common.SetOpResult) (err error) {
+	data := common.Item{
+		Key: expr.Dest,
+	}
+	if expr.Dest != nil {
+		if expr.Op.Merge == common.Append {
+			err = fmt.Errorf("When storing results of Set expressions the Append merge function is not allowed")
+			return
+		}
+		successor := self.node.GetSuccessorFor(expr.Dest)
+		if successor.Addr != self.node.GetAddr() {
+			return successor.Call("DHash.SetExpression", expr, items)
+		}
+	}
 	skipper := self.createSkipper(expr.Op)
 	var res *common.SetOpResult
 	for res, err = skipper.skip(expr.Min, expr.MinInc); res != nil && err == nil; res, err = skipper.skip(expr.Min, expr.MinInc) {
 		expr.Min = res.Key
 		expr.MinInc = false
-		*items = append(*items, *res)
+		if expr.Dest == nil {
+			*items = append(*items, *res)
+		} else {
+			data.SubKey = res.Key
+			data.Value = res.Values[0]
+			data.TTL = self.node.Redundancy()
+			data.Timestamp = self.timer.ContinuousTime()
+			self.put(data)
+		}
 	}
 	return
 }

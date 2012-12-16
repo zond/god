@@ -6,6 +6,9 @@ A Go database
 # TODO
 
 * Store results of setops
+ * Manual test!
+  * Extend the set op parser to parse merge types as well
+ * Extract the set op code from dhash, client and common
 * jsonrpc API
  * Functionality
   * Export the DHash.[METHODNAME] over jsonrpc as well as gob-rpc
