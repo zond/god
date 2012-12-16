@@ -68,6 +68,14 @@ func (self *Node) Count(r common.Range, result *int) error {
 	*result = self.tree.SubSizeBetween(r.Key, r.Min, r.Max, r.MinInc, r.MaxInc)
 	return nil
 }
+func (self *Node) MirrorLast(data common.Item, result *common.Item) error {
+	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.SubMirrorLast(data.Key)
+	return nil
+}
+func (self *Node) MirrorFirst(data common.Item, result *common.Item) error {
+	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.SubMirrorFirst(data.Key)
+	return nil
+}
 func (self *Node) Last(data common.Item, result *common.Item) error {
 	result.Key, result.Value, result.Timestamp, result.Exists = self.tree.SubLast(data.Key)
 	return nil

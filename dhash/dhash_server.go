@@ -112,6 +112,12 @@ func (self *dhashServer) SubPrev(data common.Item, result *common.Item) error {
 func (self *dhashServer) SubNext(data common.Item, result *common.Item) error {
 	return (*Node)(self).SubNext(data, result)
 }
+func (self *dhashServer) MirrorFirst(data common.Item, result *common.Item) error {
+	return (*Node)(self).MirrorFirst(data, result)
+}
+func (self *dhashServer) MirrorLast(data common.Item, result *common.Item) error {
+	return (*Node)(self).MirrorLast(data, result)
+}
 func (self *dhashServer) First(data common.Item, result *common.Item) error {
 	return (*Node)(self).First(data, result)
 }
