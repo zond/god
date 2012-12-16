@@ -2,6 +2,7 @@ package dhash
 
 import (
 	"../common"
+	"../setop"
 )
 
 type dhashServer Node
@@ -160,7 +161,7 @@ func (self *dhashServer) SliceLen(r common.Range, result *[]common.Item) error {
 func (self *dhashServer) ReverseSliceLen(r common.Range, result *[]common.Item) error {
 	return (*Node)(self).SliceLen(r, result)
 }
-func (self *dhashServer) SetExpression(expr common.SetExpression, items *[]common.SetOpResult) error {
+func (self *dhashServer) SetExpression(expr setop.SetExpression, items *[]setop.SetOpResult) error {
 	return (*Node)(self).SetExpression(expr, items)
 }
 

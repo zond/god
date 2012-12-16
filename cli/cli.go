@@ -3,6 +3,7 @@ package main
 import (
 	"../client"
 	"../common"
+	"../setop"
 	"bufio"
 	"encoding/hex"
 	"flag"
@@ -250,7 +251,7 @@ func reverseSliceLen(conn *client.Conn, args []string) {
 	}
 }
 
-func printSetOpRes(res common.SetOpResult) {
+func printSetOpRes(res setop.SetOpResult) {
 	var vals []string
 	for _, val := range res.Values {
 		vals = append(vals, decode(val))
@@ -259,11 +260,11 @@ func printSetOpRes(res common.SetOpResult) {
 }
 
 func setOp(conn *client.Conn, args []string) {
-	op, err := common.NewSetOpParser(args[1]).Parse()
+	op, err := setop.NewSetOpParser(args[1]).Parse()
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		for _, res := range conn.SetExpression(common.SetExpression{Op: *op}) {
+		for _, res := range conn.SetExpression(setop.SetExpression{Op: op}) {
 			printSetOpRes(res)
 		}
 	}

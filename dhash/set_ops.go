@@ -3,308 +3,23 @@ package dhash
 import (
 	"../common"
 	"../radix"
+	"../setop"
 	"bytes"
-	"fmt"
 )
-
-type mergeFunc func(oldValues [][]byte, newValues [][]byte) (result [][]byte)
 
 const (
-	bufferSize = 128
+	setOpBufferSize = 128
 )
-
-func (self *Node) createSkippers(sources []common.SetOpSource) (result []skipper) {
-	result = make([]skipper, len(sources))
-	for index, source := range sources {
-		if source.Key != nil {
-			remote := self.node.GetSuccessorFor(source.Key)
-			var tree *radix.Tree
-			if remote.Addr == self.node.GetAddr() {
-				tree = self.tree
-			}
-			result[index] = &treeSkipper{
-				key:    source.Key,
-				tree:   tree,
-				remote: remote,
-			}
-		} else {
-			result[index] = self.createSkipper(*source.SetOp)
-		}
-	}
-	return
-}
-
-func (self *Node) createSkipper(op common.SetOp) (result skipper) {
-	switch op.Type {
-	case common.Union:
-		result = &unionOp{
-			skippers: self.createSkippers(op.Sources),
-			merger:   self.getMerger(op.Merge),
-		}
-	case common.Intersection:
-		result = &interOp{
-			skippers: self.createSkippers(op.Sources),
-			merger:   self.getMerger(op.Merge),
-		}
-	case common.Difference:
-		result = &diffOp{
-			skippers: self.createSkippers(op.Sources),
-			merger:   self.getMerger(op.Merge),
-		}
-	case common.Xor:
-		result = &xorOp{
-			skippers: self.createSkippers(op.Sources),
-			merger:   self.getMerger(op.Merge),
-		}
-	default:
-		panic(fmt.Errorf("Unknown SetOp Type %v", op.Type))
-	}
-	return
-}
-
-type skipper interface {
-	// skip returns a value matching the min and inclusive criteria.
-	// If the last yielded value matches the criteria the same value will be returned again.
-	skip(min []byte, inc bool) (result *common.SetOpResult, err error)
-}
-
-type xorOp struct {
-	skippers []skipper
-	curr     *common.SetOpResult
-	merger   mergeFunc
-}
-
-func (self *xorOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
-	gt := 0
-	if inc {
-		gt = -1
-	}
-
-	if self.curr != nil && bytes.Compare(self.curr.Key, min) > gt {
-		result = self.curr
-		return
-	}
-
-	newSkippers := make([]skipper, 0, len(self.skippers))
-
-	var res *common.SetOpResult
-	var cmp int
-	for result == nil {
-		for _, thisSkipper := range self.skippers {
-			if res, err = thisSkipper.skip(min, inc); err != nil {
-				result = nil
-				self.curr = nil
-				return
-			}
-			if res != nil {
-				newSkippers = append(newSkippers, thisSkipper)
-				if result == nil {
-					result = res.ShallowCopy()
-				} else {
-					cmp = bytes.Compare(res.Key, result.Key)
-					if cmp < 0 {
-						result = res.ShallowCopy()
-					} else if cmp == 0 {
-						result.Values = self.merger(result.Values, res.Values)
-					}
-				}
-			}
-		}
-
-		if len(newSkippers) == 0 {
-			result = nil
-			self.curr = nil
-			return
-		}
-
-		if result != nil && len(result.Values) != 1 {
-			min = result.Key
-			inc = false
-			result = nil
-		}
-
-		self.skippers = newSkippers
-		newSkippers = newSkippers[:0]
-
-	}
-
-	self.curr = result
-
-	return
-}
-
-type unionOp struct {
-	skippers []skipper
-	curr     *common.SetOpResult
-	merger   mergeFunc
-}
-
-func (self *unionOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
-	gt := 0
-	if inc {
-		gt = -1
-	}
-
-	if self.curr != nil && bytes.Compare(self.curr.Key, min) > gt {
-		result = self.curr
-		return
-	}
-
-	newSkippers := make([]skipper, 0, len(self.skippers))
-
-	var cmp int
-	var res *common.SetOpResult
-	for _, thisSkipper := range self.skippers {
-		if res, err = thisSkipper.skip(min, inc); err != nil {
-			result = nil
-			self.curr = nil
-			return
-		}
-		if res != nil {
-			newSkippers = append(newSkippers, thisSkipper)
-			if result == nil {
-				result = res.ShallowCopy()
-			} else {
-				cmp = bytes.Compare(res.Key, result.Key)
-				if cmp < 0 {
-					result = res.ShallowCopy()
-				} else if cmp == 0 {
-					result.Values = self.merger(result.Values, res.Values)
-				}
-			}
-		}
-	}
-
-	self.skippers = newSkippers
-
-	self.curr = result
-
-	return
-}
-
-type interOp struct {
-	skippers []skipper
-	curr     *common.SetOpResult
-	merger   mergeFunc
-}
-
-func (self *interOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
-	gt := 0
-	if inc {
-		gt = -1
-	}
-
-	if self.curr != nil && bytes.Compare(self.curr.Key, min) > gt {
-		result = self.curr
-		return
-	}
-
-	var maxKey []byte
-	var results = make([]*common.SetOpResult, len(self.skippers))
-
-	for result == nil {
-		maxKey = nil
-		for index, thisSkipper := range self.skippers {
-			if results[index], err = thisSkipper.skip(min, inc); results[index] == nil || err != nil {
-				result = nil
-				self.curr = nil
-				return
-			}
-			if maxKey == nil {
-				maxKey = results[index].Key
-				result = results[index].ShallowCopy()
-			} else {
-				result.Values = self.merger(result.Values, results[index].Values)
-				if bytes.Compare(results[index].Key, maxKey) > 0 {
-					result = nil
-					maxKey = results[index].Key
-				}
-			}
-		}
-
-		if result != nil {
-			for index, _ := range self.skippers {
-				if bytes.Compare(maxKey, results[index].Key) != 0 {
-					result = nil
-				}
-			}
-		}
-
-		min = maxKey
-		inc = true
-	}
-
-	self.curr = result
-
-	return
-}
-
-type diffOp struct {
-	skippers []skipper
-	curr     *common.SetOpResult
-	merger   mergeFunc
-}
-
-func (self *diffOp) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
-	gt := 0
-	if inc {
-		gt = -1
-	}
-
-	if self.curr != nil && bytes.Compare(self.curr.Key, min) > gt {
-		result = self.curr
-		return
-	}
-
-	var newSkippers = make([]skipper, 0, len(self.skippers))
-	var res *common.SetOpResult
-
-	for result == nil {
-		for index, thisSkipper := range self.skippers {
-			if res, err = thisSkipper.skip(min, inc); err != nil {
-				result = nil
-				self.curr = nil
-				return
-			}
-			if index == 0 {
-				if res == nil {
-					result = nil
-					self.curr = nil
-					return
-				}
-				result = res
-				newSkippers = append(newSkippers, thisSkipper)
-				min = res.Key
-				inc = true
-			} else {
-				if res != nil {
-					newSkippers = append(newSkippers, thisSkipper)
-					if bytes.Compare(min, res.Key) == 0 {
-						result = nil
-						break
-					}
-				}
-			}
-		}
-		self.skippers = newSkippers
-		newSkippers = newSkippers[:0]
-		inc = false
-	}
-
-	self.curr = result
-
-	return
-}
 
 type treeSkipper struct {
 	key          []byte
 	tree         *radix.Tree
 	remote       common.Remote
-	buffer       []common.SetOpResult
+	buffer       []setop.SetOpResult
 	currentIndex int
 }
 
-func (self *treeSkipper) skip(min []byte, inc bool) (result *common.SetOpResult, err error) {
+func (self *treeSkipper) Skip(min []byte, inc bool) (result *setop.SetOpResult, err error) {
 	lt := 1
 	if inc {
 		lt = 0
@@ -326,7 +41,7 @@ func (self *treeSkipper) skip(min []byte, inc bool) (result *common.SetOpResult,
 	return
 }
 
-func (self *treeSkipper) nextWithRefill(refillMin []byte, inc bool) (result *common.SetOpResult, err error) {
+func (self *treeSkipper) nextWithRefill(refillMin []byte, inc bool) (result *setop.SetOpResult, err error) {
 	result = self.nextFromBuf()
 	if result == nil {
 		if err = self.refill(refillMin, inc); err != nil {
@@ -340,7 +55,7 @@ func (self *treeSkipper) nextWithRefill(refillMin []byte, inc bool) (result *com
 	return
 }
 
-func (self *treeSkipper) nextFromBuf() (result *common.SetOpResult) {
+func (self *treeSkipper) nextFromBuf() (result *setop.SetOpResult) {
 	self.currentIndex++
 	if self.currentIndex < len(self.buffer) {
 		result = &self.buffer[self.currentIndex]
@@ -350,7 +65,7 @@ func (self *treeSkipper) nextFromBuf() (result *common.SetOpResult) {
 }
 
 func (self *treeSkipper) refill(min []byte, inc bool) (err error) {
-	self.buffer = make([]common.SetOpResult, 0, bufferSize)
+	self.buffer = make([]setop.SetOpResult, 0, setOpBufferSize)
 	self.currentIndex = 0
 	if self.tree == nil {
 		if err = self.remoteRefill(min, inc); err != nil {
@@ -369,22 +84,22 @@ func (self *treeSkipper) remoteRefill(min []byte, inc bool) (err error) {
 		Key:    self.key,
 		Min:    min,
 		MinInc: inc,
-		Len:    bufferSize,
+		Len:    setOpBufferSize,
 	}
 	var items []common.Item
 	if err = self.remote.Call("DHash.SliceLen", r, &items); err != nil {
 		return
 	}
 	for _, item := range items {
-		self.buffer = append(self.buffer, common.SetOpResult{item.Key, [][]byte{item.Value}})
+		self.buffer = append(self.buffer, setop.SetOpResult{item.Key, [][]byte{item.Value}})
 	}
 	return
 }
 
 func (self *treeSkipper) treeRefill(min []byte, inc bool) error {
 	filler := func(key, value []byte, timestamp int64) bool {
-		self.buffer = append(self.buffer, common.SetOpResult{key, [][]byte{value}})
-		return len(self.buffer) < bufferSize
+		self.buffer = append(self.buffer, setop.SetOpResult{key, [][]byte{value}})
+		return len(self.buffer) < setOpBufferSize
 	}
 	self.tree.SubEachBetween(self.key, min, nil, inc, false, filler)
 	return nil

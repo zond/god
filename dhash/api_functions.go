@@ -4,6 +4,7 @@ import (
 	"../client"
 	"../common"
 	"../radix"
+	"../setop"
 	"bytes"
 	"fmt"
 	"sync/atomic"
@@ -438,12 +439,9 @@ func (self *Node) SubSize(key []byte, result *int) error {
 	*result = self.tree.SubSize(key)
 	return nil
 }
-func (self *Node) SetExpression(expr common.SetExpression, items *[]common.SetOpResult) (err error) {
-	data := common.Item{
-		Key: expr.Dest,
-	}
+func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpResult) (err error) {
 	if expr.Dest != nil {
-		if expr.Op.Merge == common.Append {
+		if expr.Op.Merge == setop.Append {
 			err = fmt.Errorf("When storing results of Set expressions the Append merge function is not allowed")
 			return
 		}
@@ -452,11 +450,24 @@ func (self *Node) SetExpression(expr common.SetExpression, items *[]common.SetOp
 			return successor.Call("DHash.SetExpression", expr, items)
 		}
 	}
-	skipper := self.createSkipper(expr.Op)
-	var res *common.SetOpResult
-	for res, err = skipper.skip(expr.Min, expr.MinInc); res != nil && err == nil; res, err = skipper.skip(expr.Min, expr.MinInc) {
-		expr.Min = res.Key
-		expr.MinInc = false
+	lt := 0
+	if expr.MaxInc {
+		lt = 1
+	}
+	data := common.Item{
+		Key: expr.Dest,
+	}
+	err = expr.Each(func(b []byte) setop.Skipper {
+		succ := self.node.GetSuccessorFor(b)
+		result := &treeSkipper{
+			remote: succ,
+			key:    b,
+		}
+		if succ.Addr == self.node.GetAddr() {
+			result.tree = self.tree
+		}
+		return result
+	}, func(res *setop.SetOpResult) bool {
 		if expr.Dest == nil {
 			*items = append(*items, *res)
 		} else {
@@ -466,7 +477,8 @@ func (self *Node) SetExpression(expr common.SetExpression, items *[]common.SetOp
 			data.Timestamp = self.timer.ContinuousTime()
 			self.put(data)
 		}
-	}
+		return (expr.Len == 0 || len(*items) < expr.Len) && (expr.Max == nil || bytes.Compare(res.Key, expr.Max) < lt)
+	})
 	return
 }
 func (self *Node) AddConfiguration(c common.ConfItem) {

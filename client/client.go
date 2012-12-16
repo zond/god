@@ -2,6 +2,7 @@ package client
 
 import (
 	"../common"
+	"../setop"
 	"bytes"
 	"fmt"
 	"net/rpc"
@@ -16,13 +17,13 @@ const (
 	stopped
 )
 
-func findKeys(op common.SetOp) (result map[string]bool) {
+func findKeys(op *setop.SetOp) (result map[string]bool) {
 	result = make(map[string]bool)
 	for _, source := range op.Sources {
 		if source.Key != nil {
 			result[string(source.Key)] = true
 		} else {
-			for key, _ := range findKeys(*source.SetOp) {
+			for key, _ := range findKeys(source.SetOp) {
 				result[key] = true
 			}
 		}
@@ -764,7 +765,7 @@ func (self *Conn) Describe() string {
 	return self.ring.Describe()
 }
 
-func (self *Conn) SetExpression(expr common.SetExpression) (result []common.SetOpResult) {
+func (self *Conn) SetExpression(expr setop.SetExpression) (result []setop.SetOpResult) {
 	var biggestKey []byte
 	biggestSize := 0
 	var thisSize int
@@ -779,7 +780,7 @@ func (self *Conn) SetExpression(expr common.SetExpression) (result []common.SetO
 		}
 	}
 	_, _, successor := self.ring.Remotes(biggestKey)
-	var results []common.SetOpResult
+	var results []setop.SetOpResult
 	err := successor.Call("DHash.SetExpression", expr, &results)
 	for err != nil {
 		self.removeNode(*successor)

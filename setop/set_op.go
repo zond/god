@@ -1,16 +1,12 @@
-package common
+package setop
 
 import (
 	"fmt"
 	"strings"
 )
 
-const (
-	Union = iota
-	Intersection
-	Difference
-	Xor
-)
+type RawSourceCreator func(b []byte) Skipper
+type SetOpResultIterator func(res *SetOpResult) bool
 
 const (
 	Append = iota
@@ -131,6 +127,13 @@ func (self SetOpMerge) String() string {
 	panic(fmt.Errorf("Unknown SetOpType %v", int(self)))
 }
 
+const (
+	Union = iota
+	Intersection
+	Difference
+	Xor
+)
+
 type SetOpType int
 
 func (self SetOpType) String() string {
@@ -158,7 +161,7 @@ type SetOp struct {
 	Merge   SetOpMerge
 }
 
-func (self SetOp) String() string {
+func (self *SetOp) String() string {
 	sources := make([]string, len(self.Sources))
 	for index, source := range self.Sources {
 		if source.Key != nil {
@@ -171,13 +174,28 @@ func (self SetOp) String() string {
 }
 
 type SetExpression struct {
-	Op     SetOp
+	Op     *SetOp
 	Min    []byte
 	Max    []byte
 	MinInc bool
 	MaxInc bool
 	Len    int
 	Dest   []byte
+}
+
+func (self *SetExpression) Each(r RawSourceCreator, f SetOpResultIterator) (err error) {
+	skipper := createSkipper(r, self.Op)
+	min := self.Min
+	mininc := self.MinInc
+	var res *SetOpResult
+	for res, err = skipper.Skip(min, mininc); res != nil && err == nil; res, err = skipper.Skip(min, mininc) {
+		min = res.Key
+		mininc = false
+		if !f(res) {
+			return
+		}
+	}
+	return
 }
 
 type SetOpResult struct {
