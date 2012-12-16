@@ -236,17 +236,13 @@ func (self *Conn) findRecent(operation string, data common.Item) (result *common
 	}
 	return
 }
-func (self *Conn) consume(c chan [2][]byte, wait *sync.WaitGroup, successor *common.Remote, key []byte) {
+func (self *Conn) consume(c chan [2][]byte, wait *sync.WaitGroup, successor *common.Remote) {
 	for pair := range c {
-		if key == nil {
-			self.putVia(successor, pair[0], pair[1], false)
-		} else {
-			self.subPutVia(successor, key, pair[0], pair[1], false)
-		}
+		self.putVia(successor, pair[0], pair[1], false)
 	}
 	wait.Done()
 }
-func (self *Conn) dump(c chan [2][]byte, wait *sync.WaitGroup, key []byte) {
+func (self *Conn) dump(c chan [2][]byte, wait *sync.WaitGroup) {
 	var succ *common.Remote
 	dumps := make(map[string]chan [2][]byte)
 	for pair := range c {
@@ -256,7 +252,7 @@ func (self *Conn) dump(c chan [2][]byte, wait *sync.WaitGroup, key []byte) {
 		} else {
 			newDump := make(chan [2][]byte, 16)
 			wait.Add(1)
-			go self.consume(newDump, wait, succ, key)
+			go self.consume(newDump, wait, succ)
 			newDump <- pair
 			dumps[succ.Addr] = newDump
 		}
@@ -264,6 +260,14 @@ func (self *Conn) dump(c chan [2][]byte, wait *sync.WaitGroup, key []byte) {
 	for _, dump := range dumps {
 		close(dump)
 	}
+	wait.Done()
+}
+func (self *Conn) subDump(key []byte, c chan [2][]byte, wait *sync.WaitGroup) {
+	_, _, succ := self.ring.Remotes(key)
+	for pair := range c {
+		self.subPutVia(succ, key, pair[0], pair[1], false)
+	}
+	wait.Done()
 }
 
 func (self *Conn) SSubPut(key, subKey, value []byte) {
@@ -281,13 +285,15 @@ func (self *Conn) Put(key, value []byte) {
 func (self *Conn) Dump() (c chan [2][]byte, wait *sync.WaitGroup) {
 	wait = new(sync.WaitGroup)
 	c = make(chan [2][]byte, 16)
-	go self.dump(c, wait, nil)
+	wait.Add(1)
+	go self.dump(c, wait)
 	return
 }
 func (self *Conn) SubDump(key []byte) (c chan [2][]byte, wait *sync.WaitGroup) {
 	wait = new(sync.WaitGroup)
-	c = make(chan [2][]byte, 16)
-	go self.dump(c, wait, key)
+	c = make(chan [2][]byte)
+	wait.Add(1)
+	go self.subDump(key, c, wait)
 	return
 }
 func (self *Conn) SubClear(key []byte) {
