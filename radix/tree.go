@@ -78,8 +78,12 @@ func NewTreeTimer(timer Timer) (result *Tree) {
 	result.root, _, _, _, _ = result.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), result.timer.ContinuousTime())
 	return
 }
-func (self *Tree) conf() (map[string]string, int64) {
-	return self.configuration, self.configurationTimestamp
+func (self *Tree) conf() (result map[string]string, ts int64) {
+	result = make(map[string]string)
+	for k, v := range self.configuration {
+		result[k] = v
+	}
+	return result, self.configurationTimestamp
 }
 func (self *Tree) Configuration() (map[string]string, int64) {
 	self.lock.RLock()
@@ -459,13 +463,17 @@ func (self *Tree) MirrorPrev(key []byte) (prevKey, prevValue []byte, prevTimesta
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.Prev(key)
+	prevKey, prevValue, prevTimestamp, existed = self.mirror.Prev(key)
+	prevKey = prevKey[:len(prevKey)-len(prevValue)]
+	return
 }
 func (self *Tree) MirrorNext(key []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.Next(key)
+	nextKey, nextValue, nextTimestamp, existed = self.mirror.Next(key)
+	nextKey = nextKey[:len(nextKey)-len(nextValue)]
+	return
 }
 func (self *Tree) Prev(key []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
 	self.ReverseEachBetween(nil, key, false, false, func(k, v []byte, timestamp int64) bool {
@@ -509,13 +517,17 @@ func (self *Tree) MirrorNextIndex(index int) (key, value []byte, timestamp int64
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.NextIndex(index)
+	key, value, timestamp, ind, existed = self.mirror.NextIndex(index)
+	key = key[:len(key)-len(value)]
+	return
 }
 func (self *Tree) MirrorPrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.PrevIndex(index)
+	key, value, timestamp, ind, existed = self.mirror.PrevIndex(index)
+	key = key[:len(key)-len(value)]
+	return
 }
 func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
 	self.EachBetweenIndex(&index, nil, func(k, v []byte, t int64, i int) bool {
@@ -531,43 +543,51 @@ func (self *Tree) PrevIndex(index int) (key, value []byte, timestamp int64, ind 
 	})
 	return
 }
-func (self *Tree) MirrorFirst() (key []byte, byteValue []byte, timestamp int64, existed bool) {
+func (self *Tree) MirrorFirst() (key, byteValue []byte, timestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.First()
+	key, byteValue, timestamp, existed = self.mirror.First()
+	key = key[:len(key)-len(byteValue)]
+	return
 }
-func (self *Tree) MirrorLast() (key []byte, byteValue []byte, timestamp int64, existed bool) {
+func (self *Tree) MirrorLast() (key, byteValue []byte, timestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.Last()
+	key, byteValue, timestamp, existed = self.mirror.Last()
+	key = key[:len(key)-len(byteValue)]
+	return
 }
-func (self *Tree) First() (key []byte, byteValue []byte, timestamp int64, existed bool) {
+func (self *Tree) First() (key, byteValue []byte, timestamp int64, existed bool) {
 	self.Each(func(k []byte, b []byte, ver int64) bool {
 		key, byteValue, timestamp, existed = k, b, ver, true
 		return false
 	})
 	return
 }
-func (self *Tree) Last() (key []byte, byteValue []byte, timestamp int64, existed bool) {
+func (self *Tree) Last() (key, byteValue []byte, timestamp int64, existed bool) {
 	self.ReverseEach(func(k []byte, b []byte, ver int64) bool {
 		key, byteValue, timestamp, existed = k, b, ver, true
 		return false
 	})
 	return
 }
-func (self *Tree) MirrorIndex(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
+func (self *Tree) MirrorIndex(n int) (key, byteValue []byte, timestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.Index(n)
+	key, byteValue, timestamp, existed = self.mirror.Index(n)
+	key = key[:len(key)-len(byteValue)]
+	return
 }
-func (self *Tree) MirrorReverseIndex(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
+func (self *Tree) MirrorReverseIndex(n int) (key, byteValue []byte, timestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.Index(n)
+	key, byteValue, timestamp, existed = self.mirror.Index(n)
+	key = key[:len(key)-len(byteValue)]
+	return
 }
 func (self *Tree) Index(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
 	self.EachBetweenIndex(&n, &n, func(k []byte, b []byte, ver int64, index int) bool {
