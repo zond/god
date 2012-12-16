@@ -22,7 +22,8 @@ const (
 	FloatSum
 	FloatSub
 	FloatDiv
-	FLoatMul
+	FloatMul
+	BigIntAnd
 	BigIntAdd
 	BigIntAndNot
 	BigIntDiv
@@ -35,6 +36,54 @@ const (
 )
 
 type SetOpMerge int
+
+func ParseSetOpMerge(s string) (result SetOpMerge, err error) {
+	switch s {
+	case "Append":
+		result = Append
+	case "ConCat":
+		result = ConCat
+	case "IntegerSum":
+		result = IntegerSum
+	case "IntegerSub":
+		result = IntegerSub
+	case "IntegerDiv":
+		result = IntegerDiv
+	case "IntegerMul":
+		result = IntegerMul
+	case "FloatSum":
+		result = FloatSum
+	case "FloatSub":
+		result = FloatSub
+	case "FloatDiv":
+		result = FloatDiv
+	case "FLoatMul":
+		result = FloatMul
+	case "BigIntAnd":
+		result = BigIntAnd
+	case "BigIntAdd":
+		result = BigIntAdd
+	case "BigIntAndNot":
+		result = BigIntAndNot
+	case "BigIntDiv":
+		result = BigIntDiv
+	case "BigIntMod":
+		result = BigIntMod
+	case "BigIntMul":
+		result = BigIntMul
+	case "BigIntOr":
+		result = BigIntOr
+	case "BigIntRem":
+		result = BigIntRem
+	case "BigIntSub":
+		result = BigIntSub
+	case "BigIntXor":
+		result = BigIntXor
+	default:
+		err = fmt.Errorf("Unknown SetOpType %v", s)
+	}
+	return
+}
 
 func (self SetOpMerge) String() string {
 	switch self {
@@ -56,8 +105,10 @@ func (self SetOpMerge) String() string {
 		return "FloatSub"
 	case FloatDiv:
 		return "FloatDiv"
-	case FLoatMul:
+	case FloatMul:
 		return "FloatMul"
+	case BigIntAnd:
+		return "BigIntAnd"
 	case BigIntAdd:
 		return "BigIntAdd"
 	case BigIntAndNot:

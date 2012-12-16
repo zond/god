@@ -3,7 +3,10 @@ package common
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 )
+
+var operationPattern = regexp.MustCompile("^(\\w)(:(\\w+))?$")
 
 const (
 	empty = iota
@@ -59,21 +62,31 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 		case name:
 			switch self.in[self.pos] {
 			case ' ':
-				switch string(self.nextName.Bytes()) {
-				case "U":
-					result.Type = Union
-				case "I":
-					result.Type = Intersection
-				case "X":
-					result.Type = Xor
-				case "D":
-					result.Type = Difference
-				default:
+				if match := operationPattern.FindStringSubmatch(string(self.nextName.Bytes())); match != nil {
+					switch match[1] {
+					case "U":
+						result.Type = Union
+					case "I":
+						result.Type = Intersection
+					case "X":
+						result.Type = Xor
+					case "D":
+						result.Type = Difference
+					default:
+						err = fmt.Errorf("Unknown operation type %c at %v in %v", self.in[self.pos], self.pos, self.in)
+						return
+					}
+					if match[3] != "" {
+						if result.Merge, err = ParseSetOpMerge(match[3]); err != nil {
+							return
+						}
+					}
+					state = params
+					self.nextName = new(bytes.Buffer)
+				} else {
 					err = fmt.Errorf("Unknown operation type %c at %v in %v", self.in[self.pos], self.pos, self.in)
 					return
 				}
-				state = params
-				self.nextName = new(bytes.Buffer)
 			case ')':
 				err = fmt.Errorf("Empty operation not allowed at %v in %v", self.pos, self.in)
 				return

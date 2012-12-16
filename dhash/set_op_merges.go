@@ -173,7 +173,7 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 			binary.Write(res, binary.BigEndian, sum)
 			return [][]byte{res.Bytes()}
 		}
-	case common.FLoatMul:
+	case common.FloatMul:
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			var sum int64
 			var tmp int64
@@ -194,6 +194,17 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 			res := new(bytes.Buffer)
 			binary.Write(res, binary.BigEndian, sum)
 			return [][]byte{res.Bytes()}
+		}
+	case common.BigIntAnd:
+		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
+			sum := new(big.Int).SetBytes(oldValues[0])
+			for _, b := range oldValues[1:] {
+				sum.And(sum, new(big.Int).SetBytes(b))
+			}
+			for _, b := range newValues {
+				sum.And(sum, new(big.Int).SetBytes(b))
+			}
+			return [][]byte{sum.Bytes()}
 		}
 	case common.BigIntAdd:
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
