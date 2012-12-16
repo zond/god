@@ -5,19 +5,16 @@ A Go database
 
 # TODO
 
-* Client API
- * Inter/Union/Diff
-  * Automated tests
- * StoreInter/StoreUnion/StoreDiff
+* Store results of setops
 * Persistence
  * Automatic tests
+* jsonrpc API
+ * Functionality
+  * Export the DHash.[METHODNAME] over jsonrpc as well as gob-rpc
 * Web interface
  * Functionality
   * Diagnose and understand cluster from web interface
 	* See and interact with content from web interface
-* jsonrpc API
- * Functionality
-  * Export the DHash.[METHODNAME] over jsonrpc as well as gob-rpc
 * Quality
  * Code review
  * Code comments
