@@ -6,8 +6,6 @@ A Go database
 # TODO
 
 * Store results of setops
- * Manual test!
-  * Extend the cli to be able to write big.Int, float64 and int64 byte values
  * Extract the set op code from dhash, client and common
 * jsonrpc API
  * Functionality

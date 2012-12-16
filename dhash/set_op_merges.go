@@ -31,12 +31,12 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 			var tmp int64
 			var err error
 			for _, b := range oldValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeInt64(b); err == nil {
 					sum += tmp
 				}
 			}
 			for _, b := range newValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeInt64(b); err == nil {
 					sum += tmp
 				}
 			}
@@ -49,16 +49,16 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 			var sum int64
 			var tmp int64
 			var err error
-			if err = binary.Read(bytes.NewBuffer(oldValues[0]), binary.BigEndian, &tmp); err == nil {
+			if tmp, err = common.DecodeInt64(oldValues[0]); err == nil {
 				sum = tmp
 			}
 			for _, b := range oldValues[1:] {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeInt64(b); err == nil {
 					sum -= tmp
 				}
 			}
 			for _, b := range newValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeInt64(b); err == nil {
 					sum -= tmp
 				}
 			}
@@ -71,16 +71,16 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 			var sum int64
 			var tmp int64
 			var err error
-			if err = binary.Read(bytes.NewBuffer(oldValues[0]), binary.BigEndian, &tmp); err == nil {
+			if tmp, err = common.DecodeInt64(oldValues[0]); err == nil {
 				sum = tmp
 			}
 			for _, b := range oldValues[1:] {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeInt64(b); err == nil {
 					sum /= tmp
 				}
 			}
 			for _, b := range newValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeInt64(b); err == nil {
 					sum /= tmp
 				}
 			}
@@ -89,20 +89,21 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 			return [][]byte{res.Bytes()}
 		}
 	case common.IntegerMul:
+		fmt.Println("integer mul!")
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			var sum int64
 			var tmp int64
 			var err error
-			if err = binary.Read(bytes.NewBuffer(oldValues[0]), binary.BigEndian, &tmp); err == nil {
+			if tmp, err = common.DecodeInt64(oldValues[0]); err == nil {
 				sum = tmp
 			}
 			for _, b := range oldValues[1:] {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeInt64(b); err == nil {
 					sum *= tmp
 				}
 			}
 			for _, b := range newValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeInt64(b); err == nil {
 					sum *= tmp
 				}
 			}
@@ -116,12 +117,12 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 			var tmp float64
 			var err error
 			for _, b := range oldValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeFloat64(b); err == nil {
 					sum += tmp
 				}
 			}
 			for _, b := range newValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeFloat64(b); err == nil {
 					sum += tmp
 				}
 			}
@@ -131,19 +132,19 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		}
 	case common.FloatSub:
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
-			var sum int64
-			var tmp int64
+			var sum float64
+			var tmp float64
 			var err error
-			if err = binary.Read(bytes.NewBuffer(oldValues[0]), binary.BigEndian, &tmp); err == nil {
+			if tmp, err = common.DecodeFloat64(oldValues[0]); err == nil {
 				sum = tmp
 			}
 			for _, b := range oldValues[1:] {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeFloat64(b); err == nil {
 					sum -= tmp
 				}
 			}
 			for _, b := range newValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeFloat64(b); err == nil {
 					sum -= tmp
 				}
 			}
@@ -153,19 +154,19 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		}
 	case common.FloatDiv:
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
-			var sum int64
-			var tmp int64
+			var sum float64
+			var tmp float64
 			var err error
-			if err = binary.Read(bytes.NewBuffer(oldValues[0]), binary.BigEndian, &tmp); err == nil {
+			if tmp, err = common.DecodeFloat64(oldValues[0]); err == nil {
 				sum = tmp
 			}
 			for _, b := range oldValues[1:] {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeFloat64(b); err == nil {
 					sum /= tmp
 				}
 			}
 			for _, b := range newValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeFloat64(b); err == nil {
 					sum /= tmp
 				}
 			}
@@ -175,19 +176,19 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		}
 	case common.FloatMul:
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
-			var sum int64
-			var tmp int64
+			var sum float64
+			var tmp float64
 			var err error
-			if err = binary.Read(bytes.NewBuffer(oldValues[0]), binary.BigEndian, &tmp); err == nil {
+			if tmp, err = common.DecodeFloat64(oldValues[0]); err == nil {
 				sum = tmp
 			}
 			for _, b := range oldValues[1:] {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeFloat64(b); err == nil {
 					sum *= tmp
 				}
 			}
 			for _, b := range newValues {
-				if err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &tmp); err == nil {
+				if tmp, err = common.DecodeFloat64(b); err == nil {
 					sum *= tmp
 				}
 			}
@@ -199,10 +200,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.And(sum, new(big.Int).SetBytes(b))
+				sum.And(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.And(sum, new(big.Int).SetBytes(b))
+				sum.And(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -210,10 +211,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.Add(sum, new(big.Int).SetBytes(b))
+				sum.Add(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.Add(sum, new(big.Int).SetBytes(b))
+				sum.Add(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -221,10 +222,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.AndNot(sum, new(big.Int).SetBytes(b))
+				sum.AndNot(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.AndNot(sum, new(big.Int).SetBytes(b))
+				sum.AndNot(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -232,10 +233,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.Div(sum, new(big.Int).SetBytes(b))
+				sum.Div(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.Div(sum, new(big.Int).SetBytes(b))
+				sum.Div(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -243,10 +244,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.Mod(sum, new(big.Int).SetBytes(b))
+				sum.Mod(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.Mod(sum, new(big.Int).SetBytes(b))
+				sum.Mod(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -254,10 +255,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.Mul(sum, new(big.Int).SetBytes(b))
+				sum.Mul(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.Mul(sum, new(big.Int).SetBytes(b))
+				sum.Mul(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -265,10 +266,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.Or(sum, new(big.Int).SetBytes(b))
+				sum.Or(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.Or(sum, new(big.Int).SetBytes(b))
+				sum.Or(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -276,10 +277,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.Rem(sum, new(big.Int).SetBytes(b))
+				sum.Rem(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.Rem(sum, new(big.Int).SetBytes(b))
+				sum.Rem(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -287,10 +288,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.Sub(sum, new(big.Int).SetBytes(b))
+				sum.Sub(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.Sub(sum, new(big.Int).SetBytes(b))
+				sum.Sub(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}
@@ -298,10 +299,10 @@ func (self *Node) getMerger(m common.SetOpMerge) mergeFunc {
 		return func(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 			sum := new(big.Int).SetBytes(oldValues[0])
 			for _, b := range oldValues[1:] {
-				sum.Xor(sum, new(big.Int).SetBytes(b))
+				sum.Xor(sum, common.DecodeBigInt(b))
 			}
 			for _, b := range newValues {
-				sum.Xor(sum, new(big.Int).SetBytes(b))
+				sum.Xor(sum, common.DecodeBigInt(b))
 			}
 			return [][]byte{sum.Bytes()}
 		}

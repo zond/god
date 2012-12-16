@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"regexp"
 	"strconv"
@@ -15,10 +16,65 @@ import (
 	"sync"
 )
 
+const (
+	stringFormat = "string"
+	floatFormat  = "float"
+	intFormat    = "int"
+	bigFormat    = "big"
+)
+
 type action func(conn *client.Conn, args []string)
 
 var ip = flag.String("ip", "127.0.0.1", "IP address to connect to")
 var port = flag.Int("port", 9191, "Port to connect to")
+var enc = flag.String("enc", stringFormat, "What format to assume when encoding and decoding byte slices")
+
+func encode(s string) []byte {
+	switch *enc {
+	case stringFormat:
+		return []byte(s)
+	case floatFormat:
+		result, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			panic(err)
+		}
+		return common.EncodeFloat64(result)
+	case intFormat:
+		result, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+		return common.EncodeInt64(result)
+	case bigFormat:
+		result, ok := new(big.Int).SetString(s, 10)
+		if !ok {
+			panic(fmt.Errorf("Bad BigInt format: %v", s))
+		}
+		return common.EncodeBigInt(result)
+	}
+	panic(fmt.Errorf("Unknown encoding: %v", *enc))
+}
+func decode(b []byte) string {
+	switch *enc {
+	case stringFormat:
+		return string(b)
+	case floatFormat:
+		res, err := common.DecodeFloat64(b)
+		if err != nil {
+			return fmt.Sprint(b)
+		}
+		return fmt.Sprint(res)
+	case intFormat:
+		res, err := common.DecodeInt64(b)
+		if err != nil {
+			return fmt.Sprint(b)
+		}
+		return fmt.Sprint(res)
+	case bigFormat:
+		return fmt.Sprint(common.DecodeBigInt(b))
+	}
+	panic(fmt.Errorf("Unknown encoding: %v", *enc))
+}
 
 type actionSpec struct {
 	cmd  string
@@ -124,80 +180,80 @@ func size(conn *client.Conn, args []string) {
 
 func mirrorReverseSliceIndex(conn *client.Conn, args []string) {
 	for _, item := range conn.MirrorReverseSliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
-		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), string(item.Value))
+		fmt.Printf("%v: %v => %v\n", item.Index, decode(item.Key), string(item.Value))
 	}
 }
 
 func mirrorSliceIndex(conn *client.Conn, args []string) {
 	for _, item := range conn.MirrorSliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
-		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), string(item.Value))
+		fmt.Printf("%v: %v => %v\n", item.Index, decode(item.Key), string(item.Value))
 	}
 }
 
 func mirrorReverseSlice(conn *client.Conn, args []string) {
 	for i, item := range conn.MirrorReverseSlice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
-		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+		fmt.Printf("%v: %v => %v\n", i, decode(item.Key), string(item.Value))
 	}
 }
 
 func mirrorSlice(conn *client.Conn, args []string) {
 	for i, item := range conn.MirrorSlice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
-		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+		fmt.Printf("%v: %v => %v\n", i, decode(item.Key), string(item.Value))
 	}
 }
 
 func mirrorSliceLen(conn *client.Conn, args []string) {
 	for _, item := range conn.MirrorSliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
-		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
+		fmt.Printf("%v => %v\n", decode(item.Key), string(item.Value))
 	}
 }
 
 func mirrorReverseSliceLen(conn *client.Conn, args []string) {
 	for _, item := range conn.MirrorReverseSliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
-		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
+		fmt.Printf("%v => %v\n", decode(item.Key), string(item.Value))
 	}
 }
 
 func reverseSliceIndex(conn *client.Conn, args []string) {
 	for _, item := range conn.ReverseSliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
-		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), string(item.Value))
+		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), decode(item.Value))
 	}
 }
 
 func sliceIndex(conn *client.Conn, args []string) {
 	for _, item := range conn.SliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
-		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), string(item.Value))
+		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), decode(item.Value))
 	}
 }
 
 func reverseSlice(conn *client.Conn, args []string) {
 	for i, item := range conn.ReverseSlice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
-		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+		fmt.Printf("%v: %v => %v\n", i, string(item.Key), decode(item.Value))
 	}
 }
 
 func slice(conn *client.Conn, args []string) {
 	for i, item := range conn.Slice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
-		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+		fmt.Printf("%v: %v => %v\n", i, string(item.Key), decode(item.Value))
 	}
 }
 
 func sliceLen(conn *client.Conn, args []string) {
 	for _, item := range conn.SliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
-		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
+		fmt.Printf("%v => %v\n", string(item.Key), decode(item.Value))
 	}
 }
 
 func reverseSliceLen(conn *client.Conn, args []string) {
 	for _, item := range conn.ReverseSliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
-		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
+		fmt.Printf("%v => %v\n", string(item.Key), decode(item.Value))
 	}
 }
 
 func printSetOpRes(res common.SetOpResult) {
 	var vals []string
 	for _, val := range res.Values {
-		vals = append(vals, string(val))
+		vals = append(vals, decode(val))
 	}
 	fmt.Printf("%v => %v\n", string(res.Key), vals)
 }
@@ -251,85 +307,85 @@ func count(conn *client.Conn, args []string) {
 
 func mirrorPrevIndex(conn *client.Conn, args []string) {
 	if key, value, index, existed := conn.MirrorPrevIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
-		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+		fmt.Printf("%v: %v => %v\n", index, decode(key), string(value))
 	}
 }
 
 func mirrorNextIndex(conn *client.Conn, args []string) {
 	if key, value, index, existed := conn.MirrorNextIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
-		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+		fmt.Printf("%v: %v => %v\n", index, decode(key), string(value))
 	}
 }
 
 func prevIndex(conn *client.Conn, args []string) {
 	if key, value, index, existed := conn.PrevIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
-		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+		fmt.Printf("%v: %v => %v\n", index, string(key), decode(value))
 	}
 }
 
 func nextIndex(conn *client.Conn, args []string) {
 	if key, value, index, existed := conn.NextIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
-		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+		fmt.Printf("%v: %v => %v\n", index, string(key), decode(value))
 	}
 }
 
 func prev(conn *client.Conn, args []string) {
 	if key, value, existed := conn.Prev([]byte(args[1])); existed {
-		fmt.Printf("%v => %v\n", string(key), string(value))
+		fmt.Printf("%v => %v\n", string(key), decode(value))
 	}
 }
 
 func next(conn *client.Conn, args []string) {
 	if key, value, existed := conn.Next([]byte(args[1])); existed {
-		fmt.Printf("%v => %v\n", string(key), string(value))
+		fmt.Printf("%v => %v\n", string(key), decode(value))
 	}
 }
 
 func mirrorFirst(conn *client.Conn, args []string) {
 	if key, value, existed := conn.MirrorFirst([]byte(args[1])); existed {
-		fmt.Println(string(key), "=>", string(value))
+		fmt.Println(decode(key), "=>", string(value))
 	}
 }
 
 func mirrorLast(conn *client.Conn, args []string) {
 	if key, value, existed := conn.MirrorLast([]byte(args[1])); existed {
-		fmt.Println(string(key), "=>", string(value))
+		fmt.Println(decode(key), "=>", string(value))
 	}
 }
 
 func first(conn *client.Conn, args []string) {
 	if key, value, existed := conn.First([]byte(args[1])); existed {
-		fmt.Println(string(key), "=>", string(value))
+		fmt.Println(string(key), "=>", decode(value))
 	}
 }
 
 func last(conn *client.Conn, args []string) {
 	if key, value, existed := conn.Last([]byte(args[1])); existed {
-		fmt.Println(string(key), "=>", string(value))
+		fmt.Println(string(key), "=>", decode(value))
 	}
 }
 
 func subMirrorNext(conn *client.Conn, args []string) {
 	if key, value, existed := conn.SubMirrorNext([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Printf("%v => %v\n", string(key), string(value))
+		fmt.Printf("%v => %v\n", decode(key), string(value))
 	}
 }
 
 func subMirrorPrev(conn *client.Conn, args []string) {
 	if key, value, existed := conn.SubMirrorPrev([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Printf("%v => %v\n", string(key), string(value))
+		fmt.Printf("%v => %v\n", decode(key), string(value))
 	}
 }
 
 func subNext(conn *client.Conn, args []string) {
 	if key, value, existed := conn.SubNext([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Printf("%v => %v\n", string(key), string(value))
+		fmt.Printf("%v => %v\n", string(key), decode(value))
 	}
 }
 
 func subPrev(conn *client.Conn, args []string) {
 	if key, value, existed := conn.SubPrev([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Printf("%v => %v\n", string(key), string(value))
+		fmt.Printf("%v => %v\n", string(key), decode(value))
 	}
 }
 
@@ -382,13 +438,13 @@ func describeTree(conn *client.Conn, args []string) {
 
 func get(conn *client.Conn, args []string) {
 	if value, existed := conn.Get([]byte(args[1])); existed {
-		fmt.Printf("%v\n", string(value))
+		fmt.Printf("%v\n", decode(value))
 	}
 }
 
 func subGet(conn *client.Conn, args []string) {
 	if value, existed := conn.SubGet([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Printf("%v\n", string(value))
+		fmt.Printf("%v\n", decode(value))
 	}
 }
 
@@ -414,7 +470,7 @@ func linedump(dump chan [2][]byte, wait *sync.WaitGroup) {
 	for line, err = reader.ReadString('\n'); err == nil; line, err = reader.ReadString('\n') {
 		pair = strings.Split(strings.TrimSpace(line), "=")
 		if len(pair) == 2 {
-			dump <- [2][]byte{[]byte(pair[0]), []byte(pair[1])}
+			dump <- [2][]byte{[]byte(pair[0]), encode(pair[1])}
 		} else {
 			return
 		}
@@ -425,11 +481,11 @@ func linedump(dump chan [2][]byte, wait *sync.WaitGroup) {
 }
 
 func put(conn *client.Conn, args []string) {
-	conn.Put([]byte(args[1]), []byte(args[2]))
+	conn.Put([]byte(args[1]), encode(args[2]))
 }
 
 func subPut(conn *client.Conn, args []string) {
-	conn.SubPut([]byte(args[1]), []byte(args[2]), []byte(args[3]))
+	conn.SubPut([]byte(args[1]), []byte(args[2]), encode(args[3]))
 }
 
 func subClear(conn *client.Conn, args []string) {

@@ -57,7 +57,7 @@ func ParseSetOpMerge(s string) (result SetOpMerge, err error) {
 		result = FloatSub
 	case "FloatDiv":
 		result = FloatDiv
-	case "FLoatMul":
+	case "FloatMul":
 		result = FloatMul
 	case "BigIntAnd":
 		result = BigIntAnd
