@@ -36,43 +36,58 @@ func newActionSpec(pattern string) (result *actionSpec) {
 }
 
 var actions = map[*actionSpec]action{
-	newActionSpec("reverseSliceIndex \\S+ \\d+ \\d+"): reverseSliceIndex,
-	newActionSpec("sliceIndex \\S+ \\d+ \\d+"):        sliceIndex,
-	newActionSpec("reverseSlice \\S+ \\S+ \\S+"):      reverseSlice,
-	newActionSpec("slice \\S+ \\S+ \\S+"):             slice,
-	newActionSpec("sliceLen \\S+ \\S+ \\d+"):          sliceLen,
-	newActionSpec("setOp .+"):                         setOp,
-	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):   reverseSliceLen,
-	newActionSpec("put \\S+ \\S+"):                    put,
-	newActionSpec("dump"):                             dump,
-	newActionSpec("subDump \\S+"):                     subDump,
-	newActionSpec("subSize \\S+"):                     subSize,
-	newActionSpec("size"):                             size,
-	newActionSpec("count \\S+ \\S+ \\S+"):             count,
-	newActionSpec("get \\S+"):                         get,
-	newActionSpec("del \\S+"):                         del,
-	newActionSpec("subPut \\S+ \\S+ \\S+"):            subPut,
-	newActionSpec("subGet \\S+ \\S+"):                 subGet,
-	newActionSpec("subDel \\S+ \\S+"):                 subDel,
-	newActionSpec("subClear \\S+"):                    subClear,
-	newActionSpec("describeAll"):                      describeAll,
-	newActionSpec("describe \\S+"):                    describe,
-	newActionSpec("describeTree \\S+"):                describeTree,
-	newActionSpec("describeAllTrees"):                 describeAllTrees,
-	newActionSpec("first \\S+"):                       first,
-	newActionSpec("last \\S+"):                        last,
-	newActionSpec("prevIndex \\S+ \\d+"):              prevIndex,
-	newActionSpec("nextIndex \\S+ \\d+"):              nextIndex,
-	newActionSpec("next \\S+"):                        next,
-	newActionSpec("prev \\S+"):                        prev,
-	newActionSpec("subNext \\S+ \\S+"):                subNext,
-	newActionSpec("subPrev \\S+ \\S+"):                subPrev,
-	newActionSpec("indexOf \\S+ \\S+"):                indexOf,
-	newActionSpec("reverseIndexOf \\S+ \\S+"):         reverseIndexOf,
-	newActionSpec("configuration"):                    configuration,
-	newActionSpec("subConfiguration \\S+"):            subConfiguration,
-	newActionSpec("configure \\S+ \\S+"):              configure,
-	newActionSpec("subConfigure \\S+ \\S+ \\S+"):      subConfigure,
+	newActionSpec("mirrorReverseSliceIndex \\S+ \\d+ \\d+"): mirrorReverseSliceIndex,
+	newActionSpec("mirrorSliceIndex \\S+ \\d+ \\d+"):        mirrorSliceIndex,
+	newActionSpec("mirrorReverseSlice \\S+ \\S+ \\S+"):      mirrorReverseSlice,
+	newActionSpec("mirrorSlice \\S+ \\S+ \\S+"):             mirrorSlice,
+	newActionSpec("mirrorSliceLen \\S+ \\S+ \\d+"):          mirrorSliceLen,
+	newActionSpec("mirrorReverseSliceLen \\S+ \\S+ \\d+"):   mirrorReverseSliceLen,
+	newActionSpec("reverseSliceIndex \\S+ \\d+ \\d+"):       reverseSliceIndex,
+	newActionSpec("sliceIndex \\S+ \\d+ \\d+"):              sliceIndex,
+	newActionSpec("reverseSlice \\S+ \\S+ \\S+"):            reverseSlice,
+	newActionSpec("slice \\S+ \\S+ \\S+"):                   slice,
+	newActionSpec("sliceLen \\S+ \\S+ \\d+"):                sliceLen,
+	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):         reverseSliceLen,
+	newActionSpec("setOp .+"):                               setOp,
+	newActionSpec("put \\S+ \\S+"):                          put,
+	newActionSpec("dump"):                                   dump,
+	newActionSpec("subDump \\S+"):                           subDump,
+	newActionSpec("subSize \\S+"):                           subSize,
+	newActionSpec("size"):                                   size,
+	newActionSpec("count \\S+ \\S+ \\S+"):                   count,
+	newActionSpec("mirrorCount \\S+ \\S+ \\S+"):             mirrorCount,
+	newActionSpec("get \\S+"):                               get,
+	newActionSpec("del \\S+"):                               del,
+	newActionSpec("subPut \\S+ \\S+ \\S+"):                  subPut,
+	newActionSpec("subGet \\S+ \\S+"):                       subGet,
+	newActionSpec("subDel \\S+ \\S+"):                       subDel,
+	newActionSpec("subClear \\S+"):                          subClear,
+	newActionSpec("describeAll"):                            describeAll,
+	newActionSpec("describe \\S+"):                          describe,
+	newActionSpec("describeTree \\S+"):                      describeTree,
+	newActionSpec("describeAllTrees"):                       describeAllTrees,
+	newActionSpec("mirrorFirst \\S+"):                       mirrorFirst,
+	newActionSpec("mirrorLast \\S+"):                        mirrorLast,
+	newActionSpec("mirrorPrevIndex \\S+ \\d+"):              mirrorPrevIndex,
+	newActionSpec("mirrorNextIndex \\S+ \\d+"):              mirrorNextIndex,
+	newActionSpec("first \\S+"):                             first,
+	newActionSpec("last \\S+"):                              last,
+	newActionSpec("prevIndex \\S+ \\d+"):                    prevIndex,
+	newActionSpec("nextIndex \\S+ \\d+"):                    nextIndex,
+	newActionSpec("next \\S+"):                              next,
+	newActionSpec("prev \\S+"):                              prev,
+	newActionSpec("subMirrorNext \\S+ \\S+"):                subMirrorNext,
+	newActionSpec("subMirrorPrev \\S+ \\S+"):                subMirrorPrev,
+	newActionSpec("mirrorIndexOf \\S+ \\S+"):                mirrorIndexOf,
+	newActionSpec("mirrorReverseIndexOf \\S+ \\S+"):         mirrorReverseIndexOf,
+	newActionSpec("subNext \\S+ \\S+"):                      subNext,
+	newActionSpec("subPrev \\S+ \\S+"):                      subPrev,
+	newActionSpec("indexOf \\S+ \\S+"):                      indexOf,
+	newActionSpec("reverseIndexOf \\S+ \\S+"):               reverseIndexOf,
+	newActionSpec("configuration"):                          configuration,
+	newActionSpec("subConfiguration \\S+"):                  subConfiguration,
+	newActionSpec("configure \\S+ \\S+"):                    configure,
+	newActionSpec("subConfigure \\S+ \\S+ \\S+"):            subConfigure,
 }
 
 func mustAtoi(s string) *int {
@@ -105,6 +120,42 @@ func subSize(conn *client.Conn, args []string) {
 
 func size(conn *client.Conn, args []string) {
 	fmt.Println(conn.Size())
+}
+
+func mirrorReverseSliceIndex(conn *client.Conn, args []string) {
+	for _, item := range conn.MirrorReverseSliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
+		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), string(item.Value))
+	}
+}
+
+func mirrorSliceIndex(conn *client.Conn, args []string) {
+	for _, item := range conn.MirrorSliceIndex([]byte(args[1]), mustAtoi(args[2]), mustAtoi(args[3])) {
+		fmt.Printf("%v: %v => %v\n", item.Index, string(item.Key), string(item.Value))
+	}
+}
+
+func mirrorReverseSlice(conn *client.Conn, args []string) {
+	for i, item := range conn.MirrorReverseSlice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
+		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	}
+}
+
+func mirrorSlice(conn *client.Conn, args []string) {
+	for i, item := range conn.MirrorSlice([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false) {
+		fmt.Printf("%v: %v => %v\n", i, string(item.Key), string(item.Value))
+	}
+}
+
+func mirrorSliceLen(conn *client.Conn, args []string) {
+	for _, item := range conn.MirrorSliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
+		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
+	}
+}
+
+func mirrorReverseSliceLen(conn *client.Conn, args []string) {
+	for _, item := range conn.MirrorReverseSliceLen([]byte(args[1]), []byte(args[2]), true, *(mustAtoi(args[3]))) {
+		fmt.Printf("%v => %v\n", string(item.Key), string(item.Value))
+	}
 }
 
 func reverseSliceIndex(conn *client.Conn, args []string) {
@@ -162,6 +213,18 @@ func setOp(conn *client.Conn, args []string) {
 	}
 }
 
+func mirrorReverseIndexOf(conn *client.Conn, args []string) {
+	if index, existed := conn.MirrorReverseIndexOf([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Println(index)
+	}
+}
+
+func mirrorIndexOf(conn *client.Conn, args []string) {
+	if index, existed := conn.MirrorIndexOf([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Println(index)
+	}
+}
+
 func reverseIndexOf(conn *client.Conn, args []string) {
 	if index, existed := conn.ReverseIndexOf([]byte(args[1]), []byte(args[2])); existed {
 		fmt.Println(index)
@@ -178,8 +241,24 @@ func show(conn *client.Conn) {
 	fmt.Println(conn.Describe())
 }
 
+func mirrorCount(conn *client.Conn, args []string) {
+	fmt.Println(conn.MirrorCount([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false))
+}
+
 func count(conn *client.Conn, args []string) {
 	fmt.Println(conn.Count([]byte(args[1]), []byte(args[2]), []byte(args[3]), true, false))
+}
+
+func mirrorPrevIndex(conn *client.Conn, args []string) {
+	if key, value, index, existed := conn.MirrorPrevIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
+		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+	}
+}
+
+func mirrorNextIndex(conn *client.Conn, args []string) {
+	if key, value, index, existed := conn.MirrorNextIndex([]byte(args[1]), *(mustAtoi(args[2]))); existed {
+		fmt.Printf("%v: %v => %v\n", index, string(key), string(value))
+	}
 }
 
 func prevIndex(conn *client.Conn, args []string) {
@@ -196,13 +275,25 @@ func nextIndex(conn *client.Conn, args []string) {
 
 func prev(conn *client.Conn, args []string) {
 	if key, value, existed := conn.Prev([]byte(args[1])); existed {
-		fmt.Printf("%v => %v", string(key), string(value))
+		fmt.Printf("%v => %v\n", string(key), string(value))
 	}
 }
 
 func next(conn *client.Conn, args []string) {
 	if key, value, existed := conn.Next([]byte(args[1])); existed {
-		fmt.Printf("%v => %v", string(key), string(value))
+		fmt.Printf("%v => %v\n", string(key), string(value))
+	}
+}
+
+func mirrorFirst(conn *client.Conn, args []string) {
+	if key, value, existed := conn.MirrorFirst([]byte(args[1])); existed {
+		fmt.Println(string(key), "=>", string(value))
+	}
+}
+
+func mirrorLast(conn *client.Conn, args []string) {
+	if key, value, existed := conn.MirrorLast([]byte(args[1])); existed {
+		fmt.Println(string(key), "=>", string(value))
 	}
 }
 
@@ -218,15 +309,27 @@ func last(conn *client.Conn, args []string) {
 	}
 }
 
+func subMirrorNext(conn *client.Conn, args []string) {
+	if key, value, existed := conn.SubMirrorNext([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Printf("%v => %v\n", string(key), string(value))
+	}
+}
+
+func subMirrorPrev(conn *client.Conn, args []string) {
+	if key, value, existed := conn.SubMirrorPrev([]byte(args[1]), []byte(args[2])); existed {
+		fmt.Printf("%v => %v\n", string(key), string(value))
+	}
+}
+
 func subNext(conn *client.Conn, args []string) {
 	if key, value, existed := conn.SubNext([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Printf("%v => %v", string(key), string(value))
+		fmt.Printf("%v => %v\n", string(key), string(value))
 	}
 }
 
 func subPrev(conn *client.Conn, args []string) {
 	if key, value, existed := conn.SubPrev([]byte(args[1]), []byte(args[2])); existed {
-		fmt.Printf("%v => %v", string(key), string(value))
+		fmt.Printf("%v => %v\n", string(key), string(value))
 	}
 }
 

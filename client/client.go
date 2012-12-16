@@ -16,6 +16,20 @@ const (
 	stopped
 )
 
+func findKeys(op common.SetOp) (result map[string]bool) {
+	result = make(map[string]bool)
+	for _, source := range op.Sources {
+		if source.Key != nil {
+			result[string(source.Key)] = true
+		} else {
+			for key, _ := range findKeys(*source.SetOp) {
+				result[key] = true
+			}
+		}
+	}
+	return
+}
+
 type Conn struct {
 	ring  *common.Ring
 	state int32
@@ -222,19 +236,6 @@ func (self *Conn) findRecent(operation string, data common.Item) (result *common
 	}
 	return
 }
-func findKeys(op common.SetOp) (result map[string]bool) {
-	result = make(map[string]bool)
-	for _, source := range op.Sources {
-		if source.Key != nil {
-			result[string(source.Key)] = true
-		} else {
-			for key, _ := range findKeys(*source.SetOp) {
-				result[key] = true
-			}
-		}
-	}
-	return
-}
 func (self *Conn) consume(c chan [2][]byte, wait *sync.WaitGroup, successor *common.Remote, key []byte) {
 	for pair := range c {
 		if key == nil {
@@ -306,6 +307,34 @@ func (self *Conn) SDel(key []byte) {
 }
 func (self *Conn) Del(key []byte) {
 	self.del(key, false)
+}
+func (self *Conn) MirrorReverseIndexOf(key, subKey []byte) (index int, existed bool) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	var result common.Index
+	if err := successor.Call("DHash.MirrorReverseIndexOf", data, &result); err != nil {
+		self.removeNode(*successor)
+		return self.MirrorReverseIndexOf(key, subKey)
+	}
+	index, existed = result.N, result.Existed
+	return
+}
+func (self *Conn) MirrorIndexOf(key, subKey []byte) (index int, existed bool) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	var result common.Index
+	if err := successor.Call("DHash.MirrorIndexOf", data, &result); err != nil {
+		self.removeNode(*successor)
+		return self.MirrorIndexOf(key, subKey)
+	}
+	index, existed = result.N, result.Existed
+	return
 }
 func (self *Conn) ReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	data := common.Item{
@@ -381,6 +410,21 @@ func (self *Conn) Prev(key []byte) (prevKey, prevValue []byte, existed bool) {
 	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+func (self *Conn) MirrorCount(key, min, max []byte, mininc, maxinc bool) (result int) {
+	r := common.Range{
+		Key:    key,
+		Min:    min,
+		Max:    max,
+		MinInc: mininc,
+		MaxInc: maxinc,
+	}
+	_, _, successor := self.ring.Remotes(key)
+	if err := successor.Call("DHash.MirrorCount", r, &result); err != nil {
+		self.removeNode(*successor)
+		return self.MirrorCount(key, min, max, mininc, maxinc)
+	}
+	return
+}
 func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) {
 	r := common.Range{
 		Key:    key,
@@ -394,6 +438,34 @@ func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) 
 		self.removeNode(*successor)
 		return self.Count(key, min, max, mininc, maxinc)
 	}
+	return
+}
+func (self *Conn) MirrorNextIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
+	data := common.Item{
+		Key:   key,
+		Index: index,
+	}
+	result := &common.Item{}
+	_, _, successor := self.ring.Remotes(key)
+	if err := successor.Call("DHash.MirrorNextIndex", data, result); err != nil {
+		self.removeNode(*successor)
+		return self.MirrorNextIndex(key, index)
+	}
+	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
+	return
+}
+func (self *Conn) MirrorPrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
+	data := common.Item{
+		Key:   key,
+		Index: index,
+	}
+	result := &common.Item{}
+	_, _, successor := self.ring.Remotes(key)
+	if err := successor.Call("DHash.MirrorPrevIndex", data, result); err != nil {
+		self.removeNode(*successor)
+		return self.MirrorNextIndex(key, index)
+	}
+	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
 	return
 }
 func (self *Conn) NextIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
@@ -422,6 +494,70 @@ func (self *Conn) PrevIndex(key []byte, index int) (foundKey, foundValue []byte,
 		return self.NextIndex(key, index)
 	}
 	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
+	return
+}
+func (self *Conn) MirrorReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
+	r := common.Range{
+		Key:      key,
+		MinIndex: *min,
+		MaxIndex: *max,
+		MinInc:   min != nil,
+		MaxInc:   max != nil,
+	}
+	result = self.mergeRecent("DHash.MirrorReverseSliceIndex", r, false)
+	return
+}
+func (self *Conn) MirrorSliceIndex(key []byte, min, max *int) (result []common.Item) {
+	r := common.Range{
+		Key:      key,
+		MinIndex: *min,
+		MaxIndex: *max,
+		MinInc:   min != nil,
+		MaxInc:   max != nil,
+	}
+	result = self.mergeRecent("DHash.MirrorSliceIndex", r, true)
+	return
+}
+func (self *Conn) MirrorReverseSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
+	r := common.Range{
+		Key:    key,
+		Min:    min,
+		Max:    max,
+		MinInc: mininc,
+		MaxInc: maxinc,
+	}
+	result = self.mergeRecent("DHash.MirrorReverseSlice", r, false)
+	return
+}
+func (self *Conn) MirrorSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
+	r := common.Range{
+		Key:    key,
+		Min:    min,
+		Max:    max,
+		MinInc: mininc,
+		MaxInc: maxinc,
+	}
+	result = self.mergeRecent("DHash.MirrorSlice", r, true)
+	return
+}
+func (self *Conn) MirrorSliceLen(key, min []byte, mininc bool, maxRes int) (result []common.Item) {
+	r := common.Range{
+		Key:    key,
+		Min:    min,
+		MinInc: mininc,
+		Len:    maxRes,
+	}
+	result = self.mergeRecent("DHash.MirrorSliceLen", r, true)
+	return
+}
+func (self *Conn) MirrorReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (result []common.Item) {
+	r := common.Range{
+		Key:    key,
+		Max:    max,
+		MaxInc: maxinc,
+		Len:    maxRes,
+	}
+	result = self.mergeRecent("DHash.MirrorReverseSliceLen", r, true)
 	return
 }
 func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
@@ -488,6 +624,24 @@ func (self *Conn) ReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (res
 	result = self.mergeRecent("DHash.ReverseSliceLen", r, true)
 	return
 }
+func (self *Conn) SubMirrorPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+	}
+	result := self.findRecent("DHash.SubMirrorPrev", data)
+	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
+	return
+}
+func (self *Conn) SubMirrorNext(key, subKey []byte) (nextKey, nextValue []byte, existed bool) {
+	data := common.Item{
+		Key:    key,
+		SubKey: subKey,
+	}
+	result := self.findRecent("DHash.SubMirrorNext", data)
+	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
+	return
+}
 func (self *Conn) SubPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -504,6 +658,22 @@ func (self *Conn) SubNext(key, subKey []byte) (nextKey, nextValue []byte, existe
 	}
 	result := self.findRecent("DHash.SubNext", data)
 	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
+	return
+}
+func (self *Conn) MirrorLast(key []byte) (lastKey, lastValue []byte, existed bool) {
+	data := common.Item{
+		Key: key,
+	}
+	result := self.findRecent("DHash.MirrorLast", data)
+	lastKey, lastValue, existed = result.Key, result.Value, result.Exists
+	return
+}
+func (self *Conn) MirrorFirst(key []byte) (firstKey, firstValue []byte, existed bool) {
+	data := common.Item{
+		Key: key,
+	}
+	result := self.findRecent("DHash.MirrorFirst", data)
+	firstKey, firstValue, existed = result.Key, result.Value, result.Exists
 	return
 }
 func (self *Conn) Last(key []byte) (lastKey, lastValue []byte, existed bool) {

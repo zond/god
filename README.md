@@ -5,11 +5,6 @@ A Go database
 
 # TODO
 
-* Add a mirror tree for all trees
- * Let all Puts and Deletes affect the mirror if the proper argument is set
- * Put value|key => key in the mirror tree
- * Add functions using the mirror tree to find ranges or matches to the value
- * Add DHash API endpoints for all this
 * Client API
  * Inter/Union/Diff
   * Automated tests
