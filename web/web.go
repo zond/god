@@ -4,14 +4,16 @@ import (
 	"../templates"
 	"fmt"
 	"github.com/gorilla/mux"
+	htmlTemplate "html/template"
 	"net/http"
+	textTemplate "text/template"
 )
 
 type baseData struct {
 	Timestamp int64
 }
 
-func getBaseData(w http.ResponseWrite, r *http.Request) baseData {
+func getBaseData(w http.ResponseWriter, r *http.Request) baseData {
 	return baseData{
 		Timestamp: templates.Timestamp,
 	}
@@ -21,15 +23,20 @@ func (self baseData) T() string {
 }
 
 func allCss(w http.ResponseWriter, r *http.Request) {
+	data := getBaseData(w, r)
 	w.Header().Set("Content-Type", "text/css; charset=UTF-8")
-	renderText(w, r, templates.CSS, "bootstrap.min.css", nil)
+	renderText(w, r, templates.CSS, "bootstrap.min.css", data)
+	renderText(w, r, templates.CSS, "common.css", data)
 }
 
 func allJs(w http.ResponseWriter, r *http.Request) {
+	data := getBaseData(w, r)
 	w.Header().Set("Content-Type", "application/javascript; charset=UTF-8")
-	renderText(w, r, templates.JS, "underscore-min.js", nil)
-	renderText(w, r, templates.JS, "jquery-1.8.3.min.js", nil)
-	renderText(w, r, templates.JS, "bootstrap.min.js", nil)
+	renderText(w, r, templates.JS, "underscore-min.js", data)
+	renderText(w, r, templates.JS, "jquery-1.8.3.min.js", data)
+	renderText(w, r, templates.JS, "bootstrap.min.js", data)
+	renderText(w, r, templates.JS, "jcanvas.min.js", data)
+	renderText(w, r, templates.JS, "god.js", data)
 }
 
 func renderHtml(w http.ResponseWriter, r *http.Request, templates *htmlTemplate.Template, template string, data interface{}) {
@@ -46,7 +53,7 @@ func renderText(w http.ResponseWriter, r *http.Request, templates *textTemplate.
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-	renderHtml(w, r, templates.HTML, "index.html", nil)
+	renderHtml(w, r, templates.HTML, "index.html", getBaseData(w, r))
 }
 
 func Route(router *mux.Router) {

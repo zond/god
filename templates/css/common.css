@@ -1,0 +1,9 @@
+#chord_container {
+	width: 100%;
+	text-align: center;
+}
+#chord {
+	margin: auto;
+	width: 800px;
+	height: 800px;
+}
