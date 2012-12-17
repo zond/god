@@ -5,9 +5,8 @@ A Go database
 
 # TODO
 
-* jsonrpc API
- * Functionality
-	* Set up the right x domain headers
+* Write tests for a gazillion rpc requests
+* Write tests for a gazillion json rpc requests
 * Web interface
  * Functionality
   * Diagnose and understand cluster from web interface
