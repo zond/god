@@ -106,6 +106,7 @@ var actions = map[*actionSpec]action{
 	newActionSpec("sliceLen \\S+ \\S+ \\d+"):                sliceLen,
 	newActionSpec("reverseSliceLen \\S+ \\S+ \\d+"):         reverseSliceLen,
 	newActionSpec("setOp .+"):                               setOp,
+	newActionSpec("dumpSetOp \\S+ .+"):                      dumpSetOp,
 	newActionSpec("put \\S+ \\S+"):                          put,
 	newActionSpec("dump"):                                   dump,
 	newActionSpec("subDump \\S+"):                           subDump,
@@ -265,6 +266,17 @@ func setOp(conn *client.Conn, args []string) {
 		fmt.Println(err)
 	} else {
 		for _, res := range conn.SetExpression(setop.SetExpression{Op: op}) {
+			printSetOpRes(res)
+		}
+	}
+}
+
+func dumpSetOp(conn *client.Conn, args []string) {
+	op, err := setop.NewSetOpParser(args[2]).Parse()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for _, res := range conn.SetExpression(setop.SetExpression{Dest: []byte(args[1]), Op: op}) {
 			printSetOpRes(res)
 		}
 	}

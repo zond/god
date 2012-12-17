@@ -475,7 +475,7 @@ func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpRe
 			data.Value = res.Values[0]
 			data.TTL = self.node.Redundancy()
 			data.Timestamp = self.timer.ContinuousTime()
-			self.put(data)
+			self.subPut(data)
 		}
 		return (expr.Len == 0 || len(*items) < expr.Len) && (expr.Max == nil || bytes.Compare(res.Key, expr.Max) < lt)
 	})

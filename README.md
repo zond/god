@@ -5,8 +5,6 @@ A Go database
 
 # TODO
 
-* Store results of setops
- * Test it
 * jsonrpc API
  * Functionality
   * Export the DHash.[METHODNAME] over jsonrpc as well as gob-rpc
