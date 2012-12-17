@@ -173,3 +173,13 @@ func (self *dhashServer) SubAddConfiguration(c common.ConfItem, x *int) error {
 	(*Node)(self).SubAddConfiguration(c)
 	return nil
 }
+func (self *dhashServer) Configuration(x int, result *common.Conf) error {
+	*result = common.Conf{}
+	(*result).Data, (*result).Timestamp = (*Node)(self).tree.Configuration()
+	return nil
+}
+func (self *dhashServer) SubConfiguration(key []byte, result *common.Conf) error {
+	*result = common.Conf{TreeKey: key}
+	(*result).Data, (*result).Timestamp = (*Node)(self).tree.SubConfiguration(key)
+	return nil
+}

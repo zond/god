@@ -9,7 +9,7 @@ type remoteHashTree common.Remote
 
 func (self remoteHashTree) Configuration() (conf map[string]string, timestamp int64) {
 	var result common.Conf
-	if err := common.Remote(self).Call("HashTree.Configuration", 0, &result); err != nil {
+	if err := common.Remote(self).Call("DHash.Configuration", 0, &result); err != nil {
 		conf = make(map[string]string)
 	} else {
 		conf, timestamp = result.Data, result.Timestamp
@@ -18,7 +18,7 @@ func (self remoteHashTree) Configuration() (conf map[string]string, timestamp in
 }
 func (self remoteHashTree) SubConfiguration(key []byte) (conf map[string]string, timestamp int64) {
 	var result common.Conf
-	if err := common.Remote(self).Call("HashTree.SubConfiguration", key, &result); err != nil {
+	if err := common.Remote(self).Call("DHash.SubConfiguration", key, &result); err != nil {
 		conf = make(map[string]string)
 	} else {
 		conf, timestamp = result.Data, result.Timestamp

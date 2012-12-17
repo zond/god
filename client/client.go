@@ -793,7 +793,7 @@ func (self *Conn) SetExpression(expr setop.SetExpression) (result []setop.SetOpR
 func (self *Conn) Configuration() (conf map[string]string) {
 	var result common.Conf
 	_, _, successor := self.ring.Remotes(nil)
-	if err := successor.Call("HashTree.Configuration", 0, &result); err != nil {
+	if err := successor.Call("DHash.Configuration", 0, &result); err != nil {
 		self.removeNode(*successor)
 		return self.Configuration()
 	}
@@ -802,7 +802,7 @@ func (self *Conn) Configuration() (conf map[string]string) {
 func (self *Conn) SubConfiguration(key []byte) (conf map[string]string) {
 	var result common.Conf
 	_, _, successor := self.ring.Remotes(nil)
-	if err := successor.Call("HashTree.SubConfiguration", key, &result); err != nil {
+	if err := successor.Call("DHash.SubConfiguration", key, &result); err != nil {
 		self.removeNode(*successor)
 		return self.Configuration()
 	}

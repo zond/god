@@ -487,3 +487,21 @@ func (self *Node) AddConfiguration(c common.ConfItem) {
 func (self *Node) SubAddConfiguration(c common.ConfItem) {
 	self.tree.SubAddConfiguration(c.TreeKey, c.Key, c.Value)
 }
+func (self *Node) Configuration(x int, result *common.Conf) error {
+	*result = common.Conf{}
+	(*result).Data, (*result).Timestamp = self.tree.Configuration()
+	return nil
+}
+func (self *Node) SubConfiguration(key []byte, result *common.Conf) error {
+	*result = common.Conf{TreeKey: key}
+	(*result).Data, (*result).Timestamp = self.tree.SubConfiguration(key)
+	return nil
+}
+func (self *Node) Configure(conf common.Conf, x *int) error {
+	self.tree.Configure(conf.Data, conf.Timestamp)
+	return nil
+}
+func (self *Node) SubConfigure(conf common.Conf, x *int) error {
+	self.tree.SubConfigure(conf.TreeKey, conf.Data, conf.Timestamp)
+	return nil
+}
