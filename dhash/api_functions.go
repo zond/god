@@ -497,11 +497,3 @@ func (self *Node) SubConfiguration(key []byte, result *common.Conf) error {
 	(*result).Data, (*result).Timestamp = self.tree.SubConfiguration(key)
 	return nil
 }
-func (self *Node) Configure(conf common.Conf, x *int) error {
-	self.tree.Configure(conf.Data, conf.Timestamp)
-	return nil
-}
-func (self *Node) SubConfigure(conf common.Conf, x *int) error {
-	self.tree.SubConfigure(conf.TreeKey, conf.Data, conf.Timestamp)
-	return nil
-}

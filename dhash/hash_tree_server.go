@@ -1,6 +1,7 @@
 package dhash
 
 import (
+	"../common"
 	"../radix"
 	"sync/atomic"
 	"time"
@@ -17,6 +18,14 @@ type HashTreeItem struct {
 
 type hashTreeServer Node
 
+func (self *hashTreeServer) Configure(conf common.Conf, x *int) error {
+	(*Node)(self).tree.Configure(conf.Data, conf.Timestamp)
+	return nil
+}
+func (self *hashTreeServer) SubConfigure(conf common.Conf, x *int) error {
+	(*Node)(self).tree.SubConfigure(conf.TreeKey, conf.Data, conf.Timestamp)
+	return nil
+}
 func (self *hashTreeServer) Hash(x int, result *[]byte) error {
 	*result = (*Node)(self).tree.Hash()
 	return nil
