@@ -76,7 +76,7 @@ func ParseSetOpMerge(s string) (result SetOpMerge, err error) {
 	case "BigIntXor":
 		result = BigIntXor
 	default:
-		err = fmt.Errorf("Unknown SetOpType %v", s)
+		err = fmt.Errorf("Unknown SetOpType %v. Legal values: Append, ConCat, IntegerSum, IntegerSub, IntegerDiv, IntegerMul, FloatSum, FloatSub, FloatDiv, FloatMul, BigIntAdd, BigIntAnd, BigIntAndNot, BigIntDiv, BigIntMod, BigIntMul, BigIntOr, BigIntRem, BigIntSub, BigIntXor.", s)
 	}
 	return
 }

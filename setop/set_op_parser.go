@@ -36,7 +36,7 @@ func (self *SetOpParser) Parse() (result *SetOp, err error) {
 		return
 	}
 	if self.pos < len([]byte(self.in)) {
-		err = fmt.Errorf("Unexpected characters at %v in %v", self.pos, self.in)
+		err = fmt.Errorf("Unexpected characters at %v in %v.", self.pos, self.in)
 	}
 	return
 }
@@ -46,7 +46,7 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 	result = &SetOp{}
 	for state != finished {
 		if self.pos >= len(self.in) {
-			err = fmt.Errorf("Unexpected EOF at %v in %v", self.pos, self.in)
+			err = fmt.Errorf("Unexpected EOF at %v in %v.", self.pos, self.in)
 			return
 		}
 		switch state {
@@ -56,7 +56,7 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 				state = name
 			case ' ':
 			default:
-				err = fmt.Errorf("Expected ( at %v in %v", self.pos, self.in)
+				err = fmt.Errorf("Expected ( at %v in %v.", self.pos, self.in)
 				return
 			}
 		case name:
@@ -73,7 +73,7 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 					case "D":
 						result.Type = Difference
 					default:
-						err = fmt.Errorf("Unknown operation type %c at %v in %v", self.in[self.pos], self.pos, self.in)
+						err = fmt.Errorf("Unknown operation type %c at %v in %v. Legal values: U,I,X,D.", self.in[self.pos], self.pos, self.in)
 						return
 					}
 					if match[3] != "" {
@@ -84,11 +84,11 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 					state = params
 					self.nextName = new(bytes.Buffer)
 				} else {
-					err = fmt.Errorf("Unknown operation type %c at %v in %v", self.in[self.pos], self.pos, self.in)
+					err = fmt.Errorf("Unknown operation type %c at %v in %v. Legal values: U,I,X,D.", self.in[self.pos], self.pos, self.in)
 					return
 				}
 			case ')':
-				err = fmt.Errorf("Empty operation not allowed at %v in %v", self.pos, self.in)
+				err = fmt.Errorf("Empty operation not allowed at %v in %v.", self.pos, self.in)
 				return
 			default:
 				self.nextName.WriteByte(self.in[self.pos])
@@ -98,7 +98,7 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 			case ' ':
 			case ')':
 				if len(result.Sources) == 0 {
-					err = fmt.Errorf("Operation without parameters not allowed at %v in %v", self.pos, self.in)
+					err = fmt.Errorf("Operation without parameters not allowed at %v in %v.", self.pos, self.in)
 					return
 				}
 				if self.nextName.Len() > 0 {
@@ -132,7 +132,7 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
 				}
 				state = finished
 			case '(':
-				err = fmt.Errorf("Unexpected ( at %v in %v", self.pos, self.in)
+				err = fmt.Errorf("Unexpected ( at %v in %v.", self.pos, self.in)
 				return
 			default:
 				self.nextName.WriteByte(self.in[self.pos])

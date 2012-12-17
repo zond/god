@@ -5,8 +5,6 @@ A Go database
 
 # TODO
 
-* Mirror trees
- * Check sync?!??!
 * Store results of setops
  * Test it
 * jsonrpc API

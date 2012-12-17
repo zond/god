@@ -340,6 +340,7 @@ func (self *node) del(prefix, segment []Nibble, use int, now int64) (result *nod
 			}
 			return
 		} else if self.segment[i] != segment[i] {
+			result, oldBytes, oldTree, timestamp, existed = self, nil, nil, 0, 0
 			return
 		}
 	}
