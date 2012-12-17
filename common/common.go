@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"runtime"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -16,6 +17,14 @@ const (
 	Redundancy   = 3
 	PingInterval = time.Second
 )
+
+func MustParseFloat64(s string) (result float64) {
+	var err error
+	if result, err = strconv.ParseFloat(s, 64); err != nil {
+		panic(err)
+	}
+	return
+}
 
 func EncodeBigInt(i *big.Int) []byte {
 	return i.Bytes()

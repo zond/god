@@ -10,12 +10,13 @@ import (
 
 var ip = flag.String("ip", "127.0.0.1", "IP address to listen to")
 var port = flag.Int("port", 9191, "Port to listen to")
+var httpPort = flag.Int("httpPort", 8091, "Port to listen to for HTTP requests")
 var joinIp = flag.String("joinIp", "", "IP address to join")
 var joinPort = flag.Int("joinPort", 9191, "Port to join")
 
 func main() {
 	flag.Parse()
-	s := dhash.NewNode(fmt.Sprintf("%v:%v", *ip, *port))
+	s := dhash.NewNode(fmt.Sprintf("%v:%v", *ip, *port), *httpPort)
 	s.AddChangeListener(func(ring *common.Ring) {
 		fmt.Println(s.Describe())
 	})

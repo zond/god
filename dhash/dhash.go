@@ -6,8 +6,13 @@ import (
 	"../murmur"
 	"../radix"
 	"../timenet"
+	"../web"
 	"bytes"
 	"fmt"
+	"github.com/gorilla/mux"
+	"net"
+	"net/http"
+	"net/rpc"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,13 +46,15 @@ type Node struct {
 	node             *discord.Node
 	timer            *timenet.Timer
 	tree             *radix.Tree
+	httpPort         int
 }
 
-func NewNode(addr string) (result *Node) {
+func NewNode(addr string, httpPort int) (result *Node) {
 	result = &Node{
-		node:  discord.NewNode(addr),
-		lock:  new(sync.RWMutex),
-		state: created,
+		node:     discord.NewNode(addr),
+		lock:     new(sync.RWMutex),
+		state:    created,
+		httpPort: httpPort,
 	}
 	result.AddChangeListener(func(r *common.Ring) {
 		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
@@ -80,6 +87,11 @@ func (self *Node) hasState(s int32) bool {
 func (self *Node) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
+func (self *Node) getHTTPPort() int {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	return self.httpPort
+}
 func (self *Node) GetAddr() string {
 	return self.node.GetAddr()
 }
@@ -103,6 +115,19 @@ func (self *Node) Start() (err error) {
 	go self.syncPeriodically()
 	go self.cleanPeriodically()
 	go self.migratePeriodically()
+
+	var nodeAddr *net.TCPAddr
+	if nodeAddr, err = net.ResolveTCPAddr("tcp", self.node.GetAddr()); err != nil {
+		return
+	}
+	rpcServer := rpc.NewServer()
+	rpcServer.RegisterName("DHash", (*dhashServer)(self))
+	jsonServer := jsonRpcServer{server: rpcServer}
+	router := mux.NewRouter()
+	router.Methods("POST").Path("/rpc/{method}").MatcherFunc(wantsJSON).Handler(jsonServer)
+	router.HandleFunc("/", web.Index)
+	http.Handle("/", router)
+	go http.ListenAndServe(fmt.Sprintf("%v:%v", nodeAddr.IP, self.getHTTPPort()), router)
 	return
 }
 func (self *Node) sync() {
