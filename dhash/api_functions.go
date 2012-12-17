@@ -33,16 +33,6 @@ func (self *Node) DescribeTree() string {
 func (self *Node) client() *client.Conn {
 	return client.NewConnRing(common.NewRingNodes(self.node.Nodes()))
 }
-func (self *Node) SubFind(data common.Item, result *common.Item) error {
-	*result = data
-	result.Value, result.Exists = self.client().Get(data.Key)
-	return nil
-}
-func (self *Node) Find(data common.Item, result *common.Item) error {
-	*result = data
-	result.Value, result.Exists = self.client().Get(data.Key)
-	return nil
-}
 func (self *Node) Get(data common.Item, result *common.Item) error {
 	*result = data
 	result.Value, result.Timestamp, result.Exists = self.tree.Get(data.Key)
