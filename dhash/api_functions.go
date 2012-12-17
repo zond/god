@@ -298,47 +298,22 @@ func (self *Node) SubGet(data common.Item, result *common.Item) error {
 	return nil
 }
 func (self *Node) SubClear(data common.Item) error {
-	successor := self.node.GetSuccessorFor(data.Key)
-	if successor.Addr != self.node.GetAddr() {
-		var x int
-		return successor.Call("DHash.SubClear", data, &x)
-	}
 	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.subClear(data)
 }
 func (self *Node) SubDel(data common.Item) error {
-	successor := self.node.GetSuccessorFor(data.Key)
-	if successor.Addr != self.node.GetAddr() {
-		var x int
-		return successor.Call("DHash.SubDel", data, &x)
-	}
 	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.subDel(data)
 }
 func (self *Node) SubPut(data common.Item) error {
-	successor := self.node.GetSuccessorFor(data.Key)
-	if successor.Addr != self.node.GetAddr() {
-		var x int
-		return successor.Call("DHash.SubPut", data, &x)
-	}
 	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.subPut(data)
 }
 func (self *Node) Del(data common.Item) error {
-	successor := self.node.GetSuccessorFor(data.Key)
-	if successor.Addr != self.node.GetAddr() {
-		var x int
-		return successor.Call("DHash.Del", data, &x)
-	}
 	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.del(data)
 }
 func (self *Node) Put(data common.Item) error {
-	successor := self.node.GetSuccessorFor(data.Key)
-	if successor.Addr != self.node.GetAddr() {
-		var x int
-		return successor.Call("DHash.Put", data, &x)
-	}
 	data.TTL, data.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
 	return self.put(data)
 }
