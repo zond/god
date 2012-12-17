@@ -7,7 +7,7 @@ A Go database
 
 * jsonrpc API
  * Functionality
-  * Export the json API over a different type that redirects to the right node!
+	* Set up the right x domain headers
 * Web interface
  * Functionality
   * Diagnose and understand cluster from web interface

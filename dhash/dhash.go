@@ -121,7 +121,7 @@ func (self *Node) Start() (err error) {
 		return
 	}
 	rpcServer := rpc.NewServer()
-	rpcServer.RegisterName("DHash", (*dhashServer)(self))
+	rpcServer.RegisterName("DHash", (*jsonDhashServer)(self))
 	jsonServer := jsonRpcServer{server: rpcServer}
 	router := mux.NewRouter()
 	router.Methods("POST").Path("/rpc/{method}").MatcherFunc(wantsJSON).Handler(jsonServer)
