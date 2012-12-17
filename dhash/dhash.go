@@ -125,7 +125,7 @@ func (self *Node) Start() (err error) {
 	jsonServer := jsonRpcServer{server: rpcServer}
 	router := mux.NewRouter()
 	router.Methods("POST").Path("/rpc/{method}").MatcherFunc(wantsJSON).Handler(jsonServer)
-	router.HandleFunc("/", web.Index)
+	web.Route(router)
 	http.Handle("/", router)
 	go http.ListenAndServe(fmt.Sprintf("%v:%v", nodeAddr.IP, self.getHTTPPort()), router)
 	return

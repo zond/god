@@ -32,3 +32,5 @@ cli/cli
 persistence/test*
 radix/benchmarklogs
 127.0.0.1:*
+templates/*.go
+
