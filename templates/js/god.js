@@ -5,7 +5,7 @@ Node = function(g, data) {
 	that.gob_addr = data.Addr;
 	var m = /^(.*):(.*)$/.exec(that.gob_addr);
 	that.json_addr = m[1] + ":" + (1 + parseInt(m[2]));
-	that.angle = Big(3 * Math.PI / 2).minus($.base64.decode2big(data.Pos).div(g.maxPos).times(Math.PI * 2)).toFixed();
+	that.angle = Big(3 * Math.PI / 2).plus($.base64.decode2big(data.Pos).div(g.maxPos).times(Math.PI * 2)).toFixed();
 	that.hexpos = "";
 	_.each($.base64.decode2b(data.Pos), function(b) {
 	  var thishex = b.toString(16);

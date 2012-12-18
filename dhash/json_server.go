@@ -197,10 +197,13 @@ func (self *Node) startJson() {
 			}
 		}
 	}, router)
-	http.Handle("/", router)
+	mux := http.NewServeMux()
+	mux.Handle("/", router)
 	listener, err := net.Listen("tcp", fmt.Sprintf("%v:%v", nodeAddr.IP, nodeAddr.Port+1))
 	if err != nil {
 		panic(err)
 	}
-	go new(http.Server).Serve(listener)
+	go (&http.Server{
+		Handler: mux,
+	}).Serve(listener)
 }

@@ -34,7 +34,7 @@ func countHaving(t *testing.T, dhashes []*Node, key, value []byte) (result int) 
 func testStartup(t *testing.T, n, port int) (dhashes []*Node) {
 	dhashes = make([]*Node, n)
 	for i := 0; i < n; i++ {
-		dhashes[i] = NewNode(fmt.Sprintf("127.0.0.1:%v", port+i))
+		dhashes[i] = NewNode(fmt.Sprintf("127.0.0.1:%v", port+i*2))
 		dhashes[i].MustStart()
 	}
 	for i := 1; i < n; i++ {
@@ -51,9 +51,9 @@ func testStartup(t *testing.T, n, port int) (dhashes []*Node) {
 }
 
 func testSync(t *testing.T, dhashes []*Node) {
-	dhashes[0].tree.Put([]byte{0}, []byte{0}, 1)
+	dhashes[0].tree.Put([]byte{3}, []byte{0}, 1)
 	common.AssertWithin(t, func() (string, bool) {
-		having := countHaving(t, dhashes, []byte{0}, []byte{0})
+		having := countHaving(t, dhashes, []byte{3}, []byte{0})
 		return fmt.Sprint(having), having == common.Redundancy
 	}, time.Second*10)
 }
@@ -114,19 +114,6 @@ func testMigrate(t *testing.T, dhashes []*Node) {
 	}, time.Second*100)
 }
 
-func testFind(t *testing.T, dhashes []*Node) {
-	dhashes[0].tree.Put([]byte{2}, []byte{2}, 1)
-	common.AssertWithin(t, func() (string, bool) {
-		having := make(map[bool]bool)
-		for _, n := range dhashes {
-			result := common.Item{}
-			common.Switch.Call(n.node.GetAddr(), "DHash.Find", common.Item{Key: []byte{2}}, &result)
-			having[result.Exists] = true
-		}
-		return fmt.Sprint(having), len(having) == 1 && having[true] == true
-	}, time.Second*10)
-}
-
 func stopServers(servers []*Node) {
 	for _, d := range servers {
 		d.Stop()
@@ -139,6 +126,5 @@ func TestDHash(t *testing.T) {
 	testSync(t, dhashes)
 	testClean(t, dhashes)
 	testPut(t, dhashes)
-	testFind(t, dhashes)
 	testMigrate(t, dhashes)
 }
