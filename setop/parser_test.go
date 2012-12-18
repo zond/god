@@ -6,7 +6,7 @@ import (
 )
 
 func TestSetOpParser(t *testing.T) {
-	op, err := NewSetOpParser("(U (I ccc aa (D ffff gg)) (I c23 b_ff) (X dbla e&44))").Parse()
+	op, err := NewSetOpParser("(U (I ccc aa (D ffff gg)) (I:ConCat c23 b_ff) (X dbla e&44))").Parse()
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,7 +33,8 @@ func TestSetOpParser(t *testing.T) {
 			},
 			SetOpSource{
 				SetOp: &SetOp{
-					Type: Intersection,
+					Type:  Intersection,
+					Merge: ConCat,
 					Sources: []SetOpSource{
 						SetOpSource{Key: []byte("c23")},
 						SetOpSource{Key: []byte("b_ff")},
