@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-type RingChangeListener func(ring *Ring)
+type RingChangeListener func(ring *Ring) (keep bool)
 
 type Ring struct {
 	nodes           Remotes
@@ -82,12 +82,16 @@ func (self *Ring) SetNodes(nodes Remotes) {
 }
 func (self *Ring) sendChanges(oldHash []byte) {
 	if bytes.Compare(oldHash, self.hash()) != 0 {
-		self.lock.Unlock()
-		defer self.lock.Lock()
+		var newListeners []RingChangeListener
 		clone := NewRingNodes(self.nodes.Clone())
 		for _, listener := range self.changeListeners {
-			listener(clone)
+			self.lock.Unlock()
+			if listener(clone) {
+				newListeners = append(newListeners, listener)
+			}
+			self.lock.Lock()
 		}
+		self.changeListeners = newListeners
 	}
 }
 func (self *Ring) Nodes() Remotes {

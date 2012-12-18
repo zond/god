@@ -2,6 +2,7 @@ package web
 
 import (
 	"../templates"
+	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"github.com/gorilla/mux"
 	htmlTemplate "html/template"
@@ -36,6 +37,9 @@ func allJs(w http.ResponseWriter, r *http.Request) {
 	renderText(w, r, templates.JS, "jquery-1.8.3.min.js", data)
 	renderText(w, r, templates.JS, "bootstrap.min.js", data)
 	renderText(w, r, templates.JS, "jcanvas.min.js", data)
+	renderText(w, r, templates.JS, "jquery.websocket-0.0.1.js", data)
+	renderText(w, r, templates.JS, "big.min.js", data)
+	renderText(w, r, templates.JS, "jquery.base64.js", data)
 	renderText(w, r, templates.JS, "god.js", data)
 }
 
@@ -56,8 +60,9 @@ func index(w http.ResponseWriter, r *http.Request) {
 	renderHtml(w, r, templates.HTML, "index.html", getBaseData(w, r))
 }
 
-func Route(router *mux.Router) {
+func Route(handler websocket.Handler, router *mux.Router) {
 	router.HandleFunc("/js/{ver}/all.js", allJs)
 	router.HandleFunc("/css/{ver}/all.css", allCss)
+	router.Path("/ws").Handler(handler)
 	router.HandleFunc("/", index)
 }

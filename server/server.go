@@ -17,17 +17,21 @@ var joinPort = flag.Int("joinPort", 9191, "Port to join")
 func main() {
 	flag.Parse()
 	s := dhash.NewNode(fmt.Sprintf("%v:%v", *ip, *port), *httpPort)
-	s.AddChangeListener(func(ring *common.Ring) {
+	s.AddChangeListener(func(ring *common.Ring) bool {
 		fmt.Println(s.Describe())
+		return true
 	})
-	s.AddMigrateListener(func(dhash *dhash.Node, source, destination []byte) {
+	s.AddMigrateListener(func(dhash *dhash.Node, source, destination []byte) bool {
 		fmt.Printf("Migrated from %v to %v\n", common.HexEncode(source), common.HexEncode(destination))
+		return true
 	})
-	s.AddSyncListener(func(dhash *dhash.Node, fetched, distributed int) {
+	s.AddSyncListener(func(dhash *dhash.Node, fetched, distributed int) bool {
 		fmt.Printf("Fetched %v keys while distributing %v keys\n", fetched, distributed)
+		return true
 	})
-	s.AddCleanListener(func(dhash *dhash.Node, cleaned, redistributed int) {
+	s.AddCleanListener(func(dhash *dhash.Node, cleaned, redistributed int) bool {
 		fmt.Printf("Redistributed %v keys while cleaning %v keys\n", redistributed, cleaned)
+		return true
 	})
 	s.MustStart()
 	if *joinIp != "" {

@@ -6,21 +6,16 @@ import (
 	"../murmur"
 	"../radix"
 	"../timenet"
-	"../web"
 	"bytes"
 	"fmt"
-	"github.com/gorilla/mux"
-	"net"
-	"net/http"
-	"net/rpc"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-type SyncListener func(dhash *Node, fetched, distributed int)
-type CleanListener func(dhash *Node, cleaned, redistributed int)
-type MigrateListener func(dhash *Node, source, destination []byte)
+type SyncListener func(dhash *Node, fetched, distributed int) (keep bool)
+type CleanListener func(dhash *Node, cleaned, redistributed int) (keep bool)
+type MigrateListener func(dhash *Node, source, destination []byte) (keep bool)
 
 const (
 	syncInterval      = time.Second
@@ -56,8 +51,9 @@ func NewNode(addr string, httpPort int) (result *Node) {
 		state:    created,
 		httpPort: httpPort,
 	}
-	result.AddChangeListener(func(r *common.Ring) {
+	result.AddChangeListener(func(r *common.Ring) bool {
 		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
+		return true
 	})
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
 	result.tree = radix.NewTreeTimer(result.timer).Log(addr).Restore()
@@ -115,20 +111,23 @@ func (self *Node) Start() (err error) {
 	go self.syncPeriodically()
 	go self.cleanPeriodically()
 	go self.migratePeriodically()
-
-	var nodeAddr *net.TCPAddr
-	if nodeAddr, err = net.ResolveTCPAddr("tcp", self.node.GetAddr()); err != nil {
-		return
-	}
-	rpcServer := rpc.NewServer()
-	rpcServer.RegisterName("DHash", (*jsonDhashServer)(self))
-	jsonServer := jsonRpcServer{server: rpcServer}
-	router := mux.NewRouter()
-	router.Methods("POST").Path("/rpc/{method}").MatcherFunc(wantsJSON).Handler(jsonServer)
-	web.Route(router)
-	http.Handle("/", router)
-	go http.ListenAndServe(fmt.Sprintf("%v:%v", nodeAddr.IP, self.getHTTPPort()), router)
+	self.startJson()
 	return
+}
+func (self *Node) triggerSyncListeners(fetched, distributed int) {
+	self.lock.RLock()
+	newListeners := make([]SyncListener, 0, len(self.syncListeners))
+	for _, l := range self.syncListeners {
+		self.lock.RUnlock()
+		if l(self, fetched, distributed) {
+			newListeners = append(newListeners, l)
+		}
+		self.lock.RLock()
+	}
+	self.lock.RUnlock()
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.syncListeners = newListeners
 }
 func (self *Node) sync() {
 	fetched := 0
@@ -141,11 +140,7 @@ func (self *Node) sync() {
 		nextSuccessor = self.node.GetSuccessorForRemote(nextSuccessor)
 	}
 	if fetched != 0 || distributed != 0 {
-		self.lock.RLock()
-		defer self.lock.RUnlock()
-		for _, l := range self.syncListeners {
-			l(self, fetched, distributed)
-		}
+		self.triggerSyncListeners(fetched, distributed)
 	}
 }
 func (self *Node) syncPeriodically() {
@@ -160,6 +155,21 @@ func (self *Node) cleanPeriodically() {
 		time.Sleep(syncInterval)
 	}
 }
+func (self *Node) triggerMigrateListeners(oldPos, newPos []byte) {
+	self.lock.RLock()
+	newListeners := make([]MigrateListener, 0, len(self.migrateListeners))
+	for _, l := range self.migrateListeners {
+		self.lock.RUnlock()
+		if l(self, oldPos, newPos) {
+			newListeners = append(newListeners, l)
+		}
+		self.lock.RLock()
+	}
+	self.lock.RUnlock()
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.migrateListeners = newListeners
+}
 func (self *Node) changePosition(newPos []byte) {
 	for len(newPos) < murmur.Size {
 		newPos = append(newPos, 0)
@@ -168,11 +178,7 @@ func (self *Node) changePosition(newPos []byte) {
 	if bytes.Compare(newPos, oldPos) != 0 {
 		self.node.SetPosition(newPos)
 		atomic.StoreInt64(&self.lastMigrate, time.Now().UnixNano())
-		self.lock.RLock()
-		defer self.lock.RUnlock()
-		for _, l := range self.migrateListeners {
-			l(self, oldPos, newPos)
-		}
+		self.triggerMigrateListeners(oldPos, newPos)
 	}
 }
 func (self *Node) isLeader() bool {
@@ -245,6 +251,21 @@ func (self *Node) owners(key []byte) (owners common.Remotes, isOwner bool) {
 	}
 	return
 }
+func (self *Node) triggerCleanListeners(deleted, put int) {
+	self.lock.RLock()
+	newListeners := make([]CleanListener, 0, len(self.cleanListeners))
+	for _, l := range self.cleanListeners {
+		self.lock.RUnlock()
+		if l(self, deleted, put) {
+			newListeners = append(newListeners, l)
+		}
+		self.lock.RLock()
+	}
+	self.lock.RUnlock()
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.cleanListeners = newListeners
+}
 func (self *Node) clean() {
 	deleted := 0
 	put := 0
@@ -262,11 +283,7 @@ func (self *Node) clean() {
 			}
 		}
 		if deleted != 0 || put != 0 {
-			self.lock.RLock()
-			defer self.lock.RUnlock()
-			for _, l := range self.cleanListeners {
-				l(self, deleted, put)
-			}
+			self.triggerCleanListeners(deleted, put)
 		}
 	}
 }

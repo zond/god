@@ -2,11 +2,14 @@ package dhash
 
 import (
 	"../common"
+	"../web"
 	"bytes"
+	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
+	"net"
 	"net/http"
 	"net/rpc"
 	"reflect"
@@ -14,6 +17,11 @@ import (
 	"strconv"
 	"strings"
 )
+
+type socketMessage struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
+}
 
 var prefPattern = regexp.MustCompile("^([^\\s;]+)(;q=([\\d.]+))?$")
 
@@ -113,4 +121,82 @@ func (self jsonRpcServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		response: w,
 	}
 	self.server.ServeRequest(context)
+}
+
+func (self *Node) startJson() {
+	var nodeAddr *net.TCPAddr
+	var err error
+	if nodeAddr, err = net.ResolveTCPAddr("tcp", self.node.GetAddr()); err != nil {
+		return
+	}
+	rpcServer := rpc.NewServer()
+	rpcServer.RegisterName("DHash", (*jsonDhashServer)(self))
+	jsonServer := jsonRpcServer{server: rpcServer}
+	router := mux.NewRouter()
+	router.Methods("POST").Path("/rpc/{method}").MatcherFunc(wantsJSON).Handler(jsonServer)
+	web.Route(func(ws *websocket.Conn) {
+		b, err := json.Marshal(socketMessage{
+			Type: "RingChange",
+			Data: map[string]interface{}{
+				"description": self.Description(),
+				"routes":      self.node.Nodes(),
+			},
+		})
+		if err != nil {
+			panic(err)
+		}
+		if websocket.Message.Send(ws, string(b)) == nil {
+			self.AddChangeListener(func(ring *common.Ring) bool {
+				b, err := json.Marshal(socketMessage{
+					Type: "RingChange",
+					Data: map[string]interface{}{
+						"description": self.Description(),
+						"routes":      self.node.Nodes(),
+					},
+				})
+				if err != nil {
+					panic(err)
+				}
+				return websocket.Message.Send(ws, string(b)) == nil
+			})
+			self.AddMigrateListener(func(dhash *Node, source, destination []byte) bool {
+				b, err := json.Marshal(socketMessage{
+					Type: "Migration",
+					Data: [][]byte{source, destination},
+				})
+				if err != nil {
+					panic(err)
+				}
+				return websocket.Message.Send(ws, string(b)) == nil
+			})
+			self.AddSyncListener(func(dhash *Node, fetched, distributed int) bool {
+				b, err := json.Marshal(socketMessage{
+					Type: "Sync",
+					Data: []int{fetched, distributed},
+				})
+				if err != nil {
+					panic(err)
+				}
+				return websocket.Message.Send(ws, string(b)) == nil
+			})
+			self.AddCleanListener(func(dhash *Node, cleaned, redistributed int) bool {
+				b, err := json.Marshal(socketMessage{
+					Type: "Clean",
+					Data: []int{cleaned, redistributed},
+				})
+				if err != nil {
+					panic(err)
+				}
+				return websocket.Message.Send(ws, string(b)) == nil
+			})
+			var mess string
+			for {
+				if err = websocket.Message.Receive(ws, &mess); err != nil {
+					break
+				}
+			}
+		}
+	}, router)
+	http.Handle("/", router)
+	go http.ListenAndServe(fmt.Sprintf("%v:%v", nodeAddr.IP, self.getHTTPPort()), router)
 }
