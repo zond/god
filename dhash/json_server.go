@@ -198,5 +198,9 @@ func (self *Node) startJson() {
 		}
 	}, router)
 	http.Handle("/", router)
-	go http.ListenAndServe(fmt.Sprintf("%v:%v", nodeAddr.IP, self.getHTTPPort()), router)
+	listener, err := net.Listen("tcp", fmt.Sprintf("%v:%v", nodeAddr.IP, nodeAddr.Port+1))
+	if err != nil {
+		panic(err)
+	}
+	go new(http.Server).Serve(listener)
 }

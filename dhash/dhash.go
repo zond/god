@@ -41,15 +41,13 @@ type Node struct {
 	node             *discord.Node
 	timer            *timenet.Timer
 	tree             *radix.Tree
-	httpPort         int
 }
 
-func NewNode(addr string, httpPort int) (result *Node) {
+func NewNode(addr string) (result *Node) {
 	result = &Node{
-		node:     discord.NewNode(addr),
-		lock:     new(sync.RWMutex),
-		state:    created,
-		httpPort: httpPort,
+		node:  discord.NewNode(addr),
+		lock:  new(sync.RWMutex),
+		state: created,
 	}
 	result.AddChangeListener(func(r *common.Ring) bool {
 		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
@@ -82,11 +80,6 @@ func (self *Node) hasState(s int32) bool {
 }
 func (self *Node) changeState(old, neu int32) bool {
 	return atomic.CompareAndSwapInt32(&self.state, old, neu)
-}
-func (self *Node) getHTTPPort() int {
-	self.lock.RLock()
-	defer self.lock.RUnlock()
-	return self.httpPort
 }
 func (self *Node) GetAddr() string {
 	return self.node.GetAddr()
