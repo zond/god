@@ -29,37 +29,44 @@ God = function() {
 	that.cy = 1000;
 	that.r = 800;
   that.drawChord = function() {
-	  $("#chord").clearCanvas().drawArc({
-			layer: true,
-		  strokeStyle: "black",
-			x: that.cx,
-			y: that.cy,
-			radius: that.r,
-		}).drawLine({
-			layer: true,
-		  strokeStyle: "black",
-		  x1: that.cx, y1: 180,
-			x2: that.cx, y2: 220,
+		var stage = new createjs.Stage(document.getElementById("chord"));
+		stage.enableMouseOver();
+
+		var circle = new createjs.Shape();
+		circle.graphics.beginStroke(createjs.Graphics.getRGB(0,0,0)).drawCircle(that.cx, that.cy, that.r);
+		stage.addChild(circle);
+
+    var dash = new createjs.Shape();
+		dash.graphics.beginStroke(createjs.Graphics.getRGB(0,0,0)).moveTo(that.cx, that.cy - that.r - 30).lineTo(that.cx, that.cy - that.r + 30);
+		stage.addChild(dash);
+
+    _.each(that.routes, function(route) {
+		  var click = function() {
+				window.location = "http://" + route.json_addr;
+			};
+			var mouseover = function() {
+				$("#chord").css({cursor: "pointer"});
+			};
+			var mouseout = function() {
+				$("#chord").css({cursor: "default"}); 
+			};
+		  var spot = new createjs.Shape();
+			spot.graphics.beginStroke(createjs.Graphics.getRGB(0,0,0)).beginFill(createjs.Graphics.getRGB(0,0,0)).drawCircle(route.x, route.y, 10);
+			spot.onClick = click;
+			spot.onMouseOver = mouseover;
+			spot.onMouseOut = mouseout;
+			stage.addChild(spot);
+			var label = new createjs.Text(route.hexpos + "@" + route.gob_addr, "bold 25px Courier");
+			label.onClick = click;
+			label.onMouseOver = mouseover;
+			label.onMouseOut = mouseout;
+			label.x = route.x + 30;
+			label.y = route.y - 10;
+			stage.addChild(label);
 		});
-		_.each(that.routes, function(route) {
-			$("#chord").drawArc({
-				layer: true,
-				fillStyle: "black",
-				x: route.x,
-				y: route.y,
-				radius: 10,
-			}).drawText({
-				layer: true,
-				scale: 1.3,
-				name: route.gob_addr,
-				strokeStyle: "black",
-				fillStyle: "black",
-				x: route.x + 100,
-				y: route.y - 10,
-				fromCenter: false,
-				text: route.hexpos + "@" + route.gob_addr,
-			});
-		});
+
+		stage.update();
+
 		if (that.node != null) {
 			$("#node_json_addr").text(that.node.json_addr);
 			$("#node_gob_addr").text(that.node.gob_addr);

@@ -36,7 +36,7 @@ func allJs(w http.ResponseWriter, r *http.Request) {
 	renderText(w, r, templates.JS, "underscore-min.js", data)
 	renderText(w, r, templates.JS, "jquery-1.8.3.min.js", data)
 	renderText(w, r, templates.JS, "bootstrap.min.js", data)
-	renderText(w, r, templates.JS, "jcanvas.min.js", data)
+	renderText(w, r, templates.JS, "easeljs-0.5.0.min.js", data)
 	renderText(w, r, templates.JS, "jquery.websocket-0.0.1.js", data)
 	renderText(w, r, templates.JS, "big.min.js", data)
 	renderText(w, r, templates.JS, "jquery.base64.js", data)
