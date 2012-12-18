@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-type SyncListener func(dhash *Node, fetched, distributed int) (keep bool)
-type CleanListener func(dhash *Node, cleaned, redistributed int) (keep bool)
+type SyncListener func(source, dest common.Remote, pulled, pushed int) (keep bool)
+type CleanListener func(source, dest common.Remote, cleaned, pushed int) (keep bool)
 type MigrateListener func(dhash *Node, source, destination []byte) (keep bool)
 
 const (
@@ -107,12 +107,12 @@ func (self *Node) Start() (err error) {
 	self.startJson()
 	return
 }
-func (self *Node) triggerSyncListeners(fetched, distributed int) {
+func (self *Node) triggerSyncListeners(source, dest common.Remote, pulled, pushed int) {
 	self.lock.RLock()
 	newListeners := make([]SyncListener, 0, len(self.syncListeners))
 	for _, l := range self.syncListeners {
 		self.lock.RUnlock()
-		if l(self, fetched, distributed) {
+		if l(source, dest, pulled, pushed) {
 			newListeners = append(newListeners, l)
 		}
 		self.lock.RLock()
@@ -123,17 +123,18 @@ func (self *Node) triggerSyncListeners(fetched, distributed int) {
 	self.syncListeners = newListeners
 }
 func (self *Node) sync() {
-	fetched := 0
-	distributed := 0
+	var pulled int
+	var pushed int
+	selfRemote := self.node.Remote()
 	nextSuccessor := self.node.GetSuccessor()
 	for i := 0; i < self.node.Redundancy()-1; i++ {
 		myPos := self.node.GetPosition()
-		distributed += radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
-		fetched += radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
+		pushed = radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
+		pulled = radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
+		if pushed != 0 || pulled != 0 {
+			self.triggerSyncListeners(selfRemote, nextSuccessor, pulled, pushed)
+		}
 		nextSuccessor = self.node.GetSuccessorForRemote(nextSuccessor)
-	}
-	if fetched != 0 || distributed != 0 {
-		self.triggerSyncListeners(fetched, distributed)
 	}
 }
 func (self *Node) syncPeriodically() {
@@ -244,12 +245,12 @@ func (self *Node) owners(key []byte) (owners common.Remotes, isOwner bool) {
 	}
 	return
 }
-func (self *Node) triggerCleanListeners(deleted, put int) {
+func (self *Node) triggerCleanListeners(source, dest common.Remote, cleaned, pushed int) {
 	self.lock.RLock()
 	newListeners := make([]CleanListener, 0, len(self.cleanListeners))
 	for _, l := range self.cleanListeners {
 		self.lock.RUnlock()
-		if l(self, deleted, put) {
+		if l(source, dest, cleaned, pushed) {
 			newListeners = append(newListeners, l)
 		}
 		self.lock.RLock()
@@ -260,8 +261,9 @@ func (self *Node) triggerCleanListeners(deleted, put int) {
 	self.cleanListeners = newListeners
 }
 func (self *Node) clean() {
-	deleted := 0
-	put := 0
+	selfRemote := self.node.Remote()
+	var cleaned int
+	var pushed int
 	if nextKey, existed := self.circularNext(self.node.GetPosition()); existed {
 		if owners, isOwner := self.owners(nextKey); !isOwner {
 			var sync *radix.Sync
@@ -271,12 +273,12 @@ func (self *Node) clean() {
 					sync.Destroy()
 				}
 				sync.Run()
-				deleted += sync.DelCount()
-				put += sync.PutCount()
+				cleaned = sync.DelCount()
+				pushed = sync.PutCount()
+				if cleaned != 0 || pushed != 0 {
+					self.triggerCleanListeners(selfRemote, owner, cleaned, pushed)
+				}
 			}
-		}
-		if deleted != 0 || put != 0 {
-			self.triggerCleanListeners(deleted, put)
 		}
 	}
 }

@@ -24,12 +24,12 @@ func main() {
 		fmt.Printf("Migrated from %v to %v\n", common.HexEncode(source), common.HexEncode(destination))
 		return true
 	})
-	s.AddSyncListener(func(dhash *dhash.Node, fetched, distributed int) bool {
-		fmt.Printf("Fetched %v keys while distributing %v keys\n", fetched, distributed)
+	s.AddSyncListener(func(source, dest common.Remote, pulled, pushed int) bool {
+		fmt.Printf("%v pulled %v and pushed %v keys synchronizing with %v\n", source.Addr, dest.Addr, pulled, pushed)
 		return true
 	})
-	s.AddCleanListener(func(dhash *dhash.Node, cleaned, redistributed int) bool {
-		fmt.Printf("Redistributed %v keys while cleaning %v keys\n", redistributed, cleaned)
+	s.AddCleanListener(func(source, dest common.Remote, cleaned, pushed int) bool {
+		fmt.Printf("%v cleaned %v and pushed %v keys to %v\n", source.Addr, cleaned, pushed, dest.Addr)
 		return true
 	})
 	s.MustStart()

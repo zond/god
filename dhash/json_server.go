@@ -159,30 +159,30 @@ func (self *Node) startJson() {
 				}
 				return websocket.Message.Send(ws, string(b)) == nil
 			})
-			self.AddMigrateListener(func(dhash *Node, source, destination []byte) bool {
-				b, err := json.Marshal(socketMessage{
-					Type: "Migration",
-					Data: [][]byte{source, destination},
-				})
-				if err != nil {
-					panic(err)
-				}
-				return websocket.Message.Send(ws, string(b)) == nil
-			})
-			self.AddSyncListener(func(dhash *Node, fetched, distributed int) bool {
+			self.AddSyncListener(func(source, dest common.Remote, pulled, pushed int) bool {
 				b, err := json.Marshal(socketMessage{
 					Type: "Sync",
-					Data: []int{fetched, distributed},
+					Data: map[string]interface{}{
+						"source":      source,
+						"destination": dest,
+						"pulled":      pulled,
+						"pushed":      pushed,
+					},
 				})
 				if err != nil {
 					panic(err)
 				}
 				return websocket.Message.Send(ws, string(b)) == nil
 			})
-			self.AddCleanListener(func(dhash *Node, cleaned, redistributed int) bool {
+			self.AddCleanListener(func(source, dest common.Remote, cleaned, pushed int) bool {
 				b, err := json.Marshal(socketMessage{
 					Type: "Clean",
-					Data: []int{cleaned, redistributed},
+					Data: map[string]interface{}{
+						"source":      source,
+						"destination": dest,
+						"cleaned":     cleaned,
+						"pushed":      pushed,
+					},
 				})
 				if err != nil {
 					panic(err)

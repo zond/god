@@ -9,7 +9,7 @@ A Go database
 * Write tests for a gazillion json rpc requests
 * Web interface
  * Functionality
-  * Make listeners (clean, sync) know who we sync and cleaned with
+  * Add some graphics when they clean and sync
   * Diagnose and understand cluster from web interface
 	* See and interact with content from web interface
 * Quality

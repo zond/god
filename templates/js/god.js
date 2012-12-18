@@ -94,9 +94,6 @@ God = function() {
 					that.node = Node(that, e.data.description);
 					that.drawChord();
 				},
-				Migration: function(e) {
-					console.log(e.data);
-				},
 				Sync: function(e) {
 					console.log(e.data);
 				},
