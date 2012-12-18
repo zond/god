@@ -58,21 +58,6 @@ God = function() {
 				y: route.y - 10,
 				fromCenter: false,
 				text: route.hexpos + "@" + route.gob_addr,
-			}).drawRect({
-				layer: true,
-				strokeStyle: "blue",
-				scale: 1.4,
-        width: $("#chord").measureText(route.gob_addr).width,
-        height: $("#chord").measureText(route.gob_addr).height,
-				x: route.x + 100,
-				y: route.y - 10,
-				fromCenter: false,
-				mouseout: function() {
-				  console.log("out");
-				},
-				mouseover: function() {
-				  console.log("in");
-				},
 			});
 		});
 		if (that.node != null) {
