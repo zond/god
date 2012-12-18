@@ -415,10 +415,6 @@ func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpRe
 			return successor.Call("DHash.SetExpression", expr, items)
 		}
 	}
-	lt := 0
-	if expr.MaxInc {
-		lt = 1
-	}
 	data := common.Item{
 		Key: expr.Dest,
 	}
@@ -432,7 +428,7 @@ func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpRe
 			result.tree = self.tree
 		}
 		return result
-	}, func(res *setop.SetOpResult) bool {
+	}, func(res *setop.SetOpResult) {
 		if expr.Dest == nil {
 			*items = append(*items, *res)
 		} else {
@@ -442,7 +438,6 @@ func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpRe
 			data.Timestamp = self.timer.ContinuousTime()
 			self.subPut(data)
 		}
-		return (expr.Len == 0 || len(*items) < expr.Len) && (expr.Max == nil || bytes.Compare(res.Key, expr.Max) < lt)
 	})
 	return
 }

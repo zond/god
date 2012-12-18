@@ -1,12 +1,13 @@
 package setop
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 )
 
 type RawSourceCreator func(b []byte) Skipper
-type SetOpResultIterator func(res *SetOpResult) bool
+type SetOpResultIterator func(res *SetOpResult)
 
 const (
 	Append = iota
@@ -187,13 +188,20 @@ func (self *SetExpression) Each(r RawSourceCreator, f SetOpResultIterator) (err 
 	skipper := createSkipper(r, self.Op)
 	min := self.Min
 	mininc := self.MinInc
+	count := 0
+	gt := -1
+	if self.MaxInc {
+		gt = 0
+	}
 	var res *SetOpResult
 	for res, err = skipper.Skip(min, mininc); res != nil && err == nil; res, err = skipper.Skip(min, mininc) {
-		min = res.Key
-		mininc = false
-		if !f(res) {
+		if (self.Len > 0 && count > self.Len) || (self.Max != nil && bytes.Compare(res.Key, self.Max) > gt) {
 			return
 		}
+		count++
+		min = res.Key
+		mininc = false
+		f(res)
 	}
 	return
 }
