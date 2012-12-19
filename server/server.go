@@ -25,7 +25,7 @@ func main() {
 		return true
 	})
 	s.AddSyncListener(func(source, dest common.Remote, pulled, pushed int) bool {
-		fmt.Printf("%v pulled %v and pushed %v keys synchronizing with %v\n", source.Addr, dest.Addr, pulled, pushed)
+		fmt.Printf("%v pulled %v and pushed %v keys synchronizing with %v\n", source.Addr, pulled, pushed, dest.Addr)
 		return true
 	})
 	s.AddCleanListener(func(source, dest common.Remote, cleaned, pushed int) bool {
