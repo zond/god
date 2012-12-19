@@ -1,8 +1,10 @@
 package setop
 
 import (
+	"../common"
 	"bytes"
 	"fmt"
+	"math/big"
 	"reflect"
 	"sort"
 	"testing"
@@ -195,6 +197,171 @@ func union(merger mergeFunc, sets ...[]tP) (result []*SetOpResult) {
 	}
 	sort.Sort(testResults(result))
 	return
+}
+
+func TestBigIntSub(t *testing.T) {
+	found := bigIntSub([][]byte{common.EncodeBigInt(big.NewInt(15)), common.EncodeBigInt(big.NewInt(1))}, [][]byte{common.EncodeBigInt(big.NewInt(2)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(8))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigIntXor(t *testing.T) {
+	found := bigIntXor([][]byte{common.EncodeBigInt(big.NewInt(15)), common.EncodeBigInt(big.NewInt(1))}, [][]byte{common.EncodeBigInt(big.NewInt(2)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(8))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigIntRem(t *testing.T) {
+	found := bigIntRem([][]byte{common.EncodeBigInt(big.NewInt(50)), common.EncodeBigInt(big.NewInt(30))}, [][]byte{common.EncodeBigInt(big.NewInt(11)), common.EncodeBigInt(big.NewInt(7))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(2))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigIntOr(t *testing.T) {
+	found := bigIntMul([][]byte{common.EncodeBigInt(big.NewInt(1)), common.EncodeBigInt(big.NewInt(2))}, [][]byte{common.EncodeBigInt(big.NewInt(3)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(24))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigIntMul(t *testing.T) {
+	found := bigIntOr([][]byte{common.EncodeBigInt(big.NewInt(1)), common.EncodeBigInt(big.NewInt(2))}, [][]byte{common.EncodeBigInt(big.NewInt(3)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(7))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigMod(t *testing.T) {
+	found := bigIntMod([][]byte{common.EncodeBigInt(big.NewInt(50)), common.EncodeBigInt(big.NewInt(30))}, [][]byte{common.EncodeBigInt(big.NewInt(7)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(2))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigIntDiv(t *testing.T) {
+	found := bigIntDiv([][]byte{common.EncodeBigInt(big.NewInt(48)), common.EncodeBigInt(big.NewInt(2))}, [][]byte{common.EncodeBigInt(big.NewInt(3)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(2))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigIntAndNot(t *testing.T) {
+	found := bigIntAndNot([][]byte{common.EncodeBigInt(big.NewInt(15)), common.EncodeBigInt(big.NewInt(1))}, [][]byte{common.EncodeBigInt(big.NewInt(2)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(8))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigIntAdd(t *testing.T) {
+	found := bigIntAdd([][]byte{common.EncodeBigInt(big.NewInt(1)), common.EncodeBigInt(big.NewInt(2))}, [][]byte{common.EncodeBigInt(big.NewInt(3)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(10))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestBigIntAnd(t *testing.T) {
+	found := bigIntAnd([][]byte{common.EncodeBigInt(big.NewInt(1)), common.EncodeBigInt(big.NewInt(2))}, [][]byte{common.EncodeBigInt(big.NewInt(3)), common.EncodeBigInt(big.NewInt(4))})
+	expected := [][]byte{common.EncodeBigInt(big.NewInt(0))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+	found = bigIntAnd([][]byte{common.EncodeBigInt(big.NewInt(1)), common.EncodeBigInt(big.NewInt(3))}, [][]byte{common.EncodeBigInt(big.NewInt(3)), common.EncodeBigInt(big.NewInt(5))})
+	expected = [][]byte{common.EncodeBigInt(big.NewInt(1))}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeBigInt(found[0])), fmt.Sprint(common.DecodeBigInt(expected[0])))
+	}
+}
+
+func TestFloatMul(t *testing.T) {
+	found := floatMul([][]byte{common.EncodeFloat64(1), common.EncodeFloat64(2)}, [][]byte{common.EncodeFloat64(3), common.EncodeFloat64(4)})
+	expected := [][]byte{common.EncodeFloat64(24)}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeFloat64(found[0])), fmt.Sprint(common.DecodeFloat64(expected[0])))
+	}
+}
+
+func TestFloatDiv(t *testing.T) {
+	found := floatDiv([][]byte{common.EncodeFloat64(48), common.EncodeFloat64(2)}, [][]byte{common.EncodeFloat64(3), common.EncodeFloat64(4)})
+	expected := [][]byte{common.EncodeFloat64(2)}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", fmt.Sprint(common.DecodeFloat64(found[0])), fmt.Sprint(common.DecodeFloat64(expected[0])))
+	}
+}
+
+func TestFloatSub(t *testing.T) {
+	found := floatSub([][]byte{common.EncodeFloat64(1), common.EncodeFloat64(2)}, [][]byte{common.EncodeFloat64(3), common.EncodeFloat64(4)})
+	expected := [][]byte{common.EncodeFloat64(-8)}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", found, expected)
+	}
+}
+
+func TestFloatSum(t *testing.T) {
+	found := floatSum([][]byte{common.EncodeFloat64(1), common.EncodeFloat64(2)}, [][]byte{common.EncodeFloat64(3), common.EncodeFloat64(4)})
+	expected := [][]byte{common.EncodeFloat64(10)}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", found, expected)
+	}
+}
+
+func TestIntegerMul(t *testing.T) {
+	found := integerMul([][]byte{common.EncodeInt64(1), common.EncodeInt64(2)}, [][]byte{common.EncodeInt64(3), common.EncodeInt64(4)})
+	expected := [][]byte{common.EncodeInt64(24)}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", found, expected)
+	}
+}
+
+func TestIntegerDiv(t *testing.T) {
+	found := integerDiv([][]byte{common.EncodeInt64(48), common.EncodeInt64(2)}, [][]byte{common.EncodeInt64(3), common.EncodeInt64(4)})
+	expected := [][]byte{common.EncodeInt64(2)}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", found, expected)
+	}
+}
+
+func TestIntegerSub(t *testing.T) {
+	found := integerSub([][]byte{common.EncodeInt64(1), common.EncodeInt64(2)}, [][]byte{common.EncodeInt64(3), common.EncodeInt64(4)})
+	expected := [][]byte{common.EncodeInt64(-8)}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", found, expected)
+	}
+}
+
+func TestIntegerSum(t *testing.T) {
+	found := integerSum([][]byte{common.EncodeInt64(1), common.EncodeInt64(2)}, [][]byte{common.EncodeInt64(3), common.EncodeInt64(4)})
+	expected := [][]byte{common.EncodeInt64(10)}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", found, expected)
+	}
+}
+
+func TestConCat(t *testing.T) {
+	found := conCat([][]byte{[]byte{1}, []byte{2}}, [][]byte{[]byte{3}, []byte{4}})
+	expected := [][]byte{[]byte{1, 2, 3, 4}}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", found, expected)
+	}
+}
+
+func TestAppend(t *testing.T) {
+	found := _append([][]byte{[]byte{1}, []byte{2}}, [][]byte{[]byte{3}, []byte{4}})
+	expected := [][]byte{[]byte{1}, []byte{2}, []byte{3}, []byte{4}}
+	if !reflect.DeepEqual(found, expected) {
+		t.Errorf("%v should be %v", found, expected)
+	}
 }
 
 func TestUnion(t *testing.T) {
