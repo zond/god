@@ -58,7 +58,7 @@ func newMirrorIterator(min, max []byte, mininc, maxinc bool, f TreeIterator) Tre
 			lt = 1
 		}
 		k := key[:len(key)-len(escapeBytes(value))-1]
-		if bytes.Compare(k, min) > gt && bytes.Compare(k, max) < lt {
+		if (min == nil || bytes.Compare(k, min) > gt) && (max == nil || bytes.Compare(k, max) < lt) {
 			return f(k, value, timestamp)
 		}
 		return true
@@ -176,12 +176,12 @@ func (self *Tree) Configure(conf map[string]string, ts int64) {
 	defer self.lock.Unlock()
 	self.configure(conf, ts)
 }
-func (self *Tree) AddConfiguration(key, value string) {
+func (self *Tree) AddConfiguration(ts int64, key, value string) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	oldConf, _ := self.conf()
 	oldConf[key] = value
-	self.configure(oldConf, self.timer.ContinuousTime())
+	self.configure(oldConf, ts)
 }
 func (self *Tree) Log(dir string) *Tree {
 	self.logger = persistence.NewLogger(dir)
@@ -248,7 +248,7 @@ func (self *Tree) MirrorEachBetween(min, max []byte, mininc, maxinc bool, f Tree
 	if self == nil || self.mirror == nil {
 		return
 	}
-	if maxinc {
+	if maxinc && max != nil {
 		maxinc = false
 		max = incrementBytes(max)
 	}
@@ -267,7 +267,7 @@ func (self *Tree) MirrorReverseEachBetween(min, max []byte, mininc, maxinc bool,
 	if self == nil || self.mirror == nil {
 		return
 	}
-	if maxinc {
+	if maxinc && max != nil {
 		maxinc = false
 		max = incrementBytes(max)
 	}
@@ -286,7 +286,19 @@ func (self *Tree) MirrorIndexOf(key []byte) (index int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.IndexOf(key)
+	var value []byte
+	self.MirrorEachBetween(key, nil, true, false, func(k, v []byte, ts int64) bool {
+		value, existed = v, true
+		return false
+	})
+	if existed {
+		escapedValue := escapeBytes(value)
+		newKey := make([]byte, len(escapedValue)+len(key)+1)
+		copy(newKey, key)
+		copy(newKey[len(key)+1:], escapedValue)
+		index, _ = self.mirror.IndexOf(newKey)
+	}
+	return
 }
 func (self *Tree) IndexOf(key []byte) (index int, existed bool) {
 	if self == nil {
@@ -302,7 +314,19 @@ func (self *Tree) MirrorReverseIndexOf(key []byte) (index int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
 	}
-	return self.mirror.ReverseIndexOf(key)
+	var value []byte
+	self.MirrorEachBetween(key, nil, true, false, func(k, v []byte, ts int64) bool {
+		value, existed = v, true
+		return false
+	})
+	if existed {
+		escapedValue := escapeBytes(value)
+		newKey := make([]byte, len(escapedValue)+len(key)+1)
+		copy(newKey, key)
+		copy(newKey[len(key)+1:], escapedValue)
+		index, _ = self.mirror.ReverseIndexOf(newKey)
+	}
+	return
 }
 func (self *Tree) ReverseIndexOf(key []byte) (index int, existed bool) {
 	if self == nil {
@@ -1057,12 +1081,12 @@ func (self *Tree) SubConfigure(key []byte, conf map[string]string, timestamp int
 	defer self.lock.Unlock()
 	self.subConfigure(key, conf, timestamp)
 }
-func (self *Tree) SubAddConfiguration(treeKey []byte, key, value string) {
+func (self *Tree) SubAddConfiguration(treeKey []byte, ts int64, key, value string) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	oldConf, _ := self.subConfiguration(treeKey)
 	oldConf[key] = value
-	self.subConfigure(treeKey, oldConf, self.timer.ContinuousTime())
+	self.subConfigure(treeKey, oldConf, ts)
 	return
 }
 func (self *Tree) SubFinger(key, subKey []Nibble) (result *Print) {
