@@ -219,3 +219,6 @@ func (self *SetOpResult) ShallowCopy() (result *SetOpResult) {
 	copy(result.Values, self.Values)
 	return
 }
+func (self *SetOpResult) String() string {
+	return fmt.Sprintf("%+v", *self)
+}
