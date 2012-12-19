@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestClient(t *testing.T) {
@@ -15,6 +16,8 @@ func TestClient(t *testing.T) {
 	c.Start()
 	testGetPutDel(t, c)
 	testSubGetPutDel(t, c)
+	testSubClear(t, c)
+	testIndices(t, c)
 }
 
 func testSubGetPutDel(t *testing.T, c *client.Conn) {
@@ -38,6 +41,52 @@ func testSubGetPutDel(t *testing.T, c *client.Conn) {
 				t.Errorf("shouldn't exist, but got %v => %v, %v", key, v, e)
 			}
 		}
+	}
+}
+
+func testIndices(t *testing.T, c *client.Conn) {
+	var key []byte
+	var value []byte
+	subTree := []byte("ko")
+	c.SubAddConfiguration(subTree, "mirrored", "yes")
+	for i := byte(0); i < 10; i++ {
+		key = []byte{i}
+		value = []byte{9 - i}
+		c.SSubPut(subTree, key, value)
+	}
+	// because the test runs pretty fast, the nodes are still restructuring when we run the actual test if we dont sleep a bit here
+	time.Sleep(time.Second * 2)
+	for i := byte(0); i < 10; i++ {
+		if ind, ok := c.MirrorIndexOf(subTree, []byte{i}); ind != int(i) || !ok {
+			t.Errorf("wrong index! wanted %v, %v but got %v, %v", i, true, ind, ok)
+		}
+		if ind, ok := c.MirrorReverseIndexOf(subTree, []byte{i}); ind != int(9-i) || !ok {
+			t.Errorf("wrong index! wanted %v, %v but got %v, %v", 9-i, true, ind, ok)
+		}
+		if ind, ok := c.IndexOf(subTree, []byte{i}); ind != int(i) || !ok {
+			t.Errorf("wrong index! wanted %v, %v but got %v, %v", i, true, ind, ok)
+		}
+		if ind, ok := c.ReverseIndexOf(subTree, []byte{i}); ind != int(9-i) || !ok {
+			t.Errorf("wrong index! wanted %v, %v but got %v, %v", 9-i, true, ind, ok)
+		}
+	}
+}
+
+func testSubClear(t *testing.T, c *client.Conn) {
+	var key []byte
+	var value []byte
+	subTree := []byte("apa")
+	for i := 0; i < 10; i++ {
+		key = murmur.HashString(fmt.Sprint(i))
+		value = murmur.HashString(fmt.Sprint(i))
+		c.SSubPut(subTree, key, value)
+	}
+	if c.SubSize(subTree) != 10 {
+		t.Errorf("wrong size")
+	}
+	c.SSubClear(subTree)
+	if c.SubSize(subTree) != 0 {
+		t.Errorf("wrong size")
 	}
 }
 

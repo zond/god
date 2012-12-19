@@ -163,6 +163,10 @@ func (self *dhashServer) AddConfiguration(c common.ConfItem, x *int) error {
 	(*Node)(self).AddConfiguration(c)
 	return nil
 }
+func (self *dhashServer) SlaveSubAddConfiguration(c common.ConfItem, x *int) error {
+	(*Node)(self).subAddConfiguration(c)
+	return nil
+}
 func (self *dhashServer) SubAddConfiguration(c common.ConfItem, x *int) error {
 	(*Node)(self).SubAddConfiguration(c)
 	return nil

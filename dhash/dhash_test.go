@@ -4,6 +4,7 @@ import (
 	"../common"
 	"bytes"
 	"fmt"
+	"os"
 	"runtime"
 	"sort"
 	"testing"
@@ -32,6 +33,9 @@ func countHaving(t *testing.T, dhashes []*Node, key, value []byte) (result int) 
 }
 
 func testStartup(t *testing.T, n, port int) (dhashes []*Node) {
+	for i := 0; i < n; i++ {
+		os.RemoveAll(fmt.Sprintf("127.0.0.1:%v", port+i*2))
+	}
 	dhashes = make([]*Node, n)
 	for i := 0; i < n; i++ {
 		dhashes[i] = NewNode(fmt.Sprintf("127.0.0.1:%v", port+i*2))

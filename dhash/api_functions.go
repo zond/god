@@ -442,10 +442,28 @@ func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpRe
 	return
 }
 func (self *Node) AddConfiguration(c common.ConfItem) {
-	self.tree.AddConfiguration(c.Key, c.Value)
+	self.tree.AddConfiguration(self.timer.ContinuousTime(), c.Key, c.Value)
+}
+func (self *Node) forwardConfiguration(c common.ConfItem, operation string) {
+	c.TTL--
+	successor := self.node.GetSuccessor()
+	var x int
+	err := successor.Call(operation, c, &x)
+	for err != nil {
+		self.node.RemoveNode(successor)
+		successor = self.node.GetSuccessor()
+		err = successor.Call(operation, c, &x)
+	}
+}
+func (self *Node) subAddConfiguration(c common.ConfItem) {
+	if c.TTL > 1 {
+		self.forwardConfiguration(c, "DHash.SlaveSubAddConfiguration")
+	}
+	self.tree.SubAddConfiguration(c.TreeKey, c.Timestamp, c.Key, c.Value)
 }
 func (self *Node) SubAddConfiguration(c common.ConfItem) {
-	self.tree.SubAddConfiguration(c.TreeKey, c.Key, c.Value)
+	c.TTL, c.Timestamp = self.node.Redundancy(), self.timer.ContinuousTime()
+	self.subAddConfiguration(c)
 }
 func (self *Node) Configuration(x int, result *common.Conf) error {
 	*result = common.Conf{}
