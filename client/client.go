@@ -733,6 +733,24 @@ func (self *Conn) DescribeTree(key []byte) (result string, err error) {
 	err = match.Call("DHash.DescribeTree", 0, &result)
 	return
 }
+func (self *Conn) DescribeAllTrees() string {
+	buf := new(bytes.Buffer)
+	for _, rem := range self.ring.Nodes() {
+		if res, err := self.DescribeTree(rem.Pos); err == nil {
+			fmt.Println(res)
+			fmt.Fprintln(buf, res)
+		}
+	}
+	return string(buf.Bytes())
+}
+func (self *Conn) DescribeAllNodes() (result []common.DHashDescription) {
+	for _, rem := range self.ring.Nodes() {
+		if res, err := self.DescribeNode(rem.Pos); err == nil {
+			result = append(result, res)
+		}
+	}
+	return
+}
 func (self *Conn) DescribeNode(key []byte) (result common.DHashDescription, err error) {
 	_, match, _ := self.ring.Remotes(key)
 	if match == nil {

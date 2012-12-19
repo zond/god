@@ -403,26 +403,13 @@ func subPrev(conn *client.Conn, args []string) {
 }
 
 func describeAll(conn *client.Conn, args []string) {
-	for ind, r := range conn.Nodes() {
-		var result common.DHashDescription
-		if err := r.Call("DHash.Describe", 0, &result); err != nil {
-			fmt.Printf("%v: %v: %v\n", ind, r, err)
-		} else {
-			fmt.Println(result.Describe())
-		}
+	for _, description := range conn.DescribeAllNodes() {
+		fmt.Println(description.Describe())
 	}
 }
 
 func describeAllTrees(conn *client.Conn, args []string) {
-	for ind, r := range conn.Nodes() {
-		var result string
-		if err := r.Call("DHash.DescribeTree", 0, &result); err != nil {
-			fmt.Printf("%v: %v: %v\n", ind, r, err)
-		} else {
-			fmt.Println(r)
-			fmt.Println(result)
-		}
-	}
+	fmt.Print(conn.DescribeAllTrees())
 }
 
 func describe(conn *client.Conn, args []string) {
