@@ -14,14 +14,14 @@ func TestClient(t *testing.T) {
 	dhashes := testStartup(t, common.Redundancy*2, 11191)
 	c := client.MustConn(dhashes[0].GetAddr())
 	c.Start()
-	/*	testGetPutDel(t, c)
-		testSubGetPutDel(t, c)
-		testSubClear(t, c)
-		testIndices(t, c)
-		testDump(t, c)
-		testSubDump(t, c)
-		testNextPrev(t, c)
-		testCounts(t, c)*/
+	testGetPutDel(t, c)
+	testSubGetPutDel(t, c)
+	testSubClear(t, c)
+	testIndices(t, c)
+	testDump(t, c)
+	testSubDump(t, c)
+	testNextPrev(t, c)
+	testCounts(t, c)
 	testNextPrevIndices(t, c)
 }
 
