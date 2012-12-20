@@ -206,7 +206,11 @@ func (self *Tree) Restore() *Tree {
 		} else {
 			if op.SubKey == nil {
 				if op.Clear {
-					self.root, _, _, _, _ = self.root.del(nil, rip(op.Key), treeValue, self.timer.ContinuousTime())
+					if op.Key == nil {
+						self.Clear(op.Timestamp)
+					} else {
+						self.root, _, _, _, _ = self.root.del(nil, rip(op.Key), treeValue, self.timer.ContinuousTime())
+					}
 				} else {
 					self.Del(op.Key)
 				}
@@ -683,14 +687,24 @@ func (self *Tree) ReverseIndex(n int) (key []byte, byteValue []byte, timestamp i
 	})
 	return
 }
+func (self *Tree) Kill() {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.root = nil
+	self.root, _, _, _, _ = self.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), self.timer.ContinuousTime())
+	if self.logger != nil {
+		self.logger.Clear()
+	}
+}
 func (self *Tree) Clear(timestamp int64) (result int) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	result = self.root.fakeClear(nil, byteValue, timestamp, self.timer.ContinuousTime())
 	self.mirrorClear(timestamp)
-	if self.logger != nil {
-		self.logger.Clear()
-	}
+	self.log(persistence.Op{
+		Clear:     true,
+		Timestamp: timestamp,
+	})
 	return
 }
 func (self *Tree) del(key []Nibble) (oldBytes []byte, existed bool) {
