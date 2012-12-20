@@ -195,7 +195,7 @@ func (self *SetExpression) Each(r RawSourceCreator, f SetOpResultIterator) (err 
 	}
 	var res *SetOpResult
 	for res, err = skipper.Skip(min, mininc); res != nil && err == nil; res, err = skipper.Skip(min, mininc) {
-		if (self.Len > 0 && count > self.Len) || (self.Max != nil && bytes.Compare(res.Key, self.Max) > gt) {
+		if (self.Len > 0 && count >= self.Len) || (self.Max != nil && bytes.Compare(res.Key, self.Max) > gt) {
 			return
 		}
 		count++

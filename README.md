@@ -5,8 +5,6 @@ A Go database
 
 # TODO
 
-* Write tests for a gazillion rpc requests
- * Left: SetExpressions
 * Write tests for a gazillion json rpc requests
 * Web interface
  * Functionality
