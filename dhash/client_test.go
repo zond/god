@@ -20,6 +20,18 @@ func TestClient(t *testing.T) {
 	testIndices(t, c)
 	testDump(t, c)
 	testSubDump(t, c)
+	testNextPrev(t, c)
+}
+
+func testNextPrev(t *testing.T, c *client.Conn) {
+	c.SPut([]byte("testNextPrev1"), []byte("v1"))
+	c.SPut([]byte("testNextPrev2"), []byte("v2"))
+	if k, v, e := c.Prev([]byte("testNextPrev2")); string(k) != "testNextPrev1" || string(v) != "v1" || !e {
+		t.Errorf("wrong next")
+	}
+	if k, v, e := c.Next([]byte("testNextPrev1")); string(k) != "testNextPrev2" || string(v) != "v2" || !e {
+		t.Errorf("wrong next")
+	}
 }
 
 func testSubDump(t *testing.T, c *client.Conn) {
