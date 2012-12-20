@@ -14,14 +14,15 @@ func TestClient(t *testing.T) {
 	dhashes := testStartup(t, common.Redundancy*2, 11191)
 	c := client.MustConn(dhashes[0].GetAddr())
 	c.Start()
-	testGetPutDel(t, c)
-	testSubGetPutDel(t, c)
-	testSubClear(t, c)
-	testIndices(t, c)
-	testDump(t, c)
-	testSubDump(t, c)
-	testNextPrev(t, c)
-	testCounts(t, c)
+	/*	testGetPutDel(t, c)
+		testSubGetPutDel(t, c)
+		testSubClear(t, c)
+		testIndices(t, c)
+		testDump(t, c)
+		testSubDump(t, c)
+		testNextPrev(t, c)
+		testCounts(t, c)*/
+	testNextPrevIndices(t, c)
 }
 
 func testNextPrev(t *testing.T, c *client.Conn) {
@@ -142,6 +143,67 @@ func testCounts(t *testing.T, c *client.Conn) {
 			if found != wanted {
 				t.Errorf("wrong count for mirror %v-%v true true, wanted %v but found %v", i+10, j+10, wanted, found)
 			}
+		}
+	}
+}
+
+func testNextPrevIndices(t *testing.T, c *client.Conn) {
+	var key []byte
+	var value []byte
+	subTree := []byte("gris")
+	c.SubAddConfiguration(subTree, "mirrored", "yes")
+	for i := byte(1); i < 9; i++ {
+		key = []byte{i}
+		value = []byte{9 - i}
+		c.SSubPut(subTree, key, value)
+	}
+	// because the test runs pretty fast, the nodes are still restructuring when we run the actual test if we dont sleep a bit here
+	time.Sleep(time.Second * 2)
+	if k, v, i, e := c.NextIndex(subTree, -1); string(k) != string([]byte{1}) || string(v) != string([]byte{8}) || i != 0 || !e {
+		t.Errorf("wrong next index! wanted %v, %v, %v, %v but got %v, %v, %v, %v", 1, 8, 0, true, k, v, i, e)
+	}
+	if _, _, _, e := c.NextIndex(subTree, 7); e {
+		t.Errorf("wrong next index! wanted %v but got %v", false, e)
+	}
+	if k, v, i, e := c.PrevIndex(subTree, 8); string(k) != string([]byte{8}) || string(v) != string([]byte{1}) || i != 7 || !e {
+		t.Errorf("wrong prev index! wanted %v, %v, %v, %v but got %v, %v, %v, %v", 8, 1, 7, true, k, v, i, e)
+	}
+	if _, _, _, e := c.PrevIndex(subTree, 0); e {
+		t.Errorf("wrong prev index! wanted %v but got %v", false, e)
+	}
+
+	for j := 0; j < 7; j++ {
+		if k, v, i, e := c.NextIndex(subTree, j); string(k) != string([]byte{byte(j + 2)}) || string(v) != string([]byte{byte(7 - j)}) || i != j+1 || !e {
+			t.Errorf("wrong next index for %v! wanted %v, %v, %v, %v but got %v, %v, %v, %v", j, j+2, 7-j, j+1, true, k, v, i, e)
+		}
+	}
+	for j := 1; j < 8; j++ {
+		if k, v, i, e := c.PrevIndex(subTree, j); string(k) != string([]byte{byte(j)}) || string(v) != string([]byte{byte(9 - j)}) || i != j-1 || !e {
+			t.Errorf("wrong prev index for %v! wanted %v, %v, %v, %v but got %v, %v, %v, %v", j, j, 9-j, j-1, true, k, v, i, e)
+		}
+	}
+
+	if k, v, i, e := c.MirrorNextIndex(subTree, -1); string(k) != string([]byte{1}) || string(v) != string([]byte{8}) || i != 0 || !e {
+		t.Errorf("wrong next index! wanted %v, %v, %v, %v but got %v, %v, %v, %v", 1, 8, 0, true, k, v, i, e)
+	}
+	if _, _, _, e := c.MirrorNextIndex(subTree, 7); e {
+		t.Errorf("wrong next index! wanted %v but got %v", false, e)
+	}
+	if k, v, i, e := c.MirrorPrevIndex(subTree, 8); string(k) != string([]byte{8}) || string(v) != string([]byte{1}) || i != 7 || !e {
+		t.Errorf("wrong prev index! wanted %v, %v, %v, %v but got %v, %v, %v, %v", 8, 1, 7, true, k, v, i, e)
+	}
+	if _, _, _, e := c.MirrorPrevIndex(subTree, 0); e {
+		t.Errorf("wrong prev index! wanted %v but got %v", false, e)
+	}
+
+	for j := 1; j < 8; j++ {
+		if k, v, i, e := c.MirrorPrevIndex(subTree, j); string(k) != string([]byte{byte(j)}) || string(v) != string([]byte{byte(9 - j)}) || i != j-1 || !e {
+			t.Errorf("wrong mirror next index for %v! wanted %v, %v, %v, %v but got %v, %v, %v, %v", j, j, 9-j, j-1, true, k, v, i, e)
+		}
+	}
+	for j := 1; j < 8; j++ {
+		if k, v, i, e := c.MirrorPrevIndex(subTree, j); string(k) != string([]byte{byte(j)}) || string(v) != string([]byte{byte(9 - j)}) || i != j-1 || !e {
+			t.Errorf("wrong mirror prev index for %v! wanted %v, %v, %v, %v but got %v, %v, %v, %v", j, j, 9-j, j-1, true, k, v, i, e)
 		}
 	}
 }

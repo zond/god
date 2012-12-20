@@ -592,7 +592,9 @@ func (self *Tree) MirrorNextIndex(index int) (key, value []byte, timestamp int64
 		return
 	}
 	key, value, timestamp, ind, existed = self.mirror.NextIndex(index)
-	key = key[:len(key)-len(escapeBytes(value))-1]
+	if existed {
+		key = key[:len(key)-len(escapeBytes(value))-1]
+	}
 	return
 }
 func (self *Tree) MirrorPrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
@@ -600,18 +602,22 @@ func (self *Tree) MirrorPrevIndex(index int) (key, value []byte, timestamp int64
 		return
 	}
 	key, value, timestamp, ind, existed = self.mirror.PrevIndex(index)
-	key = key[:len(key)-len(escapeBytes(value))-1]
+	if existed {
+		key = key[:len(key)-len(escapeBytes(value))-1]
+	}
 	return
 }
 func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
-	self.EachBetweenIndex(&index, nil, func(k, v []byte, t int64, i int) bool {
+	n := index + 1
+	self.EachBetweenIndex(&n, &n, func(k, v []byte, t int64, i int) bool {
 		key, value, timestamp, ind, existed = k, v, t, i, true
 		return false
 	})
 	return
 }
 func (self *Tree) PrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
-	self.ReverseEachBetweenIndex(nil, &index, func(k, v []byte, t int64, i int) bool {
+	p := index - 1
+	self.EachBetweenIndex(&p, &p, func(k, v []byte, t int64, i int) bool {
 		key, value, timestamp, ind, existed = k, v, t, i, true
 		return false
 	})

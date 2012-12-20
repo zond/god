@@ -77,6 +77,12 @@ func (self *dhashServer) DescribeTree(x int, result *string) error {
 	*result = (*Node)(self).DescribeTree()
 	return nil
 }
+func (self *dhashServer) MirrorPrevIndex(data common.Item, result *common.Item) error {
+	return (*Node)(self).MirrorPrevIndex(data, result)
+}
+func (self *dhashServer) MirrorNextIndex(data common.Item, result *common.Item) error {
+	return (*Node)(self).MirrorNextIndex(data, result)
+}
 func (self *dhashServer) PrevIndex(data common.Item, result *common.Item) error {
 	return (*Node)(self).PrevIndex(data, result)
 }
