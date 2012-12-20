@@ -18,6 +18,36 @@ func TestClient(t *testing.T) {
 	testSubGetPutDel(t, c)
 	testSubClear(t, c)
 	testIndices(t, c)
+	testDump(t, c)
+	testSubDump(t, c)
+}
+
+func testSubDump(t *testing.T, c *client.Conn) {
+	ch, wa := c.SubDump([]byte("hest"))
+	ch <- [2][]byte{[]byte("testSubDumpk1"), []byte("testSubDumpv1")}
+	ch <- [2][]byte{[]byte("testSubDumpk2"), []byte("testSubDumpv2")}
+	close(ch)
+	wa.Wait()
+	if val, ex := c.SubGet([]byte("hest"), []byte("testSubDumpk1")); !ex || bytes.Compare(val, []byte("testSubDumpv1")) != 0 {
+		t.Errorf("wrong value")
+	}
+	if val, ex := c.SubGet([]byte("hest"), []byte("testSubDumpk2")); !ex || bytes.Compare(val, []byte("testSubDumpv2")) != 0 {
+		t.Errorf("wrong value")
+	}
+}
+
+func testDump(t *testing.T, c *client.Conn) {
+	ch, wa := c.Dump()
+	ch <- [2][]byte{[]byte("testDumpk1"), []byte("testDumpv1")}
+	ch <- [2][]byte{[]byte("testDumpk2"), []byte("testDumpv2")}
+	close(ch)
+	wa.Wait()
+	if val, ex := c.Get([]byte("testDumpk1")); !ex || bytes.Compare(val, []byte("testDumpv1")) != 0 {
+		t.Errorf("wrong value")
+	}
+	if val, ex := c.Get([]byte("testDumpk2")); !ex || bytes.Compare(val, []byte("testDumpv2")) != 0 {
+		t.Errorf("wrong value")
+	}
 }
 
 func testSubGetPutDel(t *testing.T, c *client.Conn) {
