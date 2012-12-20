@@ -8,13 +8,15 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
-	"time"
+	"sync/atomic"
 )
 
 type NaiveTimer struct{}
 
+var faketime int64
+
 func (self NaiveTimer) ContinuousTime() int64 {
-	return time.Now().UnixNano()
+	return atomic.AddInt64(&faketime, 1)
 }
 
 type TreeIterator func(key, value []byte, timestamp int64) (cont bool)

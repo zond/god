@@ -320,6 +320,15 @@ func (self *Node) forwardOperation(data common.Item, operation string) {
 	data.TTL--
 	successor := self.node.GetSuccessor()
 	var x int
+	if self.hasCommListeners() {
+		self.triggerCommListeners(Comm{
+			Key:         data.Key,
+			SubKey:      data.SubKey,
+			Source:      self.node.Remote(),
+			Destination: successor,
+			Type:        operation,
+		})
+	}
 	err := successor.Call(operation, data, &x)
 	for err != nil {
 		self.node.RemoveNode(successor)

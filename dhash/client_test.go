@@ -65,6 +65,50 @@ type testClient interface {
 	SubAddConfiguration(treeKey []byte, key, value string)
 }
 
+var benchNode *Node
+
+func BenchmarkServer(b *testing.B) {
+	oldprocs := runtime.GOMAXPROCS(runtime.NumCPU())
+	defer runtime.GOMAXPROCS(oldprocs)
+	b.StopTimer()
+	if benchNode == nil {
+		benchNode = NewNode("127.0.0.1:1231")
+		benchNode.MustStart()
+	}
+	benchNode.Kill()
+	var bs [][]byte
+	for i := 0; i < b.N; i++ {
+		bs = append(bs, murmur.HashString(fmt.Sprint(i)))
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		benchNode.Put(common.Item{
+			Key:   bs[i],
+			Value: bs[i],
+		})
+	}
+}
+
+func BenchmarkClientAndServer(b *testing.B) {
+	oldprocs := runtime.GOMAXPROCS(runtime.NumCPU())
+	defer runtime.GOMAXPROCS(oldprocs)
+	b.StopTimer()
+	if benchNode == nil {
+		benchNode = NewNode("127.0.0.1:1231")
+		benchNode.MustStart()
+	}
+	c := client.MustConn("127.0.0.1:1231")
+	c.Kill()
+	var bs [][]byte
+	for i := 0; i < b.N; i++ {
+		bs = append(bs, murmur.HashString(fmt.Sprint(i)))
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		c.Put(bs[i], bs[i])
+	}
+}
+
 func TestClient(t *testing.T) {
 	dhashes := testStartup(t, common.Redundancy*2, 11191)
 	testGOBClient(t, dhashes)

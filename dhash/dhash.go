@@ -16,6 +16,27 @@ import (
 type SyncListener func(source, dest common.Remote, pulled, pushed int) (keep bool)
 type CleanListener func(source, dest common.Remote, cleaned, pushed int) (keep bool)
 type MigrateListener func(dhash *Node, source, destination []byte) (keep bool)
+type CommListener func(comm Comm) (keep bool)
+
+type commListenerContainer struct {
+	channel  chan Comm
+	listener CommListener
+	node     *Node
+}
+
+func (self *commListenerContainer) run() {
+	for self.listener(<-self.channel) {
+	}
+	self.node.removeCommListener(self)
+}
+
+type Comm struct {
+	Source      common.Remote
+	Destination common.Remote
+	Key         []byte
+	SubKey      []byte
+	Type        string
+}
 
 const (
 	syncInterval      = time.Second
@@ -38,6 +59,8 @@ type Node struct {
 	syncListeners    []SyncListener
 	cleanListeners   []CleanListener
 	migrateListeners []MigrateListener
+	commListeners    map[*commListenerContainer]bool
+	nCommListeners   int32
 	node             *discord.Node
 	timer            *timenet.Timer
 	tree             *radix.Tree
@@ -45,9 +68,10 @@ type Node struct {
 
 func NewNode(addr string) (result *Node) {
 	result = &Node{
-		node:  discord.NewNode(addr),
-		lock:  new(sync.RWMutex),
-		state: created,
+		node:          discord.NewNode(addr),
+		lock:          new(sync.RWMutex),
+		commListeners: make(map[*commListenerContainer]bool),
+		state:         created,
 	}
 	result.AddChangeListener(func(r *common.Ring) bool {
 		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
@@ -59,6 +83,42 @@ func NewNode(addr string) (result *Node) {
 	result.node.Export("DHash", (*dhashServer)(result))
 	result.node.Export("HashTree", (*hashTreeServer)(result))
 	return
+}
+func (self *Node) AddCommListener(l CommListener) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	newListener := &commListenerContainer{
+		listener: l,
+		channel:  make(chan Comm),
+		node:     self,
+	}
+	atomic.AddInt32(&self.nCommListeners, 1)
+	self.commListeners[newListener] = true
+	go newListener.run()
+}
+func (self *Node) removeCommListener(lc *commListenerContainer) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	if _, ok := self.commListeners[lc]; ok {
+		atomic.AddInt32(&self.nCommListeners, -1)
+	}
+	delete(self.commListeners, lc)
+	close(lc.channel)
+}
+func (self *Node) hasCommListeners() bool {
+	return atomic.LoadInt32(&self.nCommListeners) > 0
+}
+func (self *Node) triggerCommListeners(comm Comm) {
+	self.lock.RLock()
+	for lc, _ := range self.commListeners {
+		self.lock.RUnlock()
+		select {
+		case lc.channel <- comm:
+		default:
+		}
+		self.lock.RLock()
+	}
+	self.lock.RUnlock()
 }
 func (self *Node) AddCleanListener(l CleanListener) {
 	self.lock.Lock()

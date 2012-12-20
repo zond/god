@@ -24,6 +24,9 @@ _testmain.go
 *~
 shard/test?
 bench1
+dhash/profile/memprofile
+dhash/profile/cpuprofile
+dhash/profile/profile
 radix/profile/memprofile
 radix/profile/cpuprofile
 radix/profile/profile

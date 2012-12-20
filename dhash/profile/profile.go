@@ -2,8 +2,8 @@ package main
 
 import (
 	. "../"
+	"../../common"
 	"../../murmur"
-	"bytes"
 	"fmt"
 	"os"
 	"runtime/pprof"
@@ -23,14 +23,15 @@ func main() {
 	defer pprof.StopCPUProfile()
 	defer pprof.WriteHeapProfile(f2)
 
-	m := NewTree()
+	benchNode := NewNode("127.0.0.1:1231")
+	benchNode.MustStart()
+	benchNode.Kill()
 	var k []byte
 	for i := 0; i < 100000; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
-		m.Put(k, k, 1)
-		x, _, _ := m.Get(k)
-		if bytes.Compare(x, k) != 0 {
-			panic("humbug")
-		}
+		benchNode.Put(common.Item{
+			Key:   k,
+			Value: k,
+		})
 	}
 }

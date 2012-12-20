@@ -146,6 +146,22 @@ func (self *Node) startJson() {
 			panic(err)
 		}
 		if websocket.Message.Send(ws, string(b)) == nil {
+			self.AddCommListener(func(comm Comm) bool {
+				b, err := json.Marshal(socketMessage{
+					Type: "Comm",
+					Data: map[string]interface{}{
+						"source":      comm.Source,
+						"destination": comm.Destination,
+						"key":         comm.Key,
+						"sub_key":     comm.SubKey,
+						"type":        comm.Type,
+					},
+				})
+				if err != nil {
+					panic(err)
+				}
+				return websocket.Message.Send(ws, string(b)) == nil
+			})
 			self.AddChangeListener(func(ring *common.Ring) bool {
 				b, err := json.Marshal(socketMessage{
 					Type: "RingChange",
