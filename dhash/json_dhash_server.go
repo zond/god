@@ -15,6 +15,14 @@ func (self *jsonDhashServer) forwardUnlessMe(cmd string, key []byte, in, out int
 	return
 }
 
+func (self *jsonDhashServer) Kill(x int, y *int) error {
+	(*Node)(self).Kill()
+	return nil
+}
+func (self *jsonDhashServer) Clear(x int, y *int) error {
+	(*Node)(self).Clear()
+	return nil
+}
 func (self *jsonDhashServer) SlaveSubPut(data common.Item, x *int) error {
 	return (*Node)(self).subPut(data)
 }
@@ -120,6 +128,18 @@ func (self *jsonDhashServer) PrevIndex(data common.Item, result *common.Item) er
 		return e
 	}
 	return (*Node)(self).PrevIndex(data, result)
+}
+func (self *jsonDhashServer) MirrorPrevIndex(data common.Item, result *common.Item) error {
+	if f, e := self.forwardUnlessMe("DHash.MirrorPrevIndex", data.Key, data, result); f {
+		return e
+	}
+	return (*Node)(self).MirrorPrevIndex(data, result)
+}
+func (self *jsonDhashServer) MirrorNextIndex(data common.Item, result *common.Item) error {
+	if f, e := self.forwardUnlessMe("DHash.MirrorNextIndex", data.Key, data, result); f {
+		return e
+	}
+	return (*Node)(self).MirrorNextIndex(data, result)
 }
 func (self *jsonDhashServer) NextIndex(data common.Item, result *common.Item) error {
 	if f, e := self.forwardUnlessMe("DHash.NextIndex", data.Key, data, result); f {

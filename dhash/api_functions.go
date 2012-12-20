@@ -3,7 +3,6 @@ package dhash
 import (
 	"../client"
 	"../common"
-	"../radix"
 	"../setop"
 	"bytes"
 	"fmt"
@@ -328,8 +327,11 @@ func (self *Node) forwardOperation(data common.Item, operation string) {
 		err = successor.Call(operation, data, &x)
 	}
 }
-func (self *Node) clear() {
-	self.tree = radix.NewTreeTimer(self.timer)
+func (self *Node) Kill() {
+	self.tree.Kill()
+}
+func (self *Node) Clear() {
+	self.tree.Clear(self.timer.ContinuousTime())
 }
 func (self *Node) subClear(data common.Item) error {
 	if data.TTL > 1 {

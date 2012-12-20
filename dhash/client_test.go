@@ -8,27 +8,108 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"net"
 	"runtime"
 	"testing"
 	"time"
 )
 
+type testClient interface {
+	SSubPut(key, subKey, value []byte)
+	SubPut(key, subKey, value []byte)
+	SPut(key, value []byte)
+	Put(key, value []byte)
+	SubClear(key []byte)
+	SSubClear(key []byte)
+	SubDel(key, subKey []byte)
+	SSubDel(key, subKey []byte)
+	SDel(key []byte)
+	Del(key []byte)
+	MirrorReverseIndexOf(key, subKey []byte) (index int, existed bool)
+	MirrorIndexOf(key, subKey []byte) (index int, existed bool)
+	ReverseIndexOf(key, subKey []byte) (index int, existed bool)
+	IndexOf(key, subKey []byte) (index int, existed bool)
+	Next(key []byte) (nextKey, nextValue []byte, existed bool)
+	Prev(key []byte) (prevKey, prevValue []byte, existed bool)
+	MirrorCount(key, min, max []byte, mininc, maxinc bool) (result int)
+	Count(key, min, max []byte, mininc, maxinc bool) (result int)
+	MirrorNextIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool)
+	MirrorPrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool)
+	NextIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool)
+	PrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool)
+	MirrorReverseSliceIndex(key []byte, min, max *int) (result []common.Item)
+	MirrorSliceIndex(key []byte, min, max *int) (result []common.Item)
+	MirrorReverseSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item)
+	MirrorSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item)
+	MirrorSliceLen(key, min []byte, mininc bool, maxRes int) (result []common.Item)
+	MirrorReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (result []common.Item)
+	ReverseSliceIndex(key []byte, min, max *int) (result []common.Item)
+	SliceIndex(key []byte, min, max *int) (result []common.Item)
+	ReverseSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item)
+	Slice(key, min, max []byte, mininc, maxinc bool) (result []common.Item)
+	SliceLen(key, min []byte, mininc bool, maxRes int) (result []common.Item)
+	ReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (result []common.Item)
+	SubMirrorPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool)
+	SubMirrorNext(key, subKey []byte) (nextKey, nextValue []byte, existed bool)
+	SubPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool)
+	SubNext(key, subKey []byte) (nextKey, nextValue []byte, existed bool)
+	MirrorLast(key []byte) (lastKey, lastValue []byte, existed bool)
+	MirrorFirst(key []byte) (firstKey, firstValue []byte, existed bool)
+	Last(key []byte) (lastKey, lastValue []byte, existed bool)
+	First(key []byte) (firstKey, firstValue []byte, existed bool)
+	SubGet(key, subKey []byte) (value []byte, existed bool)
+	Get(key []byte) (value []byte, existed bool)
+	SubSize(key []byte) (result int)
+	Size() (result int)
+	SetExpression(expr setop.SetExpression) (result []setop.SetOpResult)
+	SubAddConfiguration(treeKey []byte, key, value string)
+}
+
 func TestClient(t *testing.T) {
 	dhashes := testStartup(t, common.Redundancy*2, 11191)
+	testGOBClient(t, dhashes)
+}
+
+func clearAll(dhashes []*Node) {
+	for _, node := range dhashes {
+		node.Kill()
+	}
+}
+
+func testGOBClient(t *testing.T, dhashes []*Node) {
+	clearAll(dhashes)
 	c := client.MustConn(dhashes[0].GetAddr())
 	c.Start()
+	testClientInterface(t, dhashes, c)
+}
+
+func testJSONClient(t *testing.T, dhashes []*Node) {
+	for _, dhash := range dhashes {
+		clearAll(dhashes)
+		addr, err := net.ResolveTCPAddr("tcp", dhash.node.GetAddr())
+		if err != nil {
+			panic(err)
+		}
+		c := jsonClient(fmt.Sprintf("%v:%v", addr.IP, addr.Port+1))
+		testClientInterface(t, dhashes, c)
+	}
+}
+
+func testClientInterface(t *testing.T, dhashes []*Node, c testClient) {
 	testGetPutDel(t, c)
 	testSubGetPutDel(t, c)
 	testSubClear(t, c)
-	testIndices(t, c)
-	testDump(t, c)
-	testSubDump(t, c)
+	testIndices(t, dhashes, c)
+	if rc, ok := c.(*client.Conn); ok {
+		testDump(t, rc)
+		testSubDump(t, rc)
+	}
 	testNextPrev(t, c)
-	testCounts(t, c)
-	testNextPrevIndices(t, c)
-	testSlices(t, c)
-	testSliceIndices(t, c)
-	testSliceLen(t, c)
+	testCounts(t, dhashes, c)
+	testNextPrevIndices(t, dhashes, c)
+	testSlices(t, dhashes, c)
+	testSliceIndices(t, dhashes, c)
+	testSliceLen(t, dhashes, c)
 	testSetExpression(t, c)
 }
 
@@ -61,20 +142,16 @@ func assertItems(t *testing.T, items []common.Item, keys, values []byte) {
 	}
 }
 
-func assertMirrored(t *testing.T, c *client.Conn, subTree []byte) {
+func assertMirrored(t *testing.T, dhashes []*Node, c testClient, subTree []byte) {
 	common.AssertWithin(t, func() (string, bool) {
-		for _, n := range c.Nodes() {
+		for _, n := range dhashes {
 			var conf common.Conf
-			if err := n.Call("DHash.SubConfiguration", subTree, &conf); err != nil {
-				return err.Error(), false
-			}
+			n.SubConfiguration(subTree, &conf)
 			var s int
-			if err := n.Call("DHash.SubSize", subTree, &s); err != nil {
-				return err.Error(), false
-			}
+			n.SubSize(subTree, &s)
 			if s > 0 {
 				if conf.Data["mirrored"] != "yes" {
-					return fmt.Sprint(n.String(), conf.Data), false
+					return fmt.Sprint(n, conf.Data), false
 				}
 			}
 		}
@@ -82,7 +159,7 @@ func assertMirrored(t *testing.T, c *client.Conn, subTree []byte) {
 	}, time.Second*10)
 }
 
-func testSetExpression(t *testing.T, c *client.Conn) {
+func testSetExpression(t *testing.T, c testClient) {
 	t1 := []byte("sete1")
 	t2 := []byte("sete2")
 	for i := byte(0); i < 10; i++ {
@@ -128,7 +205,7 @@ func testSetExpression(t *testing.T, c *client.Conn) {
 	assertItems(t, c.SliceIndex([]byte("sete3"), &min, &max), []byte{2, 3, 4}, []byte{1, 1, 1})
 }
 
-func testNextPrev(t *testing.T, c *client.Conn) {
+func testNextPrev(t *testing.T, c testClient) {
 	c.SPut([]byte("testNextPrev1"), []byte("v1"))
 	c.SPut([]byte("testNextPrev2"), []byte("v2"))
 	if k, v, e := c.Prev([]byte("testNextPrev2")); string(k) != "testNextPrev1" || string(v) != "v1" || !e {
@@ -167,7 +244,7 @@ func testDump(t *testing.T, c *client.Conn) {
 	}
 }
 
-func testSubGetPutDel(t *testing.T, c *client.Conn) {
+func testSubGetPutDel(t *testing.T, c testClient) {
 	var key []byte
 	var value []byte
 	var subKey []byte
@@ -191,7 +268,7 @@ func testSubGetPutDel(t *testing.T, c *client.Conn) {
 	}
 }
 
-func testSliceLen(t *testing.T, c *client.Conn) {
+func testSliceLen(t *testing.T, dhashes []*Node, c testClient) {
 	var key []byte
 	var value []byte
 	subTree := []byte("jaguar2")
@@ -204,7 +281,7 @@ func testSliceLen(t *testing.T, c *client.Conn) {
 			t.Errorf("wrong size, wanted %v but got %v", i, ss)
 		}
 	}
-	assertMirrored(t, c, subTree)
+	assertMirrored(t, dhashes, c, subTree)
 	assertItems(t, c.SliceLen(subTree, []byte{2}, true, 3), []byte{2, 3, 4}, []byte{7, 6, 5})
 	assertItems(t, c.SliceLen(subTree, []byte{2}, false, 3), []byte{3, 4, 5}, []byte{6, 5, 4})
 	assertItems(t, c.ReverseSliceLen(subTree, []byte{6}, true, 3), []byte{6, 5, 4}, []byte{3, 4, 5})
@@ -215,7 +292,7 @@ func testSliceLen(t *testing.T, c *client.Conn) {
 	assertItems(t, c.MirrorReverseSliceLen(subTree, []byte{6}, false, 3), []byte{5, 4, 3}, []byte{4, 5, 6})
 }
 
-func testCounts(t *testing.T, c *client.Conn) {
+func testCounts(t *testing.T, dhashes []*Node, c testClient) {
 	var key []byte
 	var value []byte
 	subTree := []byte("jaguar")
@@ -225,7 +302,7 @@ func testCounts(t *testing.T, c *client.Conn) {
 		value = []byte{19 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	assertMirrored(t, c, subTree)
+	assertMirrored(t, dhashes, c, subTree)
 	for i := byte(0); i < 10; i++ {
 		for j := byte(0); j < 10; j++ {
 			wanted := common.Max(0, common.Min(int(j+1), 9)-common.Max(int(i), 1))
@@ -273,7 +350,7 @@ func testCounts(t *testing.T, c *client.Conn) {
 	}
 }
 
-func testSliceIndices(t *testing.T, c *client.Conn) {
+func testSliceIndices(t *testing.T, dhashes []*Node, c testClient) {
 	var key []byte
 	var value []byte
 	subTree := []byte("banan2")
@@ -283,7 +360,7 @@ func testSliceIndices(t *testing.T, c *client.Conn) {
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	assertMirrored(t, c, subTree)
+	assertMirrored(t, dhashes, c, subTree)
 	min := 2
 	max := 5
 	assertItems(t, c.SliceIndex(subTree, &min, &max), []byte{3, 4, 5, 6}, []byte{6, 5, 4, 3})
@@ -304,7 +381,7 @@ func testSliceIndices(t *testing.T, c *client.Conn) {
 	assertItems(t, c.MirrorReverseSliceIndex(subTree, nil, nil), []byte{8, 7, 6, 5, 4, 3, 2, 1}, []byte{1, 2, 3, 4, 5, 6, 7, 8})
 }
 
-func testSlices(t *testing.T, c *client.Conn) {
+func testSlices(t *testing.T, dhashes []*Node, c testClient) {
 	var key []byte
 	var value []byte
 	subTree := []byte("banan")
@@ -314,7 +391,7 @@ func testSlices(t *testing.T, c *client.Conn) {
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	assertMirrored(t, c, subTree)
+	assertMirrored(t, dhashes, c, subTree)
 	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, true, true), []byte{5, 4, 3, 2}, []byte{4, 5, 6, 7})
 	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, true, false), []byte{4, 3, 2}, []byte{5, 6, 7})
 	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, false, true), []byte{5, 4, 3}, []byte{4, 5, 6})
@@ -356,7 +433,7 @@ func testSlices(t *testing.T, c *client.Conn) {
 	assertItems(t, c.Slice(subTree, nil, nil, true, true), []byte{1, 2, 3, 4, 5, 6, 7, 8}, []byte{8, 7, 6, 5, 4, 3, 2, 1})
 }
 
-func testNextPrevIndices(t *testing.T, c *client.Conn) {
+func testNextPrevIndices(t *testing.T, dhashes []*Node, c testClient) {
 	var key []byte
 	var value []byte
 	subTree := []byte("gris")
@@ -366,7 +443,7 @@ func testNextPrevIndices(t *testing.T, c *client.Conn) {
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	assertMirrored(t, c, subTree)
+	assertMirrored(t, dhashes, c, subTree)
 	if k, v, i, e := c.NextIndex(subTree, -1); string(k) != string([]byte{1}) || string(v) != string([]byte{8}) || i != 0 || !e {
 		t.Errorf("wrong next index! wanted %v, %v, %v, %v but got %v, %v, %v, %v", 1, 8, 0, true, k, v, i, e)
 	}
@@ -416,7 +493,7 @@ func testNextPrevIndices(t *testing.T, c *client.Conn) {
 	}
 }
 
-func testIndices(t *testing.T, c *client.Conn) {
+func testIndices(t *testing.T, dhashes []*Node, c testClient) {
 	var key []byte
 	var value []byte
 	subTree := []byte("ko")
@@ -426,7 +503,7 @@ func testIndices(t *testing.T, c *client.Conn) {
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	assertMirrored(t, c, subTree)
+	assertMirrored(t, dhashes, c, subTree)
 	if ind, ok := c.ReverseIndexOf(subTree, []byte{9}); ind != 0 || ok {
 		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 0, false, ind, ok)
 	}
@@ -467,7 +544,7 @@ func testIndices(t *testing.T, c *client.Conn) {
 	}
 }
 
-func testSubClear(t *testing.T, c *client.Conn) {
+func testSubClear(t *testing.T, c testClient) {
 	var key []byte
 	var value []byte
 	subTree := []byte("apa")
@@ -485,7 +562,7 @@ func testSubClear(t *testing.T, c *client.Conn) {
 	}
 }
 
-func testGetPutDel(t *testing.T, c *client.Conn) {
+func testGetPutDel(t *testing.T, c testClient) {
 	var key []byte
 	var value []byte
 	for i := 0; i < 1000; i++ {

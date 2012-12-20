@@ -88,7 +88,7 @@ func testPut(t *testing.T, dhashes []*Node) {
 
 func testMigrate(t *testing.T, dhashes []*Node) {
 	for _, d := range dhashes {
-		d.clear()
+		d.Kill()
 	}
 	var item common.Item
 	for i := 0; i < 1000; i++ {
@@ -102,7 +102,7 @@ func testMigrate(t *testing.T, dhashes []*Node) {
 		status := new(bytes.Buffer)
 		ordered := dhashAry(dhashes)
 		sort.Sort(ordered)
-		lastOwned := -1
+		lastOwned := ordered[len(ordered)-1].Owned()
 		ok := true
 		for _, d := range ordered {
 			sum += d.Owned()
@@ -113,6 +113,7 @@ func testMigrate(t *testing.T, dhashes []*Node) {
 			if d.Owned() == 0 {
 				ok = false
 			}
+			lastOwned = d.Owned()
 		}
 		return string(status.Bytes()), ok && sum == 1000
 	}, time.Second*100)
