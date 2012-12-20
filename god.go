@@ -1,6 +1,6 @@
 package god
 
 import (
-	"cli"
-	"server"
+	"./cli"
+	"./server"
 )
