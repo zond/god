@@ -4,8 +4,10 @@ import (
 	"../client"
 	"../common"
 	"../murmur"
+	"../setop"
 	"bytes"
 	"fmt"
+	"math/big"
 	"runtime"
 	"testing"
 	"time"
@@ -27,6 +29,36 @@ func TestClient(t *testing.T) {
 	testSlices(t, c)
 	testSliceIndices(t, c)
 	testSliceLen(t, c)
+	testSetExpression(t, c)
+}
+
+func assertSetOps(t *testing.T, res []setop.SetOpResult, keys, values []byte) {
+	_, file, line, _ := runtime.Caller(1)
+	if len(res) == len(keys) && len(res) == len(values) {
+		for index, item := range res {
+			if len(item.Values) != 1 {
+				t.Errorf("%v:%v: assertSetOps only accepts singular values")
+			}
+			if string(item.Key) != string([]byte{keys[index]}) || string(item.Values[0]) != string([]byte{values[index]}) {
+				t.Errorf("%v:%v: wanted %v, %v but got %v", file, line, keys, values, res)
+			}
+		}
+	} else {
+		t.Errorf("%v:%v: wanted %v, %v but got %v", file, line, keys, values, res)
+	}
+}
+
+func assertItems(t *testing.T, items []common.Item, keys, values []byte) {
+	_, file, line, _ := runtime.Caller(1)
+	if len(items) == len(keys) && len(items) == len(values) {
+		for index, item := range items {
+			if string(item.Key) != string([]byte{keys[index]}) || string(item.Value) != string([]byte{values[index]}) {
+				t.Errorf("%v:%v: wanted %v, %v but got %v", file, line, keys, values, items)
+			}
+		}
+	} else {
+		t.Errorf("%v:%v: wanted %v, %v but got %v", file, line, keys, values, items)
+	}
 }
 
 func assertMirrored(t *testing.T, c *client.Conn, subTree []byte) {
@@ -48,6 +80,20 @@ func assertMirrored(t *testing.T, c *client.Conn, subTree []byte) {
 		}
 		return "", true
 	}, time.Second*10)
+}
+
+func testSetExpression(t *testing.T, c *client.Conn) {
+	t1 := []byte("sete1")
+	t2 := []byte("sete2")
+	for i := byte(0); i < 10; i++ {
+		c.SubPut(t1, []byte{i}, common.EncodeBigInt(big.NewInt(1)))
+	}
+	for i := byte(5); i < 15; i++ {
+		c.SubPut(t2, []byte{i}, common.EncodeBigInt(big.NewInt(1)))
+	}
+	assertSetOps(t, c.SetExpression(setop.SetExpression{
+		Op: setop.MustParse("(U:BigIntAnd sete1 sete2)"),
+	}), []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
 }
 
 func testNextPrev(t *testing.T, c *client.Conn) {
@@ -122,6 +168,9 @@ func testSliceLen(t *testing.T, c *client.Conn) {
 		key = []byte{i}
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
+		if ss := c.SubSize(subTree); ss != int(i) {
+			t.Errorf("wrong size, wanted %v but got %v", i, ss)
+		}
 	}
 	assertMirrored(t, c, subTree)
 	assertItems(t, c.SliceLen(subTree, []byte{2}, true, 3), []byte{2, 3, 4}, []byte{7, 6, 5})
@@ -189,19 +238,6 @@ func testCounts(t *testing.T, c *client.Conn) {
 				t.Errorf("wrong count for mirror %v-%v true true, wanted %v but found %v", i+10, j+10, wanted, found)
 			}
 		}
-	}
-}
-
-func assertItems(t *testing.T, items []common.Item, keys, values []byte) {
-	_, file, line, _ := runtime.Caller(1)
-	if len(items) == len(keys) && len(items) == len(values) {
-		for index, item := range items {
-			if string(item.Key) != string([]byte{keys[index]}) || string(item.Value) != string([]byte{values[index]}) {
-				t.Errorf("%v:%v: wanted %v, %v but got %v", file, line, keys, values, items)
-			}
-		}
-	} else {
-		t.Errorf("%v:%v: wanted %v, %v but got %v", file, line, keys, values, items)
 	}
 }
 

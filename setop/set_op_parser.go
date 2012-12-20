@@ -41,6 +41,14 @@ func (self *SetOpParser) Parse() (result *SetOp, err error) {
 	return
 }
 
+func MustParse(in string) *SetOp {
+	res, err := NewSetOpParser(in).Parse()
+	if err != nil {
+		panic(err)
+	}
+	return res
+}
+
 func (self *SetOpParser) parse() (result *SetOp, err error) {
 	state := empty
 	result = &SetOp{}
