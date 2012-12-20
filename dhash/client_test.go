@@ -26,6 +26,7 @@ func TestClient(t *testing.T) {
 	testNextPrevIndices(t, c)
 	testSlices(t, c)
 	testSliceIndices(t, c)
+	testSliceLen(t, c)
 }
 
 func assertMirrored(t *testing.T, c *client.Conn, subTree []byte) {
@@ -35,8 +36,14 @@ func assertMirrored(t *testing.T, c *client.Conn, subTree []byte) {
 			if err := n.Call("DHash.SubConfiguration", subTree, &conf); err != nil {
 				return err.Error(), false
 			}
-			if conf.Data["mirrored"] != "yes" {
-				return n.String(), false
+			var s int
+			if err := n.Call("DHash.SubSize", subTree, &s); err != nil {
+				return err.Error(), false
+			}
+			if s > 0 {
+				if conf.Data["mirrored"] != "yes" {
+					return fmt.Sprint(n.String(), conf.Data), false
+				}
 			}
 		}
 		return "", true
@@ -104,6 +111,27 @@ func testSubGetPutDel(t *testing.T, c *client.Conn) {
 			}
 		}
 	}
+}
+
+func testSliceLen(t *testing.T, c *client.Conn) {
+	var key []byte
+	var value []byte
+	subTree := []byte("jaguar2")
+	c.SubAddConfiguration(subTree, "mirrored", "yes")
+	for i := byte(1); i < 9; i++ {
+		key = []byte{i}
+		value = []byte{9 - i}
+		c.SSubPut(subTree, key, value)
+	}
+	assertMirrored(t, c, subTree)
+	assertItems(t, c.SliceLen(subTree, []byte{2}, true, 3), []byte{2, 3, 4}, []byte{7, 6, 5})
+	assertItems(t, c.SliceLen(subTree, []byte{2}, false, 3), []byte{3, 4, 5}, []byte{6, 5, 4})
+	assertItems(t, c.ReverseSliceLen(subTree, []byte{6}, true, 3), []byte{6, 5, 4}, []byte{3, 4, 5})
+	assertItems(t, c.ReverseSliceLen(subTree, []byte{6}, false, 3), []byte{5, 4, 3}, []byte{4, 5, 6})
+	assertItems(t, c.MirrorSliceLen(subTree, []byte{2}, true, 3), []byte{2, 3, 4}, []byte{7, 6, 5})
+	assertItems(t, c.MirrorSliceLen(subTree, []byte{2}, false, 3), []byte{3, 4, 5}, []byte{6, 5, 4})
+	assertItems(t, c.MirrorReverseSliceLen(subTree, []byte{6}, true, 3), []byte{6, 5, 4}, []byte{3, 4, 5})
+	assertItems(t, c.MirrorReverseSliceLen(subTree, []byte{6}, false, 3), []byte{5, 4, 3}, []byte{4, 5, 6})
 }
 
 func testCounts(t *testing.T, c *client.Conn) {

@@ -141,7 +141,7 @@ func (self *dhashServer) MirrorSliceLen(r common.Range, result *[]common.Item) e
 	return (*Node)(self).MirrorSliceLen(r, result)
 }
 func (self *dhashServer) MirrorReverseSliceLen(r common.Range, result *[]common.Item) error {
-	return (*Node)(self).MirrorSliceLen(r, result)
+	return (*Node)(self).MirrorReverseSliceLen(r, result)
 }
 func (self *dhashServer) ReverseSlice(r common.Range, result *[]common.Item) error {
 	return (*Node)(self).ReverseSlice(r, result)
@@ -159,7 +159,7 @@ func (self *dhashServer) SliceLen(r common.Range, result *[]common.Item) error {
 	return (*Node)(self).SliceLen(r, result)
 }
 func (self *dhashServer) ReverseSliceLen(r common.Range, result *[]common.Item) error {
-	return (*Node)(self).SliceLen(r, result)
+	return (*Node)(self).ReverseSliceLen(r, result)
 }
 func (self *dhashServer) SetExpression(expr setop.SetExpression, items *[]setop.SetOpResult) error {
 	return (*Node)(self).SetExpression(expr, items)

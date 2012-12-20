@@ -150,8 +150,8 @@ func BetweenIE(needle, fromInc, toExc []byte) (result bool) {
 func MergeItems(arys []*[]Item, up bool) (result []Item) {
 	result = *arys[0]
 	var items []Item
-	for i := 1; i < len(arys); i++ {
-		items = *arys[i]
+	for j := 1; j < len(arys); j++ {
+		items = *arys[j]
 		for _, item := range items {
 			i := sort.Search(len(result), func(i int) bool {
 				cmp := bytes.Compare(item.Key, result[i].Key)

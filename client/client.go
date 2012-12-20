@@ -580,7 +580,7 @@ func (self *Conn) MirrorReverseSliceLen(key, max []byte, maxinc bool, maxRes int
 		MaxInc: maxinc,
 		Len:    maxRes,
 	}
-	result = self.mergeRecent("DHash.MirrorReverseSliceLen", r, true)
+	result = self.mergeRecent("DHash.MirrorReverseSliceLen", r, false)
 	return
 }
 func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
@@ -660,7 +660,7 @@ func (self *Conn) ReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (res
 		MaxInc: maxinc,
 		Len:    maxRes,
 	}
-	result = self.mergeRecent("DHash.ReverseSliceLen", r, true)
+	result = self.mergeRecent("DHash.ReverseSliceLen", r, false)
 	return
 }
 func (self *Conn) SubMirrorPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool) {
