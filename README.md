@@ -15,6 +15,7 @@ A Go database
  * Code review
  * Code comments
  * Architectural documentation
+* Benchmark
 * Example app
  * Implementation
  * Documentation
