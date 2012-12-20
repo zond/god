@@ -5,7 +5,6 @@ A Go database
 
 # TODO
 
-* Write tests for a gazillion json rpc requests
 * Web interface
  * Functionality
   * Let all websockets get notifications when the connected host does put, del, get

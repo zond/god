@@ -434,7 +434,7 @@ func TestSyncPartial(t *testing.T) {
 func TestSyncSubConf(t *testing.T) {
 	tree1 := NewTree()
 	tree2 := NewTree()
-	tree1.SubAddConfiguration([]byte("a"), "blapp", "blepp")
+	tree1.SubAddConfiguration([]byte("a"), 1, "blapp", "blepp")
 	s := NewSync(tree1, tree2)
 	s.Run()
 	c1, _ := tree1.SubConfiguration([]byte("a"))
@@ -447,7 +447,7 @@ func TestSyncSubConf(t *testing.T) {
 func TestSyncConf(t *testing.T) {
 	tree1 := NewTree()
 	tree2 := NewTree()
-	tree1.AddConfiguration("blapp", "blepp")
+	tree1.AddConfiguration(1, "blapp", "blepp")
 	s := NewSync(tree1, tree2)
 	s.Run()
 	c1, _ := tree1.Configuration()
@@ -1127,7 +1127,7 @@ func BenchmarkTreeGet1000000(b *testing.B) {
 
 func BenchmarkTreeMirrorPut10(b *testing.B) {
 	benchmarkTestTree = NewTree()
-	benchmarkTestTree.AddConfiguration(mirrored, yes)
+	benchmarkTestTree.AddConfiguration(1, mirrored, yes)
 	benchTree(b, 10, true, false)
 }
 
