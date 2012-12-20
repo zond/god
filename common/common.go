@@ -102,7 +102,7 @@ func AssertWithin(t *testing.T, f func() (string, bool), d time.Duration) {
 		if msg, ok = f(); ok {
 			return
 		}
-		time.Sleep(time.Second)
+		time.Sleep(time.Second / 5)
 	}
 	var file string
 	var line int

@@ -28,6 +28,21 @@ func TestClient(t *testing.T) {
 	testSliceIndices(t, c)
 }
 
+func assertMirrored(t *testing.T, c *client.Conn, subTree []byte) {
+	common.AssertWithin(t, func() (string, bool) {
+		for _, n := range c.Nodes() {
+			var conf common.Conf
+			if err := n.Call("DHash.SubConfiguration", subTree, &conf); err != nil {
+				return err.Error(), false
+			}
+			if conf.Data["mirrored"] != "yes" {
+				return n.String(), false
+			}
+		}
+		return "", true
+	}, time.Second*10)
+}
+
 func testNextPrev(t *testing.T, c *client.Conn) {
 	c.SPut([]byte("testNextPrev1"), []byte("v1"))
 	c.SPut([]byte("testNextPrev2"), []byte("v2"))
@@ -101,8 +116,7 @@ func testCounts(t *testing.T, c *client.Conn) {
 		value = []byte{19 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	// because the test runs pretty fast, the nodes are still restructuring when we run the actual test if we dont sleep a bit here
-	time.Sleep(time.Second * 2)
+	assertMirrored(t, c, subTree)
 	for i := byte(0); i < 10; i++ {
 		for j := byte(0); j < 10; j++ {
 			wanted := common.Max(0, common.Min(int(j+1), 9)-common.Max(int(i), 1))
@@ -173,7 +187,7 @@ func testSliceIndices(t *testing.T, c *client.Conn) {
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	time.Sleep(time.Second * 2)
+	assertMirrored(t, c, subTree)
 	min := 2
 	max := 5
 	assertItems(t, c.SliceIndex(subTree, &min, &max), []byte{3, 4, 5, 6}, []byte{6, 5, 4, 3})
@@ -204,7 +218,7 @@ func testSlices(t *testing.T, c *client.Conn) {
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	time.Sleep(time.Second * 2)
+	assertMirrored(t, c, subTree)
 	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, true, true), []byte{5, 4, 3, 2}, []byte{4, 5, 6, 7})
 	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, true, false), []byte{4, 3, 2}, []byte{5, 6, 7})
 	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, false, true), []byte{5, 4, 3}, []byte{4, 5, 6})
@@ -256,8 +270,7 @@ func testNextPrevIndices(t *testing.T, c *client.Conn) {
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	// because the test runs pretty fast, the nodes are still restructuring when we run the actual test if we dont sleep a bit here
-	time.Sleep(time.Second * 2)
+	assertMirrored(t, c, subTree)
 	if k, v, i, e := c.NextIndex(subTree, -1); string(k) != string([]byte{1}) || string(v) != string([]byte{8}) || i != 0 || !e {
 		t.Errorf("wrong next index! wanted %v, %v, %v, %v but got %v, %v, %v, %v", 1, 8, 0, true, k, v, i, e)
 	}
@@ -317,8 +330,7 @@ func testIndices(t *testing.T, c *client.Conn) {
 		value = []byte{9 - i}
 		c.SSubPut(subTree, key, value)
 	}
-	// because the test runs pretty fast, the nodes are still restructuring when we run the actual test if we dont sleep a bit here
-	time.Sleep(time.Second * 2)
+	assertMirrored(t, c, subTree)
 	if ind, ok := c.ReverseIndexOf(subTree, []byte{9}); ind != 0 || ok {
 		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 0, false, ind, ok)
 	}
