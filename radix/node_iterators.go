@@ -5,7 +5,7 @@ func (self *node) each(prefix []Nibble, use int, f nodeIterator) (cont bool) {
 	if self != nil {
 		prefix = append(prefix, self.segment...)
 		if !self.empty && (use == 0 || self.use&use != 0) {
-			cont = f(stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
+			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 		}
 		if cont {
 			for _, child := range self.children {
@@ -30,7 +30,7 @@ func (self *node) reverseEach(prefix []Nibble, use int, f nodeIterator) (cont bo
 		}
 		if cont {
 			if !self.empty && (use == 0 || self.use&use != 0) {
-				cont = f(stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
+				cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 			}
 		}
 	}
@@ -40,7 +40,7 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int
 	cont = true
 	prefix = append(prefix, self.segment...)
 	if !self.empty && (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-		cont = f(stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
+		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 	}
 	if cont {
 		for _, child := range self.children {
@@ -93,7 +93,7 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, 
 	}
 	if cont {
 		if !self.empty && (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-			cont = f(stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
+			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
 		}
 	}
 	return
@@ -103,7 +103,7 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, us
 	cont = true
 	prefix = append(prefix, self.segment...)
 	if !self.empty && (use == 0 || self.use&use != 0) && (min == nil || count >= *min) && (max == nil || count <= *max) {
-		cont = f(stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp, count)
+		cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp, count)
 		if use == 0 || self.use&use&byteValue != 0 {
 			count++
 		}
@@ -168,7 +168,7 @@ func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *
 	}
 	if cont {
 		if !self.empty && (use == 0 || self.use&use != 0) && (min == nil || count >= *min) && (max == nil || count <= *max) {
-			cont = f(stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp, count)
+			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp, count)
 			if use == 0 || self.use&use&byteValue != 0 {
 				count++
 			}

@@ -6,10 +6,10 @@ type subTreeWrapper struct {
 }
 
 func (self *subTreeWrapper) Configuration() (map[string]string, int64) {
-	return self.parentTree.SubConfiguration(stitch(self.key))
+	return self.parentTree.SubConfiguration(Stitch(self.key))
 }
 func (self *subTreeWrapper) Configure(conf map[string]string, ts int64) {
-	self.parentTree.SubConfigure(stitch(self.key), conf, ts)
+	self.parentTree.SubConfigure(Stitch(self.key), conf, ts)
 }
 func (self *subTreeWrapper) Hash() (hash []byte) {
 	if p := self.parentTree.Finger(self.key); p != nil {
