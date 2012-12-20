@@ -92,15 +92,56 @@ func testCounts(t *testing.T, c *client.Conn) {
 	var value []byte
 	subTree := []byte("jaguar")
 	c.SubAddConfiguration(subTree, "mirrored", "yes")
-	for i := byte(0); i < 10; i++ {
+	for i := byte(1); i < 9; i++ {
 		key = []byte{i}
-		value = []byte{9 - i}
+		value = []byte{19 - i}
 		c.SSubPut(subTree, key, value)
 	}
 	// because the test runs pretty fast, the nodes are still restructuring when we run the actual test if we dont sleep a bit here
 	time.Sleep(time.Second * 2)
 	for i := byte(0); i < 10; i++ {
 		for j := byte(0); j < 10; j++ {
+			wanted := common.Max(0, common.Min(int(j+1), 9)-common.Max(int(i), 1))
+			found := c.Count([]byte("jaguar"), []byte{i}, []byte{j}, true, true)
+			if found != wanted {
+				t.Errorf("wrong count for %v-%v true true, wanted %v but found %v", i, j, wanted, found)
+			}
+			wanted = common.Max(0, common.Min(int(j), 9)-common.Max(int(i), 1))
+			found = c.Count([]byte("jaguar"), []byte{i}, []byte{j}, true, false)
+			if found != wanted {
+				t.Errorf("wrong count for %v-%v true false, wanted %v but found %v", i, j, wanted, found)
+			}
+			wanted = common.Max(0, common.Min(int(j+1), 9)-common.Max(int(i+1), 1))
+			found = c.Count([]byte("jaguar"), []byte{i}, []byte{j}, false, true)
+			if found != wanted {
+				t.Errorf("wrong count for %v-%v true false, wanted %v but found %v", i, j, wanted, found)
+			}
+			wanted = common.Max(0, common.Min(int(j), 9)-common.Max(int(i+1), 1))
+			found = c.Count([]byte("jaguar"), []byte{i}, []byte{j}, false, false)
+			if found != wanted {
+				t.Errorf("wrong count for %v-%v false false, wanted %v but found %v", i, j, wanted, found)
+			}
+
+			wanted = common.Max(0, common.Min(int(j+10), 19)-common.Max(int(i+11), 11))
+			found = c.MirrorCount([]byte("jaguar"), []byte{i + 10}, []byte{j + 10}, false, false)
+			if found != wanted {
+				t.Errorf("wrong count for mirror %v-%v false false, wanted %v but found %v", i+10, j+10, wanted, found)
+			}
+			wanted = common.Max(0, common.Min(int(j+10), 19)-common.Max(int(i+10), 11))
+			found = c.MirrorCount([]byte("jaguar"), []byte{i + 10}, []byte{j + 10}, true, false)
+			if found != wanted {
+				t.Errorf("wrong count for mirror %v-%v true false, wanted %v but found %v", i+10, j+10, wanted, found)
+			}
+			wanted = common.Max(0, common.Min(int(j+11), 19)-common.Max(int(i+11), 11))
+			found = c.MirrorCount([]byte("jaguar"), []byte{i + 10}, []byte{j + 10}, false, true)
+			if found != wanted {
+				t.Errorf("wrong count for mirror %v-%v false true, wanted %v but found %v", i+10, j+10, wanted, found)
+			}
+			wanted = common.Max(0, common.Min(int(j+11), 19)-common.Max(int(i+10), 11))
+			found = c.MirrorCount([]byte("jaguar"), []byte{i + 10}, []byte{j + 10}, true, true)
+			if found != wanted {
+				t.Errorf("wrong count for mirror %v-%v true true, wanted %v but found %v", i+10, j+10, wanted, found)
+			}
 		}
 	}
 }

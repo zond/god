@@ -407,8 +407,16 @@ func (self *Tree) RealSizeBetween(min, max []byte, mininc, maxinc bool) int {
 	return self.sizeBetween(min, max, mininc, maxinc, 0)
 }
 func (self *Tree) MirrorSizeBetween(min, max []byte, mininc, maxinc bool) (i int) {
-	if self == nil || self.mirror != nil {
+	if self == nil || self.mirror == nil {
 		return
+	}
+	if !mininc && min != nil {
+		mininc = true
+		min = incrementBytes(min)
+	}
+	if maxinc && max != nil {
+		maxinc = false
+		max = incrementBytes(max)
 	}
 	return self.mirror.SizeBetween(min, max, mininc, maxinc)
 }
