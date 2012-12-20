@@ -5,11 +5,15 @@ import (
 	"../radix"
 )
 
-type remoteHashTree common.Remote
+type remoteHashTree struct {
+	destination common.Remote
+	source      common.Remote
+	node        *Node
+}
 
 func (self remoteHashTree) Configuration() (conf map[string]string, timestamp int64) {
 	var result common.Conf
-	if err := common.Remote(self).Call("DHash.Configuration", 0, &result); err != nil {
+	if err := self.destination.Call("DHash.Configuration", 0, &result); err != nil {
 		conf = make(map[string]string)
 	} else {
 		conf, timestamp = result.Data, result.Timestamp
@@ -18,7 +22,7 @@ func (self remoteHashTree) Configuration() (conf map[string]string, timestamp in
 }
 func (self remoteHashTree) SubConfiguration(key []byte) (conf map[string]string, timestamp int64) {
 	var result common.Conf
-	if err := common.Remote(self).Call("DHash.SubConfiguration", key, &result); err != nil {
+	if err := self.destination.Call("DHash.SubConfiguration", key, &result); err != nil {
 		conf = make(map[string]string)
 	} else {
 		conf, timestamp = result.Data, result.Timestamp
@@ -27,31 +31,31 @@ func (self remoteHashTree) SubConfiguration(key []byte) (conf map[string]string,
 }
 func (self remoteHashTree) Configure(conf map[string]string, timestamp int64) {
 	var x int
-	common.Remote(self).Call("HashTree.Configure", common.Conf{
+	self.destination.Call("HashTree.Configure", common.Conf{
 		Data:      conf,
 		Timestamp: timestamp,
 	}, &x)
 }
 func (self remoteHashTree) SubConfigure(key []byte, conf map[string]string, timestamp int64) {
 	var x int
-	common.Remote(self).Call("HashTree.SubConfigure", common.Conf{
+	self.destination.Call("HashTree.SubConfigure", common.Conf{
 		TreeKey:   key,
 		Data:      conf,
 		Timestamp: timestamp,
 	}, &x)
 }
 func (self remoteHashTree) Hash() (result []byte) {
-	common.Remote(self).Call("HashTree.Hash", 0, &result)
+	self.destination.Call("HashTree.Hash", 0, &result)
 	return
 }
 func (self remoteHashTree) Finger(key []radix.Nibble) (result *radix.Print) {
 	result = &radix.Print{}
-	common.Remote(self).Call("HashTree.Finger", key, result)
+	self.destination.Call("HashTree.Finger", key, result)
 	return
 }
 func (self remoteHashTree) GetTimestamp(key []radix.Nibble) (value []byte, timestamp int64, present bool) {
 	result := HashTreeItem{}
-	common.Remote(self).Call("HashTree.GetTimestamp", key, &result)
+	self.destination.Call("HashTree.GetTimestamp", key, &result)
 	value, timestamp, present = result.Value, result.Timestamp, result.Exists
 	return
 }
@@ -63,7 +67,16 @@ func (self remoteHashTree) PutTimestamp(key []radix.Nibble, value []byte, presen
 		Expected:  expected,
 		Timestamp: timestamp,
 	}
-	common.Remote(self).Call("HashTree.PutTimestamp", data, &changed)
+	op := "HashTree.PutTimestamp"
+	if self.node.hasCommListeners() {
+		self.node.triggerCommListeners(Comm{
+			Key:         radix.Stitch(data.Key),
+			Source:      self.source,
+			Destination: self.destination,
+			Type:        op,
+		})
+	}
+	self.destination.Call(op, data, &changed)
 	return
 }
 func (self remoteHashTree) DelTimestamp(key []radix.Nibble, expected int64) (changed bool) {
@@ -71,7 +84,16 @@ func (self remoteHashTree) DelTimestamp(key []radix.Nibble, expected int64) (cha
 		Key:      key,
 		Expected: expected,
 	}
-	common.Remote(self).Call("HashTree.DelTimestamp", data, &changed)
+	op := "HashTree.DelTimestamp"
+	if self.node.hasCommListeners() {
+		self.node.triggerCommListeners(Comm{
+			Key:         radix.Stitch(data.Key),
+			Source:      self.source,
+			Destination: self.destination,
+			Type:        op,
+		})
+	}
+	self.destination.Call(op, data, &changed)
 	return
 }
 func (self remoteHashTree) SubFinger(key, subKey []radix.Nibble) (result *radix.Print) {
@@ -80,7 +102,7 @@ func (self remoteHashTree) SubFinger(key, subKey []radix.Nibble) (result *radix.
 		SubKey: subKey,
 	}
 	result = &radix.Print{}
-	common.Remote(self).Call("HashTree.SubFinger", data, result)
+	self.destination.Call("HashTree.SubFinger", data, result)
 	return
 }
 func (self remoteHashTree) SubGetTimestamp(key, subKey []radix.Nibble) (value []byte, timestamp int64, present bool) {
@@ -88,7 +110,7 @@ func (self remoteHashTree) SubGetTimestamp(key, subKey []radix.Nibble) (value []
 		Key:    key,
 		SubKey: subKey,
 	}
-	common.Remote(self).Call("HashTree.SubGetTimestamp", data, &data)
+	self.destination.Call("HashTree.SubGetTimestamp", data, &data)
 	value, timestamp, present = data.Value, data.Timestamp, data.Exists
 	return
 }
@@ -101,7 +123,17 @@ func (self remoteHashTree) SubPutTimestamp(key, subKey []radix.Nibble, value []b
 		Expected:  subExpected,
 		Timestamp: subTimestamp,
 	}
-	common.Remote(self).Call("HashTree.SubPutTimestamp", data, &changed)
+	op := "HashTree.SubPutTimestamp"
+	if self.node.hasCommListeners() {
+		self.node.triggerCommListeners(Comm{
+			Key:         radix.Stitch(data.Key),
+			SubKey:      radix.Stitch(data.SubKey),
+			Source:      self.source,
+			Destination: self.destination,
+			Type:        op,
+		})
+	}
+	self.destination.Call(op, data, &changed)
 	return
 }
 func (self remoteHashTree) SubDelTimestamp(key, subKey []radix.Nibble, subExpected int64) (changed bool) {
@@ -110,6 +142,16 @@ func (self remoteHashTree) SubDelTimestamp(key, subKey []radix.Nibble, subExpect
 		SubKey:   subKey,
 		Expected: subExpected,
 	}
-	common.Remote(self).Call("HashTree.SubDelTimestamp", data, &changed)
+	op := "HashTree.SubDelTimestamp"
+	if self.node.hasCommListeners() {
+		self.node.triggerCommListeners(Comm{
+			Key:         radix.Stitch(data.Key),
+			SubKey:      radix.Stitch(data.SubKey),
+			Source:      self.source,
+			Destination: self.destination,
+			Type:        op,
+		})
+	}
+	self.destination.Call(op, data, &changed)
 	return
 }

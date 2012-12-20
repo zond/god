@@ -189,8 +189,13 @@ func (self *Node) sync() {
 	nextSuccessor := self.node.GetSuccessor()
 	for i := 0; i < self.node.Redundancy()-1; i++ {
 		myPos := self.node.GetPosition()
-		pushed = radix.NewSync(self.tree, (remoteHashTree)(nextSuccessor)).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
-		pulled = radix.NewSync((remoteHashTree)(nextSuccessor), self.tree).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
+		remoteHash := remoteHashTree{
+			source:      selfRemote,
+			destination: nextSuccessor,
+			node:        self,
+		}
+		pushed = radix.NewSync(self.tree, remoteHash).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
+		pulled = radix.NewSync(remoteHash, self.tree).From(self.node.GetPredecessor().Pos).To(myPos).Run().PutCount()
 		if pushed != 0 || pulled != 0 {
 			self.triggerSyncListeners(selfRemote, nextSuccessor, pulled, pushed)
 		}
@@ -328,7 +333,11 @@ func (self *Node) clean() {
 		if owners, isOwner := self.owners(nextKey); !isOwner {
 			var sync *radix.Sync
 			for index, owner := range owners {
-				sync = radix.NewSync(self.tree, (remoteHashTree)(owner)).From(nextKey).To(owners[0].Pos)
+				sync = radix.NewSync(self.tree, remoteHashTree{
+					source:      selfRemote,
+					destination: owner,
+					node:        self,
+				}).From(nextKey).To(owners[0].Pos)
 				if index == len(owners)-2 {
 					sync.Destroy()
 				}
