@@ -289,7 +289,11 @@ func (self *Logger) snapshot(snap *logfile, files logfiles) {
 		} else {
 			if op.SubKey == nil {
 				if op.Clear {
-					delete(treeCompressor, string(op.Key))
+					if op.Key == nil {
+						byteCompressor = make(map[string]Op)
+					} else {
+						delete(treeCompressor, string(op.Key))
+					}
 				} else {
 					delete(byteCompressor, string(op.Key))
 				}
