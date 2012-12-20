@@ -288,16 +288,17 @@ func (self *Tree) MirrorIndexOf(key []byte) (index int, existed bool) {
 	}
 	var value []byte
 	self.MirrorEachBetween(key, nil, true, false, func(k, v []byte, ts int64) bool {
-		value, existed = v, true
+		value, existed = v, bytes.Compare(key, k[:len(key)]) == 0
 		return false
 	})
+	newKey := key
 	if existed {
 		escapedValue := escapeBytes(value)
-		newKey := make([]byte, len(escapedValue)+len(key)+1)
+		newKey = make([]byte, len(escapedValue)+len(key)+1)
 		copy(newKey, key)
 		copy(newKey[len(key)+1:], escapedValue)
-		index, _ = self.mirror.IndexOf(newKey)
 	}
+	index, _ = self.mirror.IndexOf(newKey)
 	return
 }
 func (self *Tree) IndexOf(key []byte) (index int, existed bool) {
@@ -316,16 +317,17 @@ func (self *Tree) MirrorReverseIndexOf(key []byte) (index int, existed bool) {
 	}
 	var value []byte
 	self.MirrorEachBetween(key, nil, true, false, func(k, v []byte, ts int64) bool {
-		value, existed = v, true
+		value, existed = v, bytes.Compare(key, k[:len(key)]) == 0
 		return false
 	})
+	newKey := key
 	if existed {
 		escapedValue := escapeBytes(value)
-		newKey := make([]byte, len(escapedValue)+len(key)+1)
+		newKey = make([]byte, len(escapedValue)+len(key)+1)
 		copy(newKey, key)
 		copy(newKey[len(key)+1:], escapedValue)
-		index, _ = self.mirror.ReverseIndexOf(newKey)
 	}
+	index, _ = self.mirror.ReverseIndexOf(newKey)
 	return
 }
 func (self *Tree) ReverseIndexOf(key []byte) (index int, existed bool) {

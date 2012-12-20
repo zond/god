@@ -21,6 +21,7 @@ func TestClient(t *testing.T) {
 	testDump(t, c)
 	testSubDump(t, c)
 	testNextPrev(t, c)
+	testCounts(t, c)
 }
 
 func testNextPrev(t *testing.T, c *client.Conn) {
@@ -86,10 +87,10 @@ func testSubGetPutDel(t *testing.T, c *client.Conn) {
 	}
 }
 
-func testIndices(t *testing.T, c *client.Conn) {
+func testCounts(t *testing.T, c *client.Conn) {
 	var key []byte
 	var value []byte
-	subTree := []byte("ko")
+	subTree := []byte("jaguar")
 	c.SubAddConfiguration(subTree, "mirrored", "yes")
 	for i := byte(0); i < 10; i++ {
 		key = []byte{i}
@@ -99,16 +100,58 @@ func testIndices(t *testing.T, c *client.Conn) {
 	// because the test runs pretty fast, the nodes are still restructuring when we run the actual test if we dont sleep a bit here
 	time.Sleep(time.Second * 2)
 	for i := byte(0); i < 10; i++ {
-		if ind, ok := c.MirrorIndexOf(subTree, []byte{i}); ind != int(i) || !ok {
-			t.Errorf("wrong index! wanted %v, %v but got %v, %v", i, true, ind, ok)
+		for j := byte(0); j < 10; j++ {
 		}
-		if ind, ok := c.MirrorReverseIndexOf(subTree, []byte{i}); ind != int(9-i) || !ok {
+	}
+}
+
+func testIndices(t *testing.T, c *client.Conn) {
+	var key []byte
+	var value []byte
+	subTree := []byte("ko")
+	c.SubAddConfiguration(subTree, "mirrored", "yes")
+	for i := byte(1); i < 9; i++ {
+		key = []byte{i}
+		value = []byte{9 - i}
+		c.SSubPut(subTree, key, value)
+	}
+	// because the test runs pretty fast, the nodes are still restructuring when we run the actual test if we dont sleep a bit here
+	time.Sleep(time.Second * 2)
+	if ind, ok := c.ReverseIndexOf(subTree, []byte{9}); ind != 0 || ok {
+		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 0, false, ind, ok)
+	}
+	if ind, ok := c.MirrorReverseIndexOf(subTree, []byte{9}); ind != 0 || ok {
+		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 0, false, ind, ok)
+	}
+	if ind, ok := c.ReverseIndexOf(subTree, []byte{0}); ind != 8 || ok {
+		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 8, false, ind, ok)
+	}
+	if ind, ok := c.MirrorReverseIndexOf(subTree, []byte{0}); ind != 8 || ok {
+		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 8, false, ind, ok)
+	}
+	if ind, ok := c.IndexOf(subTree, []byte{9}); ind != 8 || ok {
+		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 8, false, ind, ok)
+	}
+	if ind, ok := c.MirrorIndexOf(subTree, []byte{9}); ind != 8 || ok {
+		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 8, false, ind, ok)
+	}
+	if ind, ok := c.IndexOf(subTree, []byte{0}); ind != 0 || ok {
+		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 0, false, ind, ok)
+	}
+	if ind, ok := c.MirrorIndexOf(subTree, []byte{0}); ind != 0 || ok {
+		t.Errorf("wrong index! wanted %v, %v but got %v, %v", 0, false, ind, ok)
+	}
+	for i := byte(1); i < 9; i++ {
+		if ind, ok := c.MirrorIndexOf(subTree, []byte{i}); ind != int(i-1) || !ok {
+			t.Errorf("wrong index! wanted %v, %v but got %v, %v", i-1, true, ind, ok)
+		}
+		if ind, ok := c.MirrorReverseIndexOf(subTree, []byte{i}); ind != int(8-i) || !ok {
 			t.Errorf("wrong index! wanted %v, %v but got %v, %v", 9-i, true, ind, ok)
 		}
-		if ind, ok := c.IndexOf(subTree, []byte{i}); ind != int(i) || !ok {
-			t.Errorf("wrong index! wanted %v, %v but got %v, %v", i, true, ind, ok)
+		if ind, ok := c.IndexOf(subTree, []byte{i}); ind != int(i-1) || !ok {
+			t.Errorf("wrong index! wanted %v, %v but got %v, %v", i-1, true, ind, ok)
 		}
-		if ind, ok := c.ReverseIndexOf(subTree, []byte{i}); ind != int(9-i) || !ok {
+		if ind, ok := c.ReverseIndexOf(subTree, []byte{i}); ind != int(8-i) || !ok {
 			t.Errorf("wrong index! wanted %v, %v but got %v, %v", 9-i, true, ind, ok)
 		}
 	}
