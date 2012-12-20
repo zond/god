@@ -271,6 +271,22 @@ func (self *Conn) subDump(key []byte, c chan [2][]byte, wait *sync.WaitGroup) {
 	wait.Done()
 }
 
+func (self *Conn) Kill() {
+	var x int
+	for _, node := range self.ring.Nodes() {
+		if err := node.Call("DHash.Kill", 0, &x); err != nil {
+			self.removeNode(node)
+		}
+	}
+}
+func (self *Conn) Clear() {
+	var x int
+	for _, node := range self.ring.Nodes() {
+		if err := node.Call("DHash.Clear", 0, &x); err != nil {
+			self.removeNode(node)
+		}
+	}
+}
 func (self *Conn) SSubPut(key, subKey, value []byte) {
 	self.subPut(key, subKey, value, true)
 }
