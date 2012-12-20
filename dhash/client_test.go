@@ -6,6 +6,7 @@ import (
 	"../murmur"
 	"bytes"
 	"fmt"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -23,6 +24,8 @@ func TestClient(t *testing.T) {
 	testNextPrev(t, c)
 	testCounts(t, c)
 	testNextPrevIndices(t, c)
+	testSlices(t, c)
+	testSliceIndices(t, c)
 }
 
 func testNextPrev(t *testing.T, c *client.Conn) {
@@ -145,6 +148,102 @@ func testCounts(t *testing.T, c *client.Conn) {
 			}
 		}
 	}
+}
+
+func assertItems(t *testing.T, items []common.Item, keys, values []byte) {
+	_, file, line, _ := runtime.Caller(1)
+	if len(items) == len(keys) && len(items) == len(values) {
+		for index, item := range items {
+			if string(item.Key) != string([]byte{keys[index]}) || string(item.Value) != string([]byte{values[index]}) {
+				t.Errorf("%v:%v: wanted %v, %v but got %v", file, line, keys, values, items)
+			}
+		}
+	} else {
+		t.Errorf("%v:%v: wanted %v, %v but got %v", file, line, keys, values, items)
+	}
+}
+
+func testSliceIndices(t *testing.T, c *client.Conn) {
+	var key []byte
+	var value []byte
+	subTree := []byte("banan2")
+	c.SubAddConfiguration(subTree, "mirrored", "yes")
+	for i := byte(1); i < 9; i++ {
+		key = []byte{i}
+		value = []byte{9 - i}
+		c.SSubPut(subTree, key, value)
+	}
+	time.Sleep(time.Second * 2)
+	min := 2
+	max := 5
+	assertItems(t, c.SliceIndex(subTree, &min, &max), []byte{3, 4, 5, 6}, []byte{6, 5, 4, 3})
+	assertItems(t, c.SliceIndex(subTree, nil, &max), []byte{1, 2, 3, 4, 5, 6}, []byte{8, 7, 6, 5, 4, 3})
+	assertItems(t, c.SliceIndex(subTree, &min, nil), []byte{3, 4, 5, 6, 7, 8}, []byte{6, 5, 4, 3, 2, 1})
+	assertItems(t, c.SliceIndex(subTree, nil, nil), []byte{1, 2, 3, 4, 5, 6, 7, 8}, []byte{8, 7, 6, 5, 4, 3, 2, 1})
+	assertItems(t, c.ReverseSliceIndex(subTree, &min, &max), []byte{6, 5, 4, 3}, []byte{3, 4, 5, 6})
+	assertItems(t, c.ReverseSliceIndex(subTree, nil, &max), []byte{8, 7, 6, 5, 4, 3}, []byte{1, 2, 3, 4, 5, 6})
+	assertItems(t, c.ReverseSliceIndex(subTree, &min, nil), []byte{6, 5, 4, 3, 2, 1}, []byte{3, 4, 5, 6, 7, 8})
+	assertItems(t, c.ReverseSliceIndex(subTree, nil, nil), []byte{8, 7, 6, 5, 4, 3, 2, 1}, []byte{1, 2, 3, 4, 5, 6, 7, 8})
+	assertItems(t, c.MirrorSliceIndex(subTree, &min, &max), []byte{3, 4, 5, 6}, []byte{6, 5, 4, 3})
+	assertItems(t, c.MirrorSliceIndex(subTree, nil, &max), []byte{1, 2, 3, 4, 5, 6}, []byte{8, 7, 6, 5, 4, 3})
+	assertItems(t, c.MirrorSliceIndex(subTree, &min, nil), []byte{3, 4, 5, 6, 7, 8}, []byte{6, 5, 4, 3, 2, 1})
+	assertItems(t, c.MirrorSliceIndex(subTree, nil, nil), []byte{1, 2, 3, 4, 5, 6, 7, 8}, []byte{8, 7, 6, 5, 4, 3, 2, 1})
+	assertItems(t, c.MirrorReverseSliceIndex(subTree, &min, &max), []byte{6, 5, 4, 3}, []byte{3, 4, 5, 6})
+	assertItems(t, c.MirrorReverseSliceIndex(subTree, nil, &max), []byte{8, 7, 6, 5, 4, 3}, []byte{1, 2, 3, 4, 5, 6})
+	assertItems(t, c.MirrorReverseSliceIndex(subTree, &min, nil), []byte{6, 5, 4, 3, 2, 1}, []byte{3, 4, 5, 6, 7, 8})
+	assertItems(t, c.MirrorReverseSliceIndex(subTree, nil, nil), []byte{8, 7, 6, 5, 4, 3, 2, 1}, []byte{1, 2, 3, 4, 5, 6, 7, 8})
+}
+
+func testSlices(t *testing.T, c *client.Conn) {
+	var key []byte
+	var value []byte
+	subTree := []byte("banan")
+	c.SubAddConfiguration(subTree, "mirrored", "yes")
+	for i := byte(1); i < 9; i++ {
+		key = []byte{i}
+		value = []byte{9 - i}
+		c.SSubPut(subTree, key, value)
+	}
+	time.Sleep(time.Second * 2)
+	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, true, true), []byte{5, 4, 3, 2}, []byte{4, 5, 6, 7})
+	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, true, false), []byte{4, 3, 2}, []byte{5, 6, 7})
+	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, false, true), []byte{5, 4, 3}, []byte{4, 5, 6})
+	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, []byte{5}, false, false), []byte{4, 3}, []byte{5, 6})
+	assertItems(t, c.MirrorSlice(subTree, []byte{2}, []byte{5}, true, true), []byte{2, 3, 4, 5}, []byte{7, 6, 5, 4})
+	assertItems(t, c.MirrorSlice(subTree, []byte{2}, []byte{5}, true, false), []byte{2, 3, 4}, []byte{7, 6, 5})
+	assertItems(t, c.MirrorSlice(subTree, []byte{2}, []byte{5}, false, true), []byte{3, 4, 5}, []byte{6, 5, 4})
+	assertItems(t, c.MirrorSlice(subTree, []byte{2}, []byte{5}, false, false), []byte{3, 4}, []byte{6, 5})
+	assertItems(t, c.ReverseSlice(subTree, []byte{2}, []byte{5}, true, true), []byte{5, 4, 3, 2}, []byte{4, 5, 6, 7})
+	assertItems(t, c.ReverseSlice(subTree, []byte{2}, []byte{5}, true, false), []byte{4, 3, 2}, []byte{5, 6, 7})
+	assertItems(t, c.ReverseSlice(subTree, []byte{2}, []byte{5}, false, true), []byte{5, 4, 3}, []byte{4, 5, 6})
+	assertItems(t, c.ReverseSlice(subTree, []byte{2}, []byte{5}, false, false), []byte{4, 3}, []byte{5, 6})
+	assertItems(t, c.Slice(subTree, []byte{2}, []byte{5}, true, true), []byte{2, 3, 4, 5}, []byte{7, 6, 5, 4})
+	assertItems(t, c.Slice(subTree, []byte{2}, []byte{5}, true, false), []byte{2, 3, 4}, []byte{7, 6, 5})
+	assertItems(t, c.Slice(subTree, []byte{2}, []byte{5}, false, true), []byte{3, 4, 5}, []byte{6, 5, 4})
+	assertItems(t, c.Slice(subTree, []byte{2}, []byte{5}, false, false), []byte{3, 4}, []byte{6, 5})
+
+	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, nil, true, true), []byte{8, 7, 6, 5, 4, 3, 2}, []byte{1, 2, 3, 4, 5, 6, 7})
+	assertItems(t, c.MirrorReverseSlice(subTree, []byte{2}, nil, false, true), []byte{8, 7, 6, 5, 4, 3}, []byte{1, 2, 3, 4, 5, 6})
+	assertItems(t, c.MirrorSlice(subTree, []byte{2}, nil, true, true), []byte{2, 3, 4, 5, 6, 7, 8}, []byte{7, 6, 5, 4, 3, 2, 1})
+	assertItems(t, c.MirrorSlice(subTree, []byte{2}, nil, false, true), []byte{3, 4, 5, 6, 7, 8}, []byte{6, 5, 4, 3, 2, 1})
+	assertItems(t, c.ReverseSlice(subTree, []byte{2}, nil, true, true), []byte{8, 7, 6, 5, 4, 3, 2}, []byte{1, 2, 3, 4, 5, 6, 7})
+	assertItems(t, c.ReverseSlice(subTree, []byte{2}, nil, false, true), []byte{8, 7, 6, 5, 4, 3}, []byte{1, 2, 3, 4, 5, 6})
+	assertItems(t, c.Slice(subTree, []byte{2}, nil, true, true), []byte{2, 3, 4, 5, 6, 7, 8}, []byte{7, 6, 5, 4, 3, 2, 1})
+	assertItems(t, c.Slice(subTree, []byte{2}, nil, false, true), []byte{3, 4, 5, 6, 7, 8}, []byte{6, 5, 4, 3, 2, 1})
+
+	assertItems(t, c.MirrorReverseSlice(subTree, nil, []byte{5}, true, true), []byte{5, 4, 3, 2, 1}, []byte{4, 5, 6, 7, 8})
+	assertItems(t, c.MirrorReverseSlice(subTree, nil, []byte{5}, true, false), []byte{4, 3, 2, 1}, []byte{5, 6, 7, 8})
+	assertItems(t, c.MirrorSlice(subTree, nil, []byte{5}, true, true), []byte{1, 2, 3, 4, 5}, []byte{8, 7, 6, 5, 4})
+	assertItems(t, c.MirrorSlice(subTree, nil, []byte{5}, true, false), []byte{1, 2, 3, 4}, []byte{8, 7, 6, 5})
+	assertItems(t, c.ReverseSlice(subTree, nil, []byte{5}, true, true), []byte{5, 4, 3, 2, 1}, []byte{4, 5, 6, 7, 8})
+	assertItems(t, c.ReverseSlice(subTree, nil, []byte{5}, true, false), []byte{4, 3, 2, 1}, []byte{5, 6, 7, 8})
+	assertItems(t, c.Slice(subTree, nil, []byte{5}, true, true), []byte{1, 2, 3, 4, 5}, []byte{8, 7, 6, 5, 4})
+	assertItems(t, c.Slice(subTree, nil, []byte{5}, true, false), []byte{1, 2, 3, 4}, []byte{8, 7, 6, 5})
+
+	assertItems(t, c.MirrorReverseSlice(subTree, nil, nil, true, true), []byte{8, 7, 6, 5, 4, 3, 2, 1}, []byte{1, 2, 3, 4, 5, 6, 7, 8})
+	assertItems(t, c.MirrorSlice(subTree, nil, nil, true, true), []byte{1, 2, 3, 4, 5, 6, 7, 8}, []byte{8, 7, 6, 5, 4, 3, 2, 1})
+	assertItems(t, c.ReverseSlice(subTree, nil, nil, true, true), []byte{8, 7, 6, 5, 4, 3, 2, 1}, []byte{1, 2, 3, 4, 5, 6, 7, 8})
+	assertItems(t, c.Slice(subTree, nil, nil, true, true), []byte{1, 2, 3, 4, 5, 6, 7, 8}, []byte{8, 7, 6, 5, 4, 3, 2, 1})
 }
 
 func testNextPrevIndices(t *testing.T, c *client.Conn) {

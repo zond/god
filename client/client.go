@@ -504,10 +504,18 @@ func (self *Conn) PrevIndex(key []byte, index int) (foundKey, foundValue []byte,
 	return
 }
 func (self *Conn) MirrorReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
+	var mi int
+	var ma int
+	if min != nil {
+		mi = *min
+	}
+	if max != nil {
+		ma = *max
+	}
 	r := common.Range{
 		Key:      key,
-		MinIndex: *min,
-		MaxIndex: *max,
+		MinIndex: mi,
+		MaxIndex: ma,
 		MinInc:   min != nil,
 		MaxInc:   max != nil,
 	}
@@ -515,10 +523,18 @@ func (self *Conn) MirrorReverseSliceIndex(key []byte, min, max *int) (result []c
 	return
 }
 func (self *Conn) MirrorSliceIndex(key []byte, min, max *int) (result []common.Item) {
+	var mi int
+	var ma int
+	if min != nil {
+		mi = *min
+	}
+	if max != nil {
+		ma = *max
+	}
 	r := common.Range{
 		Key:      key,
-		MinIndex: *min,
-		MaxIndex: *max,
+		MinIndex: mi,
+		MaxIndex: ma,
 		MinInc:   min != nil,
 		MaxInc:   max != nil,
 	}
@@ -568,10 +584,18 @@ func (self *Conn) MirrorReverseSliceLen(key, max []byte, maxinc bool, maxRes int
 	return
 }
 func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
+	var mi int
+	var ma int
+	if min != nil {
+		mi = *min
+	}
+	if max != nil {
+		ma = *max
+	}
 	r := common.Range{
 		Key:      key,
-		MinIndex: *min,
-		MaxIndex: *max,
+		MinIndex: mi,
+		MaxIndex: ma,
 		MinInc:   min != nil,
 		MaxInc:   max != nil,
 	}
@@ -579,10 +603,18 @@ func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.
 	return
 }
 func (self *Conn) SliceIndex(key []byte, min, max *int) (result []common.Item) {
+	var mi int
+	var ma int
+	if min != nil {
+		mi = *min
+	}
+	if max != nil {
+		ma = *max
+	}
 	r := common.Range{
 		Key:      key,
-		MinIndex: *min,
-		MaxIndex: *max,
+		MinIndex: mi,
+		MaxIndex: ma,
 		MinInc:   min != nil,
 		MaxInc:   max != nil,
 	}
