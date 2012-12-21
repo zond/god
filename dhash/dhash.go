@@ -1,13 +1,13 @@
 package dhash
 
 import (
-	"../common"
-	"../discord"
-	"../murmur"
-	"../radix"
-	"../timenet"
 	"bytes"
 	"fmt"
+	"github.com/zond/god/common"
+	"github.com/zond/god/discord"
+	"github.com/zond/god/murmur"
+	"github.com/zond/god/radix"
+	"github.com/zond/god/timenet"
 	"sync"
 	"sync/atomic"
 	"time"

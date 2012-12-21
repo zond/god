@@ -1,13 +1,13 @@
 package dhash
 
 import (
-	"../common"
-	"../web"
 	"bytes"
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/zond/god/common"
+	"github.com/zond/god/web"
 	"io"
 	"net"
 	"net/http"

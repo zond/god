@@ -1,11 +1,11 @@
 package radix
 
 import (
-	"../common"
-	"../murmur"
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/zond/god/common"
+	"github.com/zond/god/murmur"
 	"math/rand"
 	"reflect"
 	"runtime"

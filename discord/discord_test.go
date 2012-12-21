@@ -1,8 +1,8 @@
 package discord
 
 import (
-	"../common"
 	"fmt"
+	"github.com/zond/god/common"
 	"testing"
 	"time"
 )

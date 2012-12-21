@@ -1,13 +1,13 @@
 package main
 
 import (
-	"../client"
-	"../common"
-	"../setop"
 	"bufio"
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/zond/god/client"
+	"github.com/zond/god/common"
+	"github.com/zond/god/setop"
 	"io"
 	"math/big"
 	"os"

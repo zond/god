@@ -1,10 +1,10 @@
 package main
 
 import (
-	. "../"
-	"../../common"
-	"../../murmur"
 	"fmt"
+	. "github.com/zond/god/"
+	"github.com/zond/god/../common"
+	"github.com/zond/god/../murmur"
 	"os"
 	"runtime/pprof"
 )

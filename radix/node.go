@@ -1,10 +1,10 @@
 package radix
 
 import (
-	"../murmur"
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/zond/god/murmur"
 	"strings"
 	"time"
 )

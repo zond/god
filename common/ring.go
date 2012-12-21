@@ -1,9 +1,9 @@
 package common
 
 import (
-	"../murmur"
 	"bytes"
 	"fmt"
+	"github.com/zond/god/murmur"
 	"math/big"
 	"math/rand"
 	"sort"

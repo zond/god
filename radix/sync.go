@@ -1,8 +1,8 @@
 package radix
 
 import (
-	"../common"
 	"bytes"
+	"github.com/zond/god/common"
 )
 
 const (

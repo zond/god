@@ -1,9 +1,9 @@
 package dhash
 
 import (
-	"../common"
 	"bytes"
 	"fmt"
+	"github.com/zond/god/common"
 	"os"
 	"runtime"
 	"sort"

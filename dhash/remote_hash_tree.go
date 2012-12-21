@@ -1,8 +1,8 @@
 package dhash
 
 import (
-	"../common"
-	"../radix"
+	"github.com/zond/god/common"
+	"github.com/zond/god/radix"
 )
 
 type remoteHashTree struct {

@@ -1,10 +1,10 @@
 package setop
 
 import (
-	"../common"
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/zond/god/common"
 	"math/big"
 )
 

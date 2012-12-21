@@ -1,7 +1,7 @@
 package dhash
 
 import (
-	"../timenet"
+	"github.com/zond/god/timenet"
 )
 
 type dhashPeerProducer Node

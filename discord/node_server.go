@@ -1,7 +1,7 @@
 package discord
 
 import (
-	"../common"
+	"github.com/zond/god/common"
 )
 
 type nodeServer Node

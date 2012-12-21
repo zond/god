@@ -1,11 +1,11 @@
 package dhash
 
 import (
-	"../common"
-	"../setop"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/zond/god/common"
+	"github.com/zond/god/setop"
 	"net/http"
 )
 

@@ -1,11 +1,11 @@
 package radix
 
 import (
-	"../murmur"
-	"../persistence"
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/zond/god/murmur"
+	"github.com/zond/god/persistence"
 	"math/big"
 	"sync"
 	"sync/atomic"

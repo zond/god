@@ -1,10 +1,10 @@
 package client
 
 import (
-	"../common"
-	"../setop"
 	"bytes"
 	"fmt"
+	"github.com/zond/god/common"
+	"github.com/zond/god/setop"
 	"net/rpc"
 	"sync"
 	"sync/atomic"

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"../common"
-	"../dhash"
 	"flag"
 	"fmt"
+	"github.com/zond/god/common"
+	"github.com/zond/god/dhash"
 	"time"
 )
 

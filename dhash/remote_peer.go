@@ -1,7 +1,7 @@
 package dhash
 
 import (
-	"../common"
+	"github.com/zond/god/common"
 	"time"
 )
 

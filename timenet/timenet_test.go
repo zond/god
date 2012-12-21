@@ -1,8 +1,8 @@
 package timenet
 
 import (
-	"../common"
 	"fmt"
+	"github.com/zond/god/common"
 	"math"
 	"math/rand"
 	"testing"

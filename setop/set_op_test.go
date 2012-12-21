@@ -1,9 +1,9 @@
 package setop
 
 import (
-	"../common"
 	"bytes"
 	"fmt"
+	"github.com/zond/god/common"
 	"math/big"
 	"reflect"
 	"sort"

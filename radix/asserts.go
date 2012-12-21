@@ -1,7 +1,7 @@
 package radix
 
 import (
-	"../common"
+	"github.com/zond/god/common"
 	"testing"
 )
 

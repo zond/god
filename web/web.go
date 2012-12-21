@@ -1,10 +1,10 @@
 package web
 
 import (
-	"../templates"
 	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/zond/god/templates"
 	htmlTemplate "html/template"
 	"net/http"
 	textTemplate "text/template"

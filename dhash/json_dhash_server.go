@@ -1,8 +1,8 @@
 package dhash
 
 import (
-	"../common"
-	"../setop"
+	"github.com/zond/god/common"
+	"github.com/zond/god/setop"
 )
 
 type jsonDhashServer Node

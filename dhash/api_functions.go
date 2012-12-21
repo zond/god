@@ -1,11 +1,11 @@
 package dhash
 
 import (
-	"../client"
-	"../common"
-	"../setop"
 	"bytes"
 	"fmt"
+	"github.com/zond/god/client"
+	"github.com/zond/god/common"
+	"github.com/zond/god/setop"
 	"sync/atomic"
 	"time"
 )

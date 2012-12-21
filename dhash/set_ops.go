@@ -1,10 +1,10 @@
 package dhash
 
 import (
-	"../common"
-	"../radix"
-	"../setop"
 	"bytes"
+	"github.com/zond/god/common"
+	"github.com/zond/god/radix"
+	"github.com/zond/god/setop"
 )
 
 const (

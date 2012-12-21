@@ -1,10 +1,10 @@
 package discord
 
 import (
-	"../common"
-	"../murmur"
 	"bytes"
 	"fmt"
+	"github.com/zond/god/common"
+	"github.com/zond/god/murmur"
 	"net"
 	"net/rpc"
 	"sync"
