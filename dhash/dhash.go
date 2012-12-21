@@ -73,6 +73,18 @@ func NewNode(addr string) (result *Node) {
 		commListeners: make(map[*commListenerContainer]bool),
 		state:         created,
 	}
+	result.node.AddCommListener(func(source, dest common.Remote, typ string) bool {
+		if result.hasState(started) {
+			if result.hasCommListeners() {
+				result.triggerCommListeners(Comm{
+					Source:      source,
+					Destination: dest,
+					Type:        typ,
+				})
+			}
+		}
+		return !result.hasState(stopped)
+	})
 	result.AddChangeListener(func(r *common.Ring) bool {
 		atomic.StoreInt64(&result.lastReroute, time.Now().UnixNano())
 		return true
