@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+type CommListener func(source, dest common.Remote, typ string) bool
+
 type PingPack struct {
 	Caller   common.Remote
 	RingHash []byte
@@ -24,14 +26,15 @@ const (
 )
 
 type Node struct {
-	ring      *common.Ring
-	position  []byte
-	addr      string
-	listener  *net.TCPListener
-	metaLock  *sync.RWMutex
-	routeLock *sync.Mutex
-	state     int32
-	exports   map[string]interface{}
+	ring          *common.Ring
+	position      []byte
+	addr          string
+	listener      *net.TCPListener
+	metaLock      *sync.RWMutex
+	routeLock     *sync.Mutex
+	state         int32
+	exports       map[string]interface{}
+	commListeners []CommListener
 }
 
 func NewNode(addr string) (result *Node) {
@@ -53,6 +56,26 @@ func (self *Node) Export(name string, api interface{}) error {
 		return nil
 	}
 	return fmt.Errorf("%v can only export when in state 'created'")
+}
+func (self *Node) AddCommListener(f CommListener) {
+	self.metaLock.Lock()
+	defer self.metaLock.Unlock()
+	self.commListeners = append(self.commListeners, f)
+}
+func (self *Node) triggerCommListeners(source, dest common.Remote, typ string) {
+	self.metaLock.RLock()
+	newListeners := make([]CommListener, 0, len(self.commListeners))
+	for _, l := range self.commListeners {
+		self.metaLock.RUnlock()
+		if l(source, dest, typ) {
+			newListeners = append(newListeners, l)
+		}
+		self.metaLock.RLock()
+	}
+	self.metaLock.RUnlock()
+	self.metaLock.Lock()
+	defer self.metaLock.Unlock()
+	self.commListeners = newListeners
 }
 func (self *Node) AddChangeListener(f common.RingChangeListener) {
 	self.ring.AddChangeListener(f)
@@ -209,7 +232,9 @@ func (self *Node) pingPredecessor() {
 		Caller:   self.Remote(),
 	}
 	var newPred common.Remote
-	if err := pred.Call("Discord.Ping", ping, &newPred); err != nil {
+	op := "Discord.Ping"
+	self.triggerCommListeners(self.Remote(), pred, op)
+	if err := pred.Call(op, ping, &newPred); err != nil {
 		self.RemoveNode(pred)
 	} else {
 		self.routeLock.Lock()
@@ -229,7 +254,10 @@ func (self *Node) Notify(caller common.Remote) common.Remote {
 func (self *Node) notifySuccessor() {
 	succ := self.GetSuccessor()
 	var otherPred common.Remote
-	if err := succ.Call("Discord.Notify", self.Remote(), &otherPred); err != nil {
+	op := "Discord.Notify"
+	selfRemote := self.Remote()
+	self.triggerCommListeners(selfRemote, succ, op)
+	if err := succ.Call(op, selfRemote, &otherPred); err != nil {
 		self.RemoveNode(succ)
 	} else {
 		if otherPred.Addr != self.GetAddr() {
