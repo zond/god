@@ -28,13 +28,16 @@ God = function() {
 	that.cx = 1000;
 	that.cy = 1000;
 	that.r = 800;
+	that.last_route_redraw = new Date().getTime();
+	that.last_route_update = new Date().getTime();
+	that.last_meta_redraw = new Date().getTime();
+	that.last_meta_update = new Date().getTime();
 	that.getPos = function(b64) {
 		var angle = Big(3 * Math.PI / 2).plus($.base64.decode2big(b64).div(that.maxPos).times(Math.PI * 2)).toFixed();
 		return [that.cx + Math.cos(angle) * that.r, that.cy + Math.sin(angle) * that.r];
 	};
   that.drawChord = function() {
 		var stage = new createjs.Stage(document.getElementById("chord"));
-		stage.enableMouseOver();
 
 		var circle = new createjs.Shape();
 		circle.graphics.beginStroke(createjs.Graphics.getRGB(0,0,0)).drawCircle(that.cx, that.cy, that.r);
@@ -44,30 +47,28 @@ God = function() {
 		dash.graphics.beginStroke(createjs.Graphics.getRGB(0,0,0)).moveTo(that.cx, that.cy - that.r - 30).lineTo(that.cx, that.cy - that.r + 30);
 		stage.addChild(dash);
 
-    _.each(that.routes, function(route) {
-		  var click = function() {
-				window.location = "http://" + route.json_addr;
-			};
-			var mouseover = function() {
-				$("#chord").css({cursor: "pointer"});
-			};
-			var mouseout = function() {
-				$("#chord").css({cursor: "default"}); 
-			};
-		  var spot = new createjs.Shape();
+		if (that.last_route_update > that.last_route_redraw) {
+			$("#nodes .node").remove();
+		}
+		for (var addr in that.node_by_addr) {
+			var route = that.node_by_addr[addr];    
+			var spot = new createjs.Shape();
 			spot.graphics.beginStroke(createjs.Graphics.getRGB(0,0,0)).beginFill(createjs.Graphics.getRGB(0,0,0)).drawCircle(route.x, route.y, 20);
-			spot.onClick = click;
-			spot.onMouseOver = mouseover;
-			spot.onMouseOut = mouseout;
 			stage.addChild(spot);
 			var label = new createjs.Text(route.hexpos + "@" + route.gob_addr, "bold 25px Courier");
-			label.onClick = click;
-			label.onMouseOver = mouseover;
-			label.onMouseOut = mouseout;
 			label.x = route.x + 30;
 			label.y = route.y - 10;
 			stage.addChild(label);
-		});
+			if (that.last_route_update > that.last_route_redraw) {
+				$("#nodes").append($("<tr data-addr=\"" + route.json_addr + "\" class=\"node\"><td>" + route.gob_addr + "</td><td>" + route.hexpos + "</td></tr>"));
+			}
+		}
+    if (that.last_route_update > that.last_route_redraw) {
+			$(".node").click(function(e) {
+			  that.selectNodeWithAddr($(e.target).parent().attr('data-addr'));
+			});
+			that.last_route_redraw = new Date().getTime();
+		}
 
     var alphaCut = 300;
     var newAnimations = [];
@@ -94,78 +95,115 @@ God = function() {
 
 		stage.update();
 
-		if (that.node != null) {
-			$("#node_json_addr").text(that.node.json_addr);
-			$("#node_gob_addr").text(that.node.gob_addr);
-			$("#node_pos").text(that.node.hexpos);
-			$("#node_owned_keys").text(that.node.data.OwnedEntries);
-			$("#node_held_keys").text(that.node.data.HeldEntries);
+    if (that.last_meta_update > that.last_meta_redraw) {
+			if (that.node != null) {
+				$("#node_json_addr").text(that.node.json_addr);
+				$("#node_gob_addr").text(that.node.gob_addr);
+				$("#node_pos").text(that.node.hexpos);
+				$("#node_owned_keys").text(that.node.data.OwnedEntries);
+				$("#node_held_keys").text(that.node.data.HeldEntries);
+			}
+			that.last_meta_redraw = new Date().getTime();
+		}
+	};
+	that.selectNodeWithAddr = function(addr) {
+	  for (var a in that.node_by_addr) {
+		  if (a == addr) {
+			  that.node = that.node_by_addr[a];
+				that.last_meta_update = new Date().getTime();
+			}
 		}
 	};
 	that.animations = [];
-	that.routes = [];
+	that.animate = function(item) {
+	  if (that.animations.length < 50) {
+		  that.animations.push(item);
+		}
+	};
+	that.opened_sockets = {};
+	that.node_by_addr = {};
 	that.node = null;
+	that.open_socket = function(addr) {
+	  addr = addr.replace('localhost', '127.0.0.1');
+	  if (that.opened_sockets[addr] == null) {
+			that.opened_sockets[addr] = true;
+			$.websocket("ws://" + addr + "/ws", {
+				open: function() { 
+					console.log("socket to " + addr + " opened");
+				},
+				close: function() { 
+				  delete(that.opened_sockets[addr]);
+					delete(that.node_by_addr[addr]);
+					console.log("socket to " + addr + " closed");
+				},
+				events: {
+					RingChange: function(e) {
+						_.each(e.data.routes, function(r) {
+							var node = new Node(that, r);
+							if (that.node_by_addr[node.json_addr] == null) {
+								that.open_socket(node.json_addr);
+							}
+						});
+						var newNode = new Node(that, e.data.description);
+						var oldNode = that.node_by_addr[newNode.json_addr];
+						if (oldNode == null || JSON.stringify(newNode) != JSON.stringify(oldNode)) {
+							that.last_route_update = new Date().getTime();
+							that.node_by_addr[newNode.json_addr] = newNode;
+						}
+						if (that.node == null) {
+							that.last_meta_update = new Date().getTime();
+						  that.node = newNode;
+						}
+					},
+					Comm: function(e) {
+						var item = {
+							source: that.getPos(e.data.source.Pos),
+							destination: that.getPos(e.data.destination.Pos),
+							ttl: new Date().getTime() + 300,
+							color: [0,0,200],
+							strokeWidth: 3,
+							caps: 0,
+						};
+						if (/HashTree/.exec(e.data.type) != null) {
+							item.color = [200,0,0];
+						}
+						if (e.data.key != null) {
+							item.key = that.getPos(e.data.key);
+						}
+						if (e.data.sub_key != null) {
+							item.sub_key = that.getPos(e.data.sub_key);
+						}
+						that.animate(item);
+					},
+					Sync: function(e) {
+						var item = {
+							source: that.getPos(e.data.source.Pos),
+							destination: that.getPos(e.data.destination.Pos),
+							ttl: new Date().getTime() + 500,
+							color: [150,0,150],
+							strokeWidth: 5,
+							caps: 1,
+						};
+						that.animate(item);
+					},
+					Clean: function(e) {
+						var item = {
+							source: that.getPos(e.data.source.Pos),
+							destination: that.getPos(e.data.destination.Pos),
+							ttl: new Date().getTime() + 500,
+							color: [50,150,0],
+							strokeWidth: 4,
+							caps: 2,
+						};
+						that.animate(item);
+					},
+				},
+			});
+		}
+	};
 	that.start = function() {
-		window.setInterval(that.drawChord, 40);
-		that.socket = $.websocket("ws://" + document.location.hostname + ":" + document.location.port + "/ws", {
-			open: function() { 
-				console.log("socket opened");
-			},
-			close: function() { 
-				console.log("socket closed");
-			},
-			events: {
-				RingChange: function(e) {
-					that.routes = [];
-					_.each(e.data.routes, function(r) {
-						that.routes.push(Node(that, r));
-					});
-					that.node = Node(that, e.data.description);
-				},
-				Comm: function(e) {
-					var item = {
-						source: that.getPos(e.data.source.Pos),
-						destination: that.getPos(e.data.destination.Pos),
-						ttl: new Date().getTime() + 500,
-						color: [0,0,200],
-						strokeWidth: 3,
-						caps: 0,
-					};
-					if (/HashTree/.exec(e.data.type) != null) {
-					  item.color = [200,0,0];
-					}
-					if (e.data.key != null) {
-					  item.key = that.getPos(e.data.key);
-					}
-          if (e.data.sub_key != null) {
-					  item.sub_key = that.getPos(e.data.sub_key);
-					}
-				  that.animations.push(item);
-				},
-				Sync: function(e) {
-					var item = {
-						source: that.getPos(e.data.source.Pos),
-						destination: that.getPos(e.data.destination.Pos),
-						ttl: new Date().getTime() + 1000,
-						color: [150,0,150],
-						strokeWidth: 5,
-						caps: 1,
-					};
-				  that.animations.push(item);
-				},
-				Clean: function(e) {
-					var item = {
-						source: that.getPos(e.data.source.Pos),
-						destination: that.getPos(e.data.destination.Pos),
-						ttl: new Date().getTime() + 1000,
-						color: [50,150,0],
-						strokeWidth: 4,
-						caps: 2,
-					};
-				  that.animations.push(item);
-				},
-			},
-		});
+		window.setInterval(that.drawChord, 100);
+		that.open_socket(document.location.hostname + ":" + document.location.port);
 	};
 	return that;
 };

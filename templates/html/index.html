@@ -10,19 +10,39 @@
 		<div id="chord_container">
 			<canvas width="3000" height="2000" id="chord"></canvas>
 		</div>
+		<div id="nodes_container">
+			<table class="table table-striped" id="nodes">
+				<caption>nodes</caption>
+				<tr>
+					<th>address</th>
+					<th>position</th>
+				</tr>
+			</table>
+		</div>
 		<div id="node_container">
-			<dl>
-				<dt>gob RPC Address</dt>
-				<dd id="node_gob_addr"></dd>
-				<dt>JSON/HTTP RPC Address</dt>
-				<dd id="node_json_addr"></dd>
-				<dt>Position</dt>
-				<dd id="node_pos"></dd>
-				<dt>Owned keys</dt>
-				<dd id="node_owned_keys"></dd>
-				<dt>Held keys</dt>
-				<dd id="node_held_keys"></dd>
-			</dl>
+			<table class="table table-condensed">
+				<caption>node</caption>
+				<tr>
+					<td>gob rpc address</td>
+					<td id="node_gob_addr"></td>
+				</tr>
+				<tr>
+					<td>JSON/HTTP rpc address</td>
+					<td id="node_json_addr"></td>
+				</tr>
+				<tr>
+					<td>position</td>
+					<td id="node_pos"></td>
+				</tr>
+				<tr>
+					<td>owned keys</td>
+					<td id="node_owned_keys"></td>
+				</tr>
+				<tr>
+					<td>held keys</td>
+					<td id="node_held_keys"></td>
+				</tr>
+			</table>
 		</div>
 	</body>
 </html>
