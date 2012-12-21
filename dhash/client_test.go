@@ -247,6 +247,40 @@ func testSetExpression(t *testing.T, c testClient) {
 	min := 0
 	max := 100
 	assertItems(t, c.SliceIndex([]byte("sete3"), &min, &max), []byte{2, 3, 4}, []byte{1, 1, 1})
+
+	assertSetOps(t, c.SetExpression(setop.SetExpression{
+		Code: "(U:BigIntAnd sete1 sete2)",
+	}), []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+	assertSetOps(t, c.SetExpression(setop.SetExpression{
+		Min:  []byte{2},
+		Max:  []byte{6},
+		Code: "(U:BigIntAnd sete1 sete2)",
+	}), []byte{3, 4, 5}, []byte{1, 1, 1})
+	assertSetOps(t, c.SetExpression(setop.SetExpression{
+		Min:    []byte{2},
+		Max:    []byte{6},
+		MinInc: true,
+		MaxInc: true,
+		Code:   "(U:BigIntAnd sete1 sete2)",
+	}), []byte{2, 3, 4, 5, 6}, []byte{1, 1, 1, 1, 1})
+	assertSetOps(t, c.SetExpression(setop.SetExpression{
+		Min:    []byte{2},
+		Max:    []byte{6},
+		MinInc: true,
+		MaxInc: true,
+		Len:    3,
+		Code:   "(U:BigIntAnd sete1 sete2)",
+	}), []byte{2, 3, 4}, []byte{1, 1, 1})
+	assertSetOps(t, c.SetExpression(setop.SetExpression{
+		Min:    []byte{2},
+		Max:    []byte{6},
+		MinInc: true,
+		MaxInc: true,
+		Len:    3,
+		Dest:   []byte("sete4"),
+		Code:   "(U:BigIntAnd sete1 sete2)",
+	}), []byte{}, []byte{})
+	assertItems(t, c.SliceIndex([]byte("sete4"), &min, &max), []byte{2, 3, 4}, []byte{1, 1, 1})
 }
 
 func testNextPrev(t *testing.T, c testClient) {

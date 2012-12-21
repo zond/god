@@ -176,6 +176,7 @@ func (self *SetOp) String() string {
 
 type SetExpression struct {
 	Op     *SetOp
+	Code   string
 	Min    []byte
 	Max    []byte
 	MinInc bool
@@ -185,6 +186,9 @@ type SetExpression struct {
 }
 
 func (self *SetExpression) Each(r RawSourceCreator, f SetOpResultIterator) (err error) {
+	if self.Op == nil {
+		self.Op = MustParse(self.Code)
+	}
 	skipper := createSkipper(r, self.Op)
 	min := self.Min
 	mininc := self.MinInc

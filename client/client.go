@@ -832,9 +832,13 @@ func (self *Conn) Describe() string {
 }
 
 func (self *Conn) SetExpression(expr setop.SetExpression) (result []setop.SetOpResult) {
+	if expr.Op == nil {
+		expr.Op = setop.MustParse(expr.Code)
+	}
 	var biggestKey []byte
 	biggestSize := 0
 	var thisSize int
+
 	for key, _ := range findKeys(expr.Op) {
 		thisSize = self.SubSize([]byte(key))
 		if biggestKey == nil {
