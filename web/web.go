@@ -25,6 +25,7 @@ func (self baseData) T() string {
 
 func allCss(w http.ResponseWriter, r *http.Request) {
 	data := getBaseData(w, r)
+	w.Header().Set("Cache-Control", "public, max-age=864000")
 	w.Header().Set("Content-Type", "text/css; charset=UTF-8")
 	renderText(w, r, templates.CSS, "bootstrap.min.css", data)
 	renderText(w, r, templates.CSS, "common.css", data)
@@ -32,6 +33,7 @@ func allCss(w http.ResponseWriter, r *http.Request) {
 
 func allJs(w http.ResponseWriter, r *http.Request) {
 	data := getBaseData(w, r)
+	w.Header().Set("Cache-Control", "public, max-age=864000")
 	w.Header().Set("Content-Type", "application/javascript; charset=UTF-8")
 	renderText(w, r, templates.JS, "underscore-min.js", data)
 	renderText(w, r, templates.JS, "jquery-1.8.3.min.js", data)
