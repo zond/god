@@ -662,6 +662,8 @@ func (self *Conn) MirrorReverseSlice(key, min, max []byte, mininc, maxinc bool) 
 	result = self.mergeRecent("DHash.MirrorReverseSlice", r, false)
 	return
 }
+
+// MirrorSlice will return the slice between min and max in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
 	r := common.Range{
 		Key:    key,
@@ -673,6 +675,8 @@ func (self *Conn) MirrorSlice(key, min, max []byte, mininc, maxinc bool) (result
 	result = self.mergeRecent("DHash.MirrorSlice", r, true)
 	return
 }
+
+// MirrorSliceLen will return at most maxRes elements after min in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorSliceLen(key, min []byte, mininc bool, maxRes int) (result []common.Item) {
 	r := common.Range{
 		Key:    key,
@@ -683,6 +687,8 @@ func (self *Conn) MirrorSliceLen(key, min []byte, mininc bool, maxRes int) (resu
 	result = self.mergeRecent("DHash.MirrorSliceLen", r, true)
 	return
 }
+
+// MirrorReverseSliceLen will return at most maxRes elements before max in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (result []common.Item) {
 	r := common.Range{
 		Key:    key,
@@ -693,6 +699,8 @@ func (self *Conn) MirrorReverseSliceLen(key, max []byte, maxinc bool, maxRes int
 	result = self.mergeRecent("DHash.MirrorReverseSliceLen", r, false)
 	return
 }
+
+// ReverseSliceIndex will the reverse slice between index min and max in the sub tree defined by key.
 func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
 	var mi int
 	var ma int
@@ -712,6 +720,8 @@ func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.
 	result = self.mergeRecent("DHash.ReverseSliceIndex", r, false)
 	return
 }
+
+// SliceIndex will return the slice between index min and max in the sub tree defined by key.
 func (self *Conn) SliceIndex(key []byte, min, max *int) (result []common.Item) {
 	var mi int
 	var ma int
@@ -731,6 +741,8 @@ func (self *Conn) SliceIndex(key []byte, min, max *int) (result []common.Item) {
 	result = self.mergeRecent("DHash.SliceIndex", r, true)
 	return
 }
+
+// ReverseSlice will return the reverse slice between min and max in the sub tree defined by key.
 func (self *Conn) ReverseSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
 	r := common.Range{
 		Key:    key,
@@ -742,6 +754,8 @@ func (self *Conn) ReverseSlice(key, min, max []byte, mininc, maxinc bool) (resul
 	result = self.mergeRecent("DHash.ReverseSlice", r, false)
 	return
 }
+
+// ReverseSlice will return the slice between min and max in the sub tree defined by key.
 func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
 	r := common.Range{
 		Key:    key,
@@ -753,6 +767,8 @@ func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []com
 	result = self.mergeRecent("DHash.Slice", r, true)
 	return
 }
+
+// SliceLen will return at most maxRes elements after min in the sub tree defined by key.
 func (self *Conn) SliceLen(key, min []byte, mininc bool, maxRes int) (result []common.Item) {
 	r := common.Range{
 		Key:    key,
@@ -763,6 +779,8 @@ func (self *Conn) SliceLen(key, min []byte, mininc bool, maxRes int) (result []c
 	result = self.mergeRecent("DHash.SliceLen", r, true)
 	return
 }
+
+// ReverseSliceLen will return at most maxRes elements before max in the sub tree defined by key.
 func (self *Conn) ReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (result []common.Item) {
 	r := common.Range{
 		Key:    key,
@@ -773,6 +791,8 @@ func (self *Conn) ReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (res
 	result = self.mergeRecent("DHash.ReverseSliceLen", r, false)
 	return
 }
+
+// SubMirrorPrev will return the previous key and value before subKey in the sub tree defined by key.
 func (self *Conn) SubMirrorPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -782,6 +802,8 @@ func (self *Conn) SubMirrorPrev(key, subKey []byte) (prevKey, prevValue []byte, 
 	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// SubMirrorPrev will return the next key and value after subKey in the sub tree defined by key.
 func (self *Conn) SubMirrorNext(key, subKey []byte) (nextKey, nextValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -791,6 +813,8 @@ func (self *Conn) SubMirrorNext(key, subKey []byte) (nextKey, nextValue []byte, 
 	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// SubPrev will return the previous key and value before subKey in the sub tree defined by key.
 func (self *Conn) SubPrev(key, subKey []byte) (prevKey, prevValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -800,6 +824,8 @@ func (self *Conn) SubPrev(key, subKey []byte) (prevKey, prevValue []byte, existe
 	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// SubNext will return the next key and value after subKey in the sub tree defined by key.
 func (self *Conn) SubNext(key, subKey []byte) (nextKey, nextValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -809,6 +835,8 @@ func (self *Conn) SubNext(key, subKey []byte) (nextKey, nextValue []byte, existe
 	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// MirrorLast will return the last key and valuei in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorLast(key []byte) (lastKey, lastValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
@@ -817,6 +845,8 @@ func (self *Conn) MirrorLast(key []byte) (lastKey, lastValue []byte, existed boo
 	lastKey, lastValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// MirrorFirst will return the first key and value in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorFirst(key []byte) (firstKey, firstValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
@@ -825,6 +855,8 @@ func (self *Conn) MirrorFirst(key []byte) (firstKey, firstValue []byte, existed 
 	firstKey, firstValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// Last will return the last key and value in the sub tree defined by key.
 func (self *Conn) Last(key []byte) (lastKey, lastValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
@@ -833,6 +865,8 @@ func (self *Conn) Last(key []byte) (lastKey, lastValue []byte, existed bool) {
 	lastKey, lastValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// First will return the first key and value in the sub tree defined by key.
 func (self *Conn) First(key []byte) (firstKey, firstValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
@@ -841,6 +875,8 @@ func (self *Conn) First(key []byte) (firstKey, firstValue []byte, existed bool) 
 	firstKey, firstValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// SubGet will return the value under subKey in the sub tree defined by key.
 func (self *Conn) SubGet(key, subKey []byte) (value []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -854,6 +890,8 @@ func (self *Conn) SubGet(key, subKey []byte) (value []byte, existed bool) {
 	}
 	return
 }
+
+// Get will return the value under key.
 func (self *Conn) Get(key []byte) (value []byte, existed bool) {
 	data := common.Item{
 		Key: key,
@@ -866,15 +904,21 @@ func (self *Conn) Get(key []byte) (value []byte, existed bool) {
 	}
 	return
 }
-func (self *Conn) DescribeTree(key []byte) (result string, err error) {
-	_, match, _ := self.ring.Remotes(key)
+
+// DescribeTree will return a string representation of the complete tree in the node at pos.
+// Used for debug purposes, don't do it on big databases!
+func (self *Conn) DescribeTree(pos []byte) (result string, err error) {
+	_, match, _ := self.ring.Remotes(pos)
 	if match == nil {
-		err = fmt.Errorf("No node with position %v found", common.HexEncode(key))
+		err = fmt.Errorf("No node with position %v found", common.HexEncode(pos))
 		return
 	}
 	err = match.Call("DHash.DescribeTree", 0, &result)
 	return
 }
+
+// DescribeTree will return a string representation of the complete trees of all known nodes.
+// Used for debug purposes, don't do it on big databases!
 func (self *Conn) DescribeAllTrees() string {
 	buf := new(bytes.Buffer)
 	for _, rem := range self.ring.Nodes() {
@@ -885,6 +929,8 @@ func (self *Conn) DescribeAllTrees() string {
 	}
 	return string(buf.Bytes())
 }
+
+// DescribeAllNodes will return the description structures of all known nodes.
 func (self *Conn) DescribeAllNodes() (result []common.DHashDescription) {
 	for _, rem := range self.ring.Nodes() {
 		if res, err := self.DescribeNode(rem.Pos); err == nil {
@@ -893,15 +939,19 @@ func (self *Conn) DescribeAllNodes() (result []common.DHashDescription) {
 	}
 	return
 }
-func (self *Conn) DescribeNode(key []byte) (result common.DHashDescription, err error) {
-	_, match, _ := self.ring.Remotes(key)
+
+// DescribeNode will return the description structure of the node at pos.
+func (self *Conn) DescribeNode(pos []byte) (result common.DHashDescription, err error) {
+	_, match, _ := self.ring.Remotes(pos)
 	if match == nil {
-		err = fmt.Errorf("No node with position %v found", common.HexEncode(key))
+		err = fmt.Errorf("No node with position %v found", common.HexEncode(pos))
 		return
 	}
 	err = match.Call("DHash.Describe", 0, &result)
 	return
 }
+
+// SubSize will return the size of the sub tree defined by key.
 func (self *Conn) SubSize(key []byte) (result int) {
 	_, _, successor := self.ring.Remotes(key)
 	if err := successor.Call("DHash.SubSize", key, &result); err != nil {
@@ -910,6 +960,8 @@ func (self *Conn) SubSize(key []byte) (result int) {
 	}
 	return
 }
+
+// Size will return the total size of all known nodes.
 func (self *Conn) Size() (result int) {
 	var tmp int
 	for _, node := range self.ring.Nodes() {
@@ -921,10 +973,21 @@ func (self *Conn) Size() (result int) {
 	}
 	return
 }
+
+// Describe will return a string representation of the known cluster of nodes.
 func (self *Conn) Describe() string {
 	return self.ring.Describe()
 }
 
+// SetExpression will execute the given expr.
+//
+// If expr.Dest is set it will store the result under the sub tree defined by expr.Dest.
+//
+// If expr.Dest is nil it will return the result.
+//
+// Either expr.Op or expr.Code has to be set. 
+//
+// If expr.Op is nil expr.Code will be parsed to provide expr.Op.
 func (self *Conn) SetExpression(expr setop.SetExpression) (result []setop.SetOpResult) {
 	if expr.Op == nil {
 		expr.Op = setop.MustParse(expr.Code)
@@ -954,6 +1017,8 @@ func (self *Conn) SetExpression(expr setop.SetExpression) (result []setop.SetOpR
 	return results
 }
 
+// Configuration will return the configuration for the entire cluster.
+// Not internally used for anything right now.
 func (self *Conn) Configuration() (conf map[string]string) {
 	var result common.Conf
 	_, _, successor := self.ring.Remotes(nil)
@@ -963,6 +1028,10 @@ func (self *Conn) Configuration() (conf map[string]string) {
 	}
 	return result.Data
 }
+
+// SubConfiguratino will return the configuration for the sub tree defined by key.
+//
+// mirrored=yes means that the sub tree is currently mirrored.
 func (self *Conn) SubConfiguration(key []byte) (conf map[string]string) {
 	var result common.Conf
 	_, _, successor := self.ring.Remotes(nil)
@@ -972,6 +1041,9 @@ func (self *Conn) SubConfiguration(key []byte) (conf map[string]string) {
 	}
 	return result.Data
 }
+
+// AddConfiguration will set a key and value to the cluster configuration.
+// Not internally used for anything right now.
 func (self *Conn) AddConfiguration(key, value string) {
 	conf := common.ConfItem{
 		Key:   key,
@@ -984,6 +1056,10 @@ func (self *Conn) AddConfiguration(key, value string) {
 		self.AddConfiguration(key, value)
 	}
 }
+
+// SubAddConfiguration will set a key and value to the configuratino of the sub tree defined by key.
+//
+// To mirror a sub tree, set mirrored=yes. To turn off mirroring of a sub tree, set mirrored!=yes.
 func (self *Conn) SubAddConfiguration(treeKey []byte, key, value string) {
 	conf := common.ConfItem{
 		TreeKey: treeKey,
