@@ -52,6 +52,8 @@ func findKeys(op *setop.SetOp) (result map[string]bool) {
 //
 // Methods prefixed Mirror will work on the mirror trees of the sub trees in question.
 //
+// Parameters named mininc and maxinc paired with parameters min and max of []byte type defined whether the min and max parameters are inclusive as opposed to exclusive.
+//
 // To install: go get github.com/zond/god/client
 type Conn struct {
 	ring  *common.Ring
@@ -507,6 +509,8 @@ func (self *Conn) Prev(key []byte) (prevKey, prevValue []byte, existed bool) {
 	prevKey, prevValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// MirrorCount will count the number of keys between min and max in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorCount(key, min, max []byte, mininc, maxinc bool) (result int) {
 	r := common.Range{
 		Key:    key,
@@ -522,6 +526,8 @@ func (self *Conn) MirrorCount(key, min, max []byte, mininc, maxinc bool) (result
 	}
 	return
 }
+
+// Count will count the number of keys between min and max in the sub tree defined by key.
 func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) {
 	r := common.Range{
 		Key:    key,
@@ -537,6 +543,8 @@ func (self *Conn) Count(key, min, max []byte, mininc, maxinc bool) (result int) 
 	}
 	return
 }
+
+// MirrorNextIndex will return the key, value and index of the first key after index in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorNextIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
 	data := common.Item{
 		Key:   key,
@@ -551,6 +559,8 @@ func (self *Conn) MirrorNextIndex(key []byte, index int) (foundKey, foundValue [
 	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
 	return
 }
+
+// MirrorPrevIndex will return the key, value and index of the first key before index in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorPrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
 	data := common.Item{
 		Key:   key,
@@ -565,6 +575,8 @@ func (self *Conn) MirrorPrevIndex(key []byte, index int) (foundKey, foundValue [
 	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
 	return
 }
+
+// NextIndex will return the key, value and index of the first key after index in the sub tree defined by key.
 func (self *Conn) NextIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
 	data := common.Item{
 		Key:   key,
@@ -579,6 +591,8 @@ func (self *Conn) NextIndex(key []byte, index int) (foundKey, foundValue []byte,
 	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
 	return
 }
+
+// PrevIndex will return the key, value and index of the first key before index in the sub tree defined by key.
 func (self *Conn) PrevIndex(key []byte, index int) (foundKey, foundValue []byte, foundIndex int, existed bool) {
 	data := common.Item{
 		Key:   key,
@@ -593,6 +607,8 @@ func (self *Conn) PrevIndex(key []byte, index int) (foundKey, foundValue []byte,
 	foundKey, foundValue, foundIndex, existed = result.Key, result.Value, result.Index, result.Exists
 	return
 }
+
+// MirrorReverseSliceIndex will return the reverse slice between index min and max in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
 	var mi int
 	var ma int
@@ -612,6 +628,8 @@ func (self *Conn) MirrorReverseSliceIndex(key []byte, min, max *int) (result []c
 	result = self.mergeRecent("DHash.MirrorReverseSliceIndex", r, false)
 	return
 }
+
+// MirrorSliceIndex will return the slice between index min and max in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorSliceIndex(key []byte, min, max *int) (result []common.Item) {
 	var mi int
 	var ma int
@@ -631,6 +649,8 @@ func (self *Conn) MirrorSliceIndex(key []byte, min, max *int) (result []common.I
 	result = self.mergeRecent("DHash.MirrorSliceIndex", r, true)
 	return
 }
+
+// MirrorReverseSlice will return the reverse slice between min and max in the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorReverseSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
 	r := common.Range{
 		Key:    key,
