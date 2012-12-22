@@ -35,19 +35,23 @@ func findKeys(op *setop.SetOp) (result map[string]bool) {
 //
 // A god database has two data types: byte values and sub trees. All values are sorted in ascending order.
 //
-// * byte values are simply byte slices indexed by a key byte slice.
-// * sub trees are trees containing byte values.
+// byte values are simply byte slices indexed by a key byte slice.
+//
+// sub trees are trees containing byte values.
 //
 // Sub trees can be 'mirrored', which means that they contain a tree mirroring its values as keys and its keys as values.
 // 
 // Naming conventions:
-// * If there are two methods with similar names except that one has a capital S prefixed, that means that the method with the capital S will not return until all nodes responsible for the written data has received the data, while the one without the capital S will return as soon as the owner of the data has received it.
-// * Methods prefixed Sub will work on sub trees.
-// * Methods prefixed Reverse will work in reverse order. Return slices in reverse order and indices from the end instead of the start etc.
-// * Methods prefixed Mirror will work on the mirror trees of the sub trees in question.
 //
-// To install:
-// go get github.com/zond/god/client
+// If there are two methods with similar names except that one has a capital S prefixed, that means that the method with the capital S will not return until all nodes responsible for the written data has received the data, while the one without the capital S will return as soon as the owner of the data has received it.
+//
+// Methods prefixed Sub will work on sub trees.
+//
+// Methods prefixed Reverse will work in reverse order. Return slices in reverse order and indices from the end instead of the start etc.
+//
+// Methods prefixed Mirror will work on the mirror trees of the sub trees in question.
+//
+// To install: go get github.com/zond/god/client
 type Conn struct {
 	ring  *common.Ring
 	state int32
