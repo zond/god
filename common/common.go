@@ -40,6 +40,13 @@ func EncodeInt64(i int64) []byte {
 	}
 	return result.Bytes()
 }
+func MustDecodeInt64(b []byte) (result int64) {
+	result, err := DecodeInt64(b)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
 func DecodeInt64(b []byte) (result int64, err error) {
 	err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &result)
 	return
@@ -50,6 +57,13 @@ func EncodeFloat64(f float64) []byte {
 		panic(err)
 	}
 	return result.Bytes()
+}
+func MustDecodeFloat64(b []byte) (result float64) {
+	result, err := DecodeFloat64(b)
+	if err != nil {
+		panic(err)
+	}
+	return
 }
 func DecodeFloat64(b []byte) (result float64, err error) {
 	err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &result)
