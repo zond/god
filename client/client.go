@@ -330,15 +330,23 @@ func (self *Conn) Clear() {
 func (self *Conn) SSubPut(key, subKey, value []byte) {
 	self.subPut(key, subKey, value, true)
 }
+
+// SubPut will put value under subKey in the sub tree defined by key.
 func (self *Conn) SubPut(key, subKey, value []byte) {
 	self.subPut(key, subKey, value, false)
 }
+
+// SPut will put value under key.
 func (self *Conn) SPut(key, value []byte) {
 	self.put(key, value, true)
 }
+
+// Put will put value under key.
 func (self *Conn) Put(key, value []byte) {
 	self.put(key, value, false)
 }
+
+// Dump will return a channel to send multiple key/value pairs through. When finished, close the channel and #Wait for the *sync.WaitGroup.
 func (self *Conn) Dump() (c chan [2][]byte, wait *sync.WaitGroup) {
 	wait = new(sync.WaitGroup)
 	c = make(chan [2][]byte, 16)
@@ -346,6 +354,8 @@ func (self *Conn) Dump() (c chan [2][]byte, wait *sync.WaitGroup) {
 	go self.dump(c, wait)
 	return
 }
+
+// SubDump will return a channel to send multiple key/value pairs to a given sub tree through. When finished, close the channel and #Wait for the *sync.WaitGroup.
 func (self *Conn) SubDump(key []byte) (c chan [2][]byte, wait *sync.WaitGroup) {
 	wait = new(sync.WaitGroup)
 	c = make(chan [2][]byte)
@@ -353,24 +363,38 @@ func (self *Conn) SubDump(key []byte) (c chan [2][]byte, wait *sync.WaitGroup) {
 	go self.subDump(key, c, wait)
 	return
 }
+
+// SubClear will remove all byte values from the sub tree defined by key. It will retain delete markers for all deleted values.
 func (self *Conn) SubClear(key []byte) {
 	self.subClear(key, false)
 }
+
+// SubClear will remove all byte values from the sub tree defined by key. It will retain delete markers for all deleted values.
 func (self *Conn) SSubClear(key []byte) {
 	self.subClear(key, true)
 }
+
+// SubDel will remove the value under subKey from the sub tree defined by key.
 func (self *Conn) SubDel(key, subKey []byte) {
 	self.subDel(key, subKey, false)
 }
+
+// SSubDel will remove the value under subKey from the sub tree defined by key.
 func (self *Conn) SSubDel(key, subKey []byte) {
 	self.subDel(key, subKey, true)
 }
+
+// SDel will remove the byte value under key.
 func (self *Conn) SDel(key []byte) {
 	self.del(key, true)
 }
+
+// Del will remove the byte value under key.
 func (self *Conn) Del(key []byte) {
 	self.del(key, false)
 }
+
+// MirrorReverseIndexOf will return the the distance from the end for subKey, looking at the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -385,6 +409,8 @@ func (self *Conn) MirrorReverseIndexOf(key, subKey []byte) (index int, existed b
 	index, existed = result.N, result.Existed
 	return
 }
+
+// MirrorIndexOf will return the the distance from the start for subKey, looking at the mirror tree of the sub tree defined by key.
 func (self *Conn) MirrorIndexOf(key, subKey []byte) (index int, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -399,6 +425,8 @@ func (self *Conn) MirrorIndexOf(key, subKey []byte) (index int, existed bool) {
 	index, existed = result.N, result.Existed
 	return
 }
+
+// ReverseIndexOf will return the the distance from the end for subKey, looking at the sub tree defined by key.
 func (self *Conn) ReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -413,6 +441,8 @@ func (self *Conn) ReverseIndexOf(key, subKey []byte) (index int, existed bool) {
 	index, existed = result.N, result.Existed
 	return
 }
+
+// IndexOf will return the the distance from the start for subKey, looking at the sub tree defined by key.
 func (self *Conn) IndexOf(key, subKey []byte) (index int, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -427,6 +457,8 @@ func (self *Conn) IndexOf(key, subKey []byte) (index int, existed bool) {
 	index, existed = result.N, result.Existed
 	return
 }
+
+// Next will return the next key and value after key.
 func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
@@ -450,6 +482,8 @@ func (self *Conn) Next(key []byte) (nextKey, nextValue []byte, existed bool) {
 	nextKey, nextValue, existed = result.Key, result.Value, result.Exists
 	return
 }
+
+// Prev will return the previous key and value before key.
 func (self *Conn) Prev(key []byte) (prevKey, prevValue []byte, existed bool) {
 	data := common.Item{
 		Key: key,
