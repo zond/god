@@ -40,6 +40,7 @@ func findKeys(op *setop.SetOp) (result map[string]bool) {
 // Sub trees are trees containing byte values.
 //
 // Sub trees can be 'mirrored', which means that they contain a tree mirroring its values as keys and its keys as values.
+// To mirror a sub tree, call SubAddConfiguration for the sub tree and set 'mirrored' to 'yes'.
 // 
 // Naming conventions:
 //
