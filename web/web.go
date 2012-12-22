@@ -1,14 +1,54 @@
 package web
 
 import (
+	"bytes"
 	"code.google.com/p/go.net/websocket"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/zond/god/templates"
 	htmlTemplate "html/template"
 	"net/http"
+	"reflect"
+	"strings"
 	textTemplate "text/template"
 )
+
+var apiMethods string
+
+func getFormat(t reflect.Type) interface{} {
+	if t.Kind() == reflect.Struct {
+		result := make(map[string]interface{})
+		var field reflect.StructField
+		for i := 0; i < t.NumField(); i++ {
+			field = t.Field(i)
+			result[field.Name] = field.Type.Name()
+		}
+		return result
+	}
+	return t.Name()
+}
+
+func SetApi(t reflect.Type) {
+	var ary []map[string]interface{}
+	var meth reflect.Method
+	var in reflect.Type
+	for i := 0; i < t.NumMethod(); i++ {
+		meth = t.Method(i)
+		if strings.ToUpper(string(meth.Name[0])) == string(meth.Name[0]) && meth.Type.NumIn() == 3 {
+			in = meth.Type.In(1)
+			ary = append(ary, map[string]interface{}{
+				"name":      meth.Name,
+				"parameter": getFormat(in),
+			})
+		}
+	}
+	buf := new(bytes.Buffer)
+	if err := json.NewEncoder(buf).Encode(ary); err != nil {
+		panic(err)
+	}
+	apiMethods = string(buf.Bytes())
+}
 
 type baseData struct {
 	Timestamp int64
@@ -21,6 +61,9 @@ func getBaseData(w http.ResponseWriter, r *http.Request) baseData {
 }
 func (self baseData) T() string {
 	return fmt.Sprint(self.Timestamp)
+}
+func (self baseData) ApiMethods() string {
+	return apiMethods
 }
 
 func allCss(w http.ResponseWriter, r *http.Request) {

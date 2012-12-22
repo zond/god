@@ -130,7 +130,9 @@ func (self *Node) startJson() {
 		return
 	}
 	rpcServer := rpc.NewServer()
-	rpcServer.RegisterName("DHash", (*jsonDhashServer)(self))
+	jsonApi := (*jsonDhashServer)(self)
+	web.SetApi(reflect.TypeOf(jsonApi))
+	rpcServer.RegisterName("DHash", jsonApi)
 	jsonServer := jsonRpcServer{server: rpcServer}
 	router := mux.NewRouter()
 	router.Methods("POST").Path("/rpc/{method}").MatcherFunc(wantsJSON).Handler(jsonServer)
