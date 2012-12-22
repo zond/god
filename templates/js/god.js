@@ -28,6 +28,7 @@ God = function() {
 	that.cx = 1000;
 	that.cy = 1000;
 	that.r = 800;
+	that.api_methods = {{.ApiMethods}};
 	that.last_route_redraw = new Date().getTime();
 	that.last_route_update = new Date().getTime();
 	that.last_meta_redraw = new Date().getTime();
@@ -70,24 +71,41 @@ God = function() {
 			that.last_route_redraw = new Date().getTime();
 		}
 
-    var alphaCut = 300;
+    var fade = 300;
     var newAnimations = [];
 		var now = new Date().getTime()
-		_.each(that.animations, function(animation) {
-		  if (animation.ttl > now) {
-			  newAnimations.push(animation);
+		_.each(that.animations, function(ani) {
+		  if (ani.ttl > now) {
+			  newAnimations.push(ani);
 			}
-			var left = animation.ttl - now;
+			var age = now - ani.created;
+			var left = ani.ttl - now;
 			var alpha = 1;
-			if (left < alphaCut) {
-			  alpha = left / alphaCut;
+			var len = 1;
+			var sx = ani.source[0];
+			var sy = ani.source[1];
+			var dx = ani.destination[0];
+			var dy = ani.destination[1];
+			var len;
+			if (left < fade) {
+			  alpha = left / fade;
+				if (ani.key == null) {
+					len = left / fade;
+					sx = ani.destination[0] - (ani.destination[0] - ani.source[0]) * len;
+					sy = ani.destination[1] - (ani.destination[1] - ani.source[1]) * len;
+				}
+			}
+			if (age < fade && ani.key == null) {
+			  len = age / fade;
+				dx = ani.source[0] + (ani.destination[0] - ani.source[0]) * len;
+				dy = ani.source[1] + (ani.destination[1] - ani.source[1]) * len;
 			}
 		  var line = new createjs.Shape()
-			var gr = line.graphics.beginStroke(createjs.Graphics.getRGB(animation.color[0], animation.color[1], animation.color[2], alpha)).setStrokeStyle(animation.strokeWidth, animation.caps);
-			if (animation.key != null) {
-				gr.moveTo(animation.source[0], animation.source[1]).quadraticCurveTo(animation.key[0], animation.key[1], animation.destination[0], animation.destination[1]);
+			var gr = line.graphics.beginStroke(createjs.Graphics.getRGB(ani.color[0], ani.color[1], ani.color[2], alpha)).setStrokeStyle(ani.strokeWidth, ani.caps);
+			if (ani.key != null) {
+				gr.moveTo(sx, sy).quadraticCurveTo(ani.key[0], ani.key[1], dx, dy);
 			} else {
-				gr.moveTo(animation.source[0], animation.source[1]).lineTo(animation.destination[0], animation.destination[1]);
+				gr.moveTo(sx, sy).lineTo(dx, dy);
 			}
 			stage.addChild(line);
 		});
@@ -116,7 +134,7 @@ God = function() {
 	};
 	that.animations = [];
 	that.animate = function(item) {
-	  if (that.animations.length < 50) {
+	  if (that.animations.length < 100) {
 		  that.animations.push(item);
 		}
 	};
@@ -159,11 +177,18 @@ God = function() {
 						var item = {
 							source: that.getPos(e.data.source.Pos),
 							destination: that.getPos(e.data.destination.Pos),
-							ttl: new Date().getTime() + 300,
+							ttl: new Date().getTime() + 400,
 							color: [0,0,200],
 							strokeWidth: 3,
 							caps: 0,
+							created: new Date().getTime(),
 						};
+						if (/Notify/.exec(e.data.type) != null) {
+							item.color = [200,200,0];
+						}
+						if (/Ping/.exec(e.data.type) != null) {
+							item.color = [200,0,200];
+						}
 						if (/HashTree/.exec(e.data.type) != null) {
 							item.color = [200,0,0];
 						}
@@ -179,9 +204,10 @@ God = function() {
 						var item = {
 							source: that.getPos(e.data.source.Pos),
 							destination: that.getPos(e.data.destination.Pos),
-							ttl: new Date().getTime() + 500,
+							ttl: new Date().getTime() + 400,
 							color: [150,0,150],
 							strokeWidth: 5,
+							created: new Date().getTime(),
 							caps: 1,
 						};
 						that.animate(item);
@@ -190,7 +216,8 @@ God = function() {
 						var item = {
 							source: that.getPos(e.data.source.Pos),
 							destination: that.getPos(e.data.destination.Pos),
-							ttl: new Date().getTime() + 500,
+							ttl: new Date().getTime() + 400,
+							created: new Date().getTime(),
 							color: [50,150,0],
 							strokeWidth: 4,
 							caps: 2,
@@ -202,8 +229,11 @@ God = function() {
 		}
 	};
 	that.start = function() {
-		window.setInterval(that.drawChord, 100);
+		window.setInterval(that.drawChord, 40);
 		that.open_socket(document.location.hostname + ":" + document.location.port);
+		_.each(that.api_methods, function(api_meth) {
+		  $("#meth").append("<option data-method-name=\"" + api_meth.name + "\">" + api_meth.name + "</option>");
+		});
 	};
 	return that;
 };
@@ -211,6 +241,6 @@ God = function() {
 g = new God();
 
 $(function() {
-  g.start()
+  g.start();
 });
 
