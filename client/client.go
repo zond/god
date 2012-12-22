@@ -35,9 +35,9 @@ func findKeys(op *setop.SetOp) (result map[string]bool) {
 //
 // A god database has two data types: byte values and sub trees. All values are sorted in ascending order.
 //
-// byte values are simply byte slices indexed by a key byte slice.
+// Byte values are simply byte slices indexed by a key byte slice.
 //
-// sub trees are trees containing byte values.
+// Sub trees are trees containing byte values.
 //
 // Sub trees can be 'mirrored', which means that they contain a tree mirroring its values as keys and its keys as values.
 // 
