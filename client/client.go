@@ -31,14 +31,34 @@ func findKeys(op *setop.SetOp) (result map[string]bool) {
 	return
 }
 
+// Conn is the client connection.
+//
+// A god database has two data types: byte values and sub trees. All values are sorted in ascending order.
+//
+// * byte values are simply byte slices indexed by a key byte slice.
+// * sub trees are trees containing byte values.
+//
+// Sub trees can be 'mirrored', which means that they contain a tree mirroring its values as keys and its keys as values.
+// 
+// Naming conventions:
+// * If there are two methods with similar names except that one has a capital S prefixed, that means that the method with the capital S will not return until all nodes responsible for the written data has received the data, while the one without the capital S will return as soon as the owner of the data has received it.
+// * Methods prefixed Sub will work on sub trees.
+// * Methods prefixed Reverse will work in reverse order. Return slices in reverse order and indices from the end instead of the start etc.
+// * Methods prefixed Mirror will work on the mirror trees of the sub trees in question.
+//
+// To install:
+// go get github.com/zond/god/client
 type Conn struct {
 	ring  *common.Ring
 	state int32
 }
 
+// NewConnRing creates a new Conn from a given set of known nodes. For internal usage.
 func NewConnRing(ring *common.Ring) *Conn {
 	return &Conn{ring: ring}
 }
+
+// NewConn creates a new Conn to a cluster defined by the address of one of its members.
 func NewConn(addr string) (result *Conn, err error) {
 	result = &Conn{ring: common.NewRing()}
 	var newNodes common.Remotes
@@ -46,6 +66,8 @@ func NewConn(addr string) (result *Conn, err error) {
 	result.ring.SetNodes(newNodes)
 	return
 }
+
+// MustConn creates a working Conn or panics.
 func MustConn(addr string) (result *Conn) {
 	var err error
 	if result, err = NewConn(addr); err != nil {
@@ -63,6 +85,8 @@ func (self *Conn) removeNode(node common.Remote) {
 	self.ring.Remove(node)
 	self.Reconnect()
 }
+
+// Nodes returns the set of known nodes for this Conn.
 func (self *Conn) Nodes() common.Remotes {
 	return self.ring.Nodes()
 }
@@ -89,11 +113,15 @@ func (self *Conn) updateRegularly() {
 		time.Sleep(common.PingInterval)
 	}
 }
+
+// Start will begin to regularly update the set of known nodes for this Conn.
 func (self *Conn) Start() {
 	if self.changeState(created, started) {
 		go self.updateRegularly()
 	}
 }
+
+// Reconnect will try to refetch the set of known nodes from a randomly chosen currently known node.
 func (self *Conn) Reconnect() {
 	node := self.ring.Random()
 	var err error
@@ -271,6 +299,8 @@ func (self *Conn) subDump(key []byte, c chan [2][]byte, wait *sync.WaitGroup) {
 	wait.Done()
 }
 
+// Kill will remove all content from all currently known database nodes.
+// It will NOT keep delete markers for the data, so any disconnected node later connected WILL reanimate all data it belives to be current.
 func (self *Conn) Kill() {
 	var x int
 	for _, node := range self.ring.Nodes() {
@@ -279,6 +309,9 @@ func (self *Conn) Kill() {
 		}
 	}
 }
+
+// Clear will remove all first level data (not sub trees) from all currently known database nodes.
+// It WILL keep delete markers for the data, so any disconnected node later connected will NOT reanimate the data it believes to be current.
 func (self *Conn) Clear() {
 	var x int
 	for _, node := range self.ring.Nodes() {
@@ -287,6 +320,8 @@ func (self *Conn) Clear() {
 		}
 	}
 }
+
+// SSubPut will put value under subKey in the sub tree defined by key.
 func (self *Conn) SSubPut(key, subKey, value []byte) {
 	self.subPut(key, subKey, value, true)
 }
