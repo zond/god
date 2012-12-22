@@ -55,6 +55,8 @@ func findKeys(op *setop.SetOp) (result map[string]bool) {
 // Parameters named mininc and maxinc paired with parameters min and max of []byte type defined whether the min and max parameters are inclusive as opposed to exclusive.
 //
 // To install: go get github.com/zond/god/client
+//
+// Usage: https://github.com/zond/god/blob/master/client/client_test.go
 type Conn struct {
 	ring  *common.Ring
 	state int32
