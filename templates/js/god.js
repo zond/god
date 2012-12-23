@@ -28,7 +28,7 @@ God = function() {
 	that.cx = 1000;
 	that.cy = 1000;
 	that.r = 800;
-	that.api_methods = {{.ApiMethods}};
+	that.api_endpoints = {{.ApiMethods}};
 	that.last_route_redraw = new Date().getTime();
 	that.last_route_update = new Date().getTime();
 	that.last_meta_redraw = new Date().getTime();
@@ -228,11 +228,17 @@ God = function() {
 			});
 		}
 	};
+	that.display_endpoint_form = function(endp) {
+    console.log(endp);
+	};
 	that.start = function() {
 		window.setInterval(that.drawChord, 40);
 		that.open_socket(document.location.hostname + ":" + document.location.port);
-		_.each(that.api_methods, function(api_meth) {
-		  $("#meth").append("<option data-method-name=\"" + api_meth.name + "\">" + api_meth.name + "</option>");
+		_.each(that.api_endpoints, function(api_meth) {
+		  $("#endpoints").append("<li data-endpoint-name=\"" + api_meth.name + "\">" + api_meth.name + "</ul>");
+		});
+		$("#endpoints li").click(function(ev) {
+		  that.display_endpoint_form(that.api_endpoints[$(ev.target).attr("data-endpoint-name")]);
 		});
 	};
 	return that;

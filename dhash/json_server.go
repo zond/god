@@ -75,14 +75,16 @@ func (self *requestContext) getBodyString() string {
 
 func (self *requestContext) ReadRequestBody(b interface{}) (err error) {
 	if b != nil {
-		if _, ok := b.(*int); ok {
-			var i int64
-			if i, err = strconv.ParseInt(self.getBodyString(), 10, 64); err != nil {
-				return
+		if self.request.ContentLength > 0 {
+			if _, ok := b.(*int); ok {
+				var i int64
+				if i, err = strconv.ParseInt(self.getBodyString(), 10, 64); err != nil {
+					return
+				}
+				reflect.ValueOf(b).Elem().SetInt(i)
+			} else {
+				err = json.NewDecoder(self.request.Body).Decode(b)
 			}
-			reflect.ValueOf(b).Elem().SetInt(i)
-		} else {
-			err = json.NewDecoder(self.request.Body).Decode(b)
 		}
 	}
 	return
@@ -130,7 +132,7 @@ func (self *Node) startJson() {
 		return
 	}
 	rpcServer := rpc.NewServer()
-	jsonApi := (*jsonDhashServer)(self)
+	jsonApi := (*JSONApi)(self)
 	web.SetApi(reflect.TypeOf(jsonApi))
 	rpcServer.RegisterName("DHash", jsonApi)
 	jsonServer := jsonRpcServer{server: rpcServer}

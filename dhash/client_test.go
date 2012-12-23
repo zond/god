@@ -112,6 +112,7 @@ func BenchmarkClientAndServer(b *testing.B) {
 func TestClient(t *testing.T) {
 	dhashes := testStartup(t, common.Redundancy*2, 11191)
 	testGOBClient(t, dhashes)
+	testJSONClient(t, dhashes)
 }
 
 func clearAll(dhashes []*Node) {
@@ -134,7 +135,7 @@ func testJSONClient(t *testing.T, dhashes []*Node) {
 		if err != nil {
 			panic(err)
 		}
-		c := jsonClient(fmt.Sprintf("%v:%v", addr.IP, addr.Port+1))
+		c := JSONClient(fmt.Sprintf("%v:%v", addr.IP, addr.Port+1))
 		testClientInterface(t, dhashes, c)
 	}
 }

@@ -22,7 +22,13 @@ func getFormat(t reflect.Type) interface{} {
 		var field reflect.StructField
 		for i := 0; i < t.NumField(); i++ {
 			field = t.Field(i)
-			result[field.Name] = field.Type.Name()
+			if field.Type.Kind() == reflect.Slice {
+				if field.Type.Elem().Kind() == reflect.Uint8 {
+					result[field.Name] = "[]byte"
+				}
+			} else {
+				result[field.Name] = field.Type.Name()
+			}
 		}
 		return result
 	}
@@ -30,21 +36,21 @@ func getFormat(t reflect.Type) interface{} {
 }
 
 func SetApi(t reflect.Type) {
-	var ary []map[string]interface{}
+	m := make(map[string]map[string]interface{})
 	var meth reflect.Method
 	var in reflect.Type
 	for i := 0; i < t.NumMethod(); i++ {
 		meth = t.Method(i)
 		if strings.ToUpper(string(meth.Name[0])) == string(meth.Name[0]) && meth.Type.NumIn() == 3 {
 			in = meth.Type.In(1)
-			ary = append(ary, map[string]interface{}{
+			m[meth.Name] = map[string]interface{}{
 				"name":      meth.Name,
 				"parameter": getFormat(in),
-			})
+			}
 		}
 	}
 	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(ary); err != nil {
+	if err := json.NewEncoder(buf).Encode(m); err != nil {
 		panic(err)
 	}
 	apiMethods = string(buf.Bytes())
