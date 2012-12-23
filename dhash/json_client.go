@@ -9,6 +9,9 @@ import (
 	"net/http"
 )
 
+// JSONClient is used in the tests to ensure that the JSON API provides roughly the same functionality as the gob API.
+// It is also a demonstration and example of how the JSON API can be used.
+// It is NOT meant to be used as a real client, since if you are using Go anyway the client.Conn type is much more efficient.
 type JSONClient string
 
 func (self JSONClient) call(action string, params, result interface{}) {
