@@ -39,7 +39,7 @@ func (self JSONClient) call(action string, params, result interface{}) {
 	resp.Body.Close()
 }
 func (self JSONClient) SSubPut(key, subKey, value []byte) {
-	var x int
+	var x Nothing
 	item := SubValue{
 		Key:    key,
 		SubKey: subKey,
@@ -49,7 +49,7 @@ func (self JSONClient) SSubPut(key, subKey, value []byte) {
 	self.call("SubPut", item, &x)
 }
 func (self JSONClient) SubPut(key, subKey, value []byte) {
-	var x int
+	var x Nothing
 	item := SubValue{
 		Key:    key,
 		SubKey: subKey,
@@ -58,7 +58,7 @@ func (self JSONClient) SubPut(key, subKey, value []byte) {
 	self.call("SubPut", item, &x)
 }
 func (self JSONClient) SPut(key, value []byte) {
-	var x int
+	var x Nothing
 	item := Value{
 		Key:   key,
 		Value: value,
@@ -67,7 +67,7 @@ func (self JSONClient) SPut(key, value []byte) {
 	self.call("Put", item, &x)
 }
 func (self JSONClient) Put(key, value []byte) {
-	var x int
+	var x Nothing
 	item := Value{
 		Key:   key,
 		Value: value,
@@ -75,14 +75,14 @@ func (self JSONClient) Put(key, value []byte) {
 	self.call("Put", item, &x)
 }
 func (self JSONClient) SubClear(key []byte) {
-	var x int
+	var x Nothing
 	item := KeyOp{
 		Key: key,
 	}
 	self.call("SubClear", item, &x)
 }
 func (self JSONClient) SSubClear(key []byte) {
-	var x int
+	var x Nothing
 	item := KeyOp{
 		Key:  key,
 		Sync: true,
@@ -90,7 +90,7 @@ func (self JSONClient) SSubClear(key []byte) {
 	self.call("SubClear", item, &x)
 }
 func (self JSONClient) SubDel(key, subKey []byte) {
-	var x int
+	var x Nothing
 	item := SubKeyOp{
 		Key:    key,
 		SubKey: subKey,
@@ -98,7 +98,7 @@ func (self JSONClient) SubDel(key, subKey []byte) {
 	self.call("SubDel", item, &x)
 }
 func (self JSONClient) SSubDel(key, subKey []byte) {
-	var x int
+	var x Nothing
 	item := SubKeyOp{
 		Key:    key,
 		SubKey: subKey,
@@ -107,7 +107,7 @@ func (self JSONClient) SSubDel(key, subKey []byte) {
 	self.call("SubDel", item, &x)
 }
 func (self JSONClient) SDel(key []byte) {
-	var x int
+	var x Nothing
 	item := KeyOp{
 		Key:  key,
 		Sync: true,
@@ -115,7 +115,7 @@ func (self JSONClient) SDel(key []byte) {
 	self.call("Del", item, &x)
 }
 func (self JSONClient) Del(key []byte) {
-	var x int
+	var x Nothing
 	item := KeyOp{
 		Key: key,
 	}
@@ -448,12 +448,20 @@ func (self JSONClient) SetExpression(expr setop.SetExpression) (result []setop.S
 	self.call("SetExpression", expr, &result)
 	return
 }
+func (self JSONClient) AddConfiguration(key, value string) {
+	conf := SubConf{
+		Key:   key,
+		Value: value,
+	}
+	var x Nothing
+	self.call("AddConfiguration", conf, &x)
+}
 func (self JSONClient) SubAddConfiguration(treeKey []byte, key, value string) {
 	conf := SubConf{
 		TreeKey: treeKey,
 		Key:     key,
 		Value:   value,
 	}
-	var x int
+	var x Nothing
 	self.call("SubAddConfiguration", conf, &x)
 }

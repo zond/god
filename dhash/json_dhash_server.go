@@ -83,57 +83,62 @@ func (self *JSONApi) Clear(x Nothing, y *Nothing) error {
 	(*Node)(self).Clear()
 	return nil
 }
-func (self *JSONApi) SubDel(d SubKeyOp, x *int) error {
+func (self *JSONApi) SubDel(d SubKeyOp, n *Nothing) error {
 	data := common.Item{
 		Key:    d.Key,
 		SubKey: d.SubKey,
 		Sync:   d.Sync,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SubDel", data.Key, data, x); f {
+	var x int
+	if f, e := self.forwardUnlessMe("DHash.SubDel", data.Key, data, &x); f {
 		return e
 	}
 	return (*Node)(self).SubDel(data)
 }
-func (self *JSONApi) SubClear(d SubKeyOp, x *int) error {
+func (self *JSONApi) SubClear(d SubKeyOp, n *Nothing) error {
 	data := common.Item{
 		Key:    d.Key,
 		SubKey: d.SubKey,
 		Sync:   d.Sync,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SubClear", data.Key, data, x); f {
+	var x int
+	if f, e := self.forwardUnlessMe("DHash.SubClear", data.Key, data, &x); f {
 		return e
 	}
 	return (*Node)(self).SubClear(data)
 }
-func (self *JSONApi) SubPut(d SubValue, x *int) error {
+func (self *JSONApi) SubPut(d SubValue, n *Nothing) error {
 	data := common.Item{
 		Key:    d.Key,
 		SubKey: d.SubKey,
 		Value:  d.Value,
 		Sync:   d.Sync,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SubPut", data.Key, data, x); f {
+	var x int
+	if f, e := self.forwardUnlessMe("DHash.SubPut", data.Key, data, &x); f {
 		return e
 	}
 	return (*Node)(self).SubPut(data)
 }
-func (self *JSONApi) Del(d KeyOp, x *int) error {
+func (self *JSONApi) Del(d KeyOp, n *Nothing) error {
 	data := common.Item{
 		Key:  d.Key,
 		Sync: d.Sync,
 	}
-	if f, e := self.forwardUnlessMe("DHash.Del", data.Key, data, x); f {
+	var x int
+	if f, e := self.forwardUnlessMe("DHash.Del", data.Key, data, &x); f {
 		return e
 	}
 	return (*Node)(self).Del(data)
 }
-func (self *JSONApi) Put(d Value, x *int) error {
+func (self *JSONApi) Put(d Value, n *Nothing) error {
 	data := common.Item{
 		Key:   d.Key,
 		Value: d.Value,
 		Sync:  d.Sync,
 	}
-	if f, e := self.forwardUnlessMe("DHash.Put", data.Key, data, x); f {
+	var x int
+	if f, e := self.forwardUnlessMe("DHash.Put", data.Key, data, &x); f {
 		return e
 	}
 	return (*Node)(self).Put(data)
@@ -573,7 +578,7 @@ func (self *JSONApi) SetExpression(expr setop.SetExpression, items *[]setop.SetO
 	return (*Node)(self).SetExpression(expr, items)
 }
 
-func (self *JSONApi) AddConfiguration(co Conf, x *int) error {
+func (self *JSONApi) AddConfiguration(co Conf, x *Nothing) error {
 	c := common.ConfItem{
 		Key:   co.Key,
 		Value: co.Value,
@@ -581,7 +586,7 @@ func (self *JSONApi) AddConfiguration(co Conf, x *int) error {
 	(*Node)(self).AddConfiguration(c)
 	return nil
 }
-func (self *JSONApi) SubAddConfiguration(co SubConf, x *int) error {
+func (self *JSONApi) SubAddConfiguration(co SubConf, x *Nothing) error {
 	c := common.ConfItem{
 		TreeKey: co.TreeKey,
 		Key:     co.Key,
