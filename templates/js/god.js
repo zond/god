@@ -25,6 +25,9 @@ Node = function(g, data) {
 God = function() {
   var that = new Object();
 	that.maxPos = Big(1).times(Big(256).pow(16));
+	that.api_endpoint_templ = _.template($("#api_endpoint_templ").text());
+	that.api_endpoint_item_templ = _.template($("#api_endpoint_item_templ").text());
+	that.node_link_templ = _.template($("#node_link_templ").text());
 	that.cx = 1000;
 	that.cy = 1000;
 	that.r = 800;
@@ -61,7 +64,7 @@ God = function() {
 			label.y = route.y - 10;
 			stage.addChild(label);
 			if (that.last_route_update > that.last_route_redraw) {
-				$("#nodes").append($("<tr data-addr=\"" + route.json_addr + "\" class=\"node\"><td>" + route.gob_addr + "</td><td>" + route.hexpos + "</td></tr>"));
+				$("#nodes").append(that.node_link_templ({ node: route }));
 			}
 		}
     if (that.last_route_update > that.last_route_redraw) {
@@ -228,14 +231,38 @@ God = function() {
 			});
 		}
 	};
+	that.generate_example_param = function(param) {
+	  if (param == 'bool') {
+		  return 'false';
+		} else if (param == '[]byte') {
+		  return '$.base64.encode("some bytes")';
+		} else if (param == 'int') {
+		  return '0';
+		} else {
+		  return '"Unknown parameter type ' + param + ', please implement example code for it!"';
+		}
+	};
+	that.generate_example_params = function(endp) {
+	  var rval = '{\n';
+		for (var key in endp.parameter) {
+		  rval += '    ' + key + ': ' + that.generate_example_param(endp.parameter[key]) + ',\n';
+		}
+		rval += '  }';
+		return rval;
+	};
 	that.display_endpoint_form = function(endp) {
-    console.log(endp);
+		$("#endpoint_container").html(that.api_endpoint_templ({ api_endpoint: endp }));
+    var generated_code = "$.ajax('/rpc/DHash." + endp.name + "', {\n  type: 'POST',\n  contentType: 'application/json; charset=UTF-8',\n  data: JSON.stringify(" + that.generate_example_params(endp) + "),\n  success: function(data) { console.log(data); },\n  dataType: 'json',\n});";
+		$("#code").val(generated_code);
+		$("#execute").click(function(ev) {
+		  eval($("#code").val());
+		});
 	};
 	that.start = function() {
 		window.setInterval(that.drawChord, 40);
 		that.open_socket(document.location.hostname + ":" + document.location.port);
-		_.each(that.api_endpoints, function(api_meth) {
-		  $("#endpoints").append("<li data-endpoint-name=\"" + api_meth.name + "\">" + api_meth.name + "</ul>");
+		_.each(that.api_endpoints, function(api_endpoint) {
+		  $("#endpoints").append(that.api_endpoint_item_templ({ api_endpoint: api_endpoint }));
 		});
 		$("#endpoints li").click(function(ev) {
 		  that.display_endpoint_form(that.api_endpoints[$(ev.target).attr("data-endpoint-name")]);

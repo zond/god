@@ -22,10 +22,10 @@ func getFormat(t reflect.Type) interface{} {
 		var field reflect.StructField
 		for i := 0; i < t.NumField(); i++ {
 			field = t.Field(i)
-			if field.Type.Kind() == reflect.Slice {
-				if field.Type.Elem().Kind() == reflect.Uint8 {
-					result[field.Name] = "[]byte"
-				}
+			if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Uint8 {
+				result[field.Name] = "[]byte"
+			} else if field.Type.Kind() == reflect.Ptr && field.Type.Elem().Kind() == reflect.Int {
+				result[field.Name] = "int"
 			} else {
 				result[field.Name] = field.Type.Name()
 			}

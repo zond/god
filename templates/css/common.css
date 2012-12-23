@@ -20,3 +20,10 @@
 .node {
 	cursor: pointer;
 }
+#code {
+	width: 30em;
+	height: 20em;
+}
+#execute {
+	display: block;
+}
