@@ -5,9 +5,9 @@ A Go database
 
 # TODO
 
+* Replace all returns from the json server with smaller structs containing only what is actually needed.
 * Web interface
- * Functionality
-	* See and interact with content from web interface
+ * Add links to documentation.
 * Quality
  * Code review
  * Code comments

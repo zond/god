@@ -251,8 +251,8 @@ God = function() {
 		return rval;
 	};
 	that.display_endpoint_form = function(endp) {
-		$("#endpoint_container").html(that.api_endpoint_templ({ api_endpoint: endp }));
-    var generated_code = "$.ajax('/rpc/DHash." + endp.name + "', {\n  type: 'POST',\n  contentType: 'application/json; charset=UTF-8',\n  data: JSON.stringify(" + that.generate_example_params(endp) + "),\n  success: function(data) { console.log(data); },\n  dataType: 'json',\n});";
+		$("#code_container").html(that.api_endpoint_templ({ api_endpoint: endp }));
+    var generated_code = "$.ajax('/rpc/DHash." + endp.name + "', {\n  type: 'POST',\n  contentType: 'application/json; charset=UTF-8',\n  data: JSON.stringify(" + that.generate_example_params(endp) + "),\n  success: function(data) { $('#result_container').html('<pre>' + JSON.stringify(data, null, '  ') + '</pre>'); },\n  dataType: 'json',\n});";
 		$("#code").val(generated_code);
 		$("#execute").click(function(ev) {
 		  eval($("#code").val());
