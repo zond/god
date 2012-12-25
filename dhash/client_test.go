@@ -652,7 +652,7 @@ func testGetPutDel(t *testing.T, c testClient) {
 		}
 		c.SPut(key, value)
 		if v, e := c.Get(key); bytes.Compare(value, v) != 0 || !e {
-			t.Errorf("should exist, but got %v => %v, %v", key, v, e)
+			t.Fatalf("should exist, but got %v => %v, %v", key, v, e)
 		}
 		c.SDel(key)
 		if v, e := c.Get(key); v != nil || e {

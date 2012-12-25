@@ -6,7 +6,20 @@ import (
 )
 
 type Nothing struct{}
-type SubValue struct {
+type SubValueRes struct {
+	Key    []byte
+	SubKey []byte
+	Value  []byte
+	Exists bool
+}
+type SubValueIndexRes struct {
+	Key    []byte
+	SubKey []byte
+	Value  []byte
+	Index  int
+	Exists bool
+}
+type SubValueOp struct {
 	Key    []byte
 	SubKey []byte
 	Value  []byte
@@ -25,10 +38,15 @@ type SubIndex struct {
 	Key   []byte
 	Index int
 }
-type Value struct {
+type ValueOp struct {
 	Key   []byte
 	Value []byte
 	Sync  bool
+}
+type ValueRes struct {
+	Key    []byte
+	Value  []byte
+	Exists bool
 }
 type KeyOp struct {
 	Key  []byte
@@ -67,6 +85,16 @@ type Conf struct {
 
 type JSONApi Node
 
+func (self *JSONApi) convert(items []common.Item, result *[]SubValueRes) {
+	for _, item := range items {
+		*result = append(*result, SubValueRes{
+			Key:    item.Key,
+			SubKey: item.SubKey,
+			Value:  item.Value,
+			Exists: item.Exists,
+		})
+	}
+}
 func (self *JSONApi) forwardUnlessMe(cmd string, key []byte, in, out interface{}) (forwarded bool, err error) {
 	succ := (*Node)(self).node.GetSuccessorFor(key)
 	if succ.Addr != (*Node)(self).node.GetAddr() {
@@ -75,39 +103,41 @@ func (self *JSONApi) forwardUnlessMe(cmd string, key []byte, in, out interface{}
 	return
 }
 
-func (self *JSONApi) Kill(x Nothing, y *Nothing) error {
+func (self *JSONApi) Kill(x Nothing, y *Nothing) (err error) {
 	(*Node)(self).Kill()
 	return nil
 }
-func (self *JSONApi) Clear(x Nothing, y *Nothing) error {
+func (self *JSONApi) Clear(x Nothing, y *Nothing) (err error) {
 	(*Node)(self).Clear()
 	return nil
 }
-func (self *JSONApi) SubDel(d SubKeyOp, n *Nothing) error {
+func (self *JSONApi) SubDel(d SubKeyOp, n *Nothing) (err error) {
 	data := common.Item{
 		Key:    d.Key,
 		SubKey: d.SubKey,
 		Sync:   d.Sync,
 	}
 	var x int
-	if f, e := self.forwardUnlessMe("DHash.SubDel", data.Key, data, &x); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubDel", data.Key, data, &x); !f {
+		err = (*Node)(self).SubDel(data)
 	}
-	return (*Node)(self).SubDel(data)
+	return
 }
-func (self *JSONApi) SubClear(d SubKeyOp, n *Nothing) error {
+func (self *JSONApi) SubClear(d SubKeyOp, n *Nothing) (err error) {
 	data := common.Item{
 		Key:    d.Key,
 		SubKey: d.SubKey,
 		Sync:   d.Sync,
 	}
 	var x int
-	if f, e := self.forwardUnlessMe("DHash.SubClear", data.Key, data, &x); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubClear", data.Key, data, &x); !f {
+		err = (*Node)(self).SubClear(data)
 	}
-	return (*Node)(self).SubClear(data)
+	return
 }
-func (self *JSONApi) SubPut(d SubValue, n *Nothing) error {
+func (self *JSONApi) SubPut(d SubValueOp, n *Nothing) (err error) {
 	data := common.Item{
 		Key:    d.Key,
 		SubKey: d.SubKey,
@@ -115,35 +145,38 @@ func (self *JSONApi) SubPut(d SubValue, n *Nothing) error {
 		Sync:   d.Sync,
 	}
 	var x int
-	if f, e := self.forwardUnlessMe("DHash.SubPut", data.Key, data, &x); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubPut", data.Key, data, &x); !f {
+		err = (*Node)(self).SubPut(data)
 	}
-	return (*Node)(self).SubPut(data)
+	return
 }
-func (self *JSONApi) Del(d KeyOp, n *Nothing) error {
+func (self *JSONApi) Del(d KeyOp, n *Nothing) (err error) {
 	data := common.Item{
 		Key:  d.Key,
 		Sync: d.Sync,
 	}
 	var x int
-	if f, e := self.forwardUnlessMe("DHash.Del", data.Key, data, &x); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.Del", data.Key, data, &x); !f {
+		err = (*Node)(self).Del(data)
 	}
-	return (*Node)(self).Del(data)
+	return
 }
-func (self *JSONApi) Put(d Value, n *Nothing) error {
+func (self *JSONApi) Put(d ValueOp, n *Nothing) (err error) {
 	data := common.Item{
 		Key:   d.Key,
 		Value: d.Value,
 		Sync:  d.Sync,
 	}
 	var x int
-	if f, e := self.forwardUnlessMe("DHash.Put", data.Key, data, &x); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.Put", data.Key, data, &x); !f {
+		err = (*Node)(self).Put(data)
 	}
-	return (*Node)(self).Put(data)
+	return
 }
-func (self *JSONApi) MirrorCount(kr KeyRange, result *int) error {
+func (self *JSONApi) MirrorCount(kr KeyRange, result *int) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -151,12 +184,13 @@ func (self *JSONApi) MirrorCount(kr KeyRange, result *int) error {
 		MinInc: kr.MinInc,
 		MaxInc: kr.MaxInc,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorCount", r.Key, r, result); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorCount", r.Key, r, result); !f {
+		err = (*Node)(self).MirrorCount(r, result)
 	}
-	return (*Node)(self).MirrorCount(r, result)
+	return
 }
-func (self *JSONApi) Count(kr KeyRange, result *int) error {
+func (self *JSONApi) Count(kr KeyRange, result *int) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -164,227 +198,348 @@ func (self *JSONApi) Count(kr KeyRange, result *int) error {
 		MinInc: kr.MinInc,
 		MaxInc: kr.MaxInc,
 	}
-	if f, e := self.forwardUnlessMe("DHash.Count", r.Key, r, result); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.Count", r.Key, r, result); !f {
+		err = (*Node)(self).Count(r, result)
 	}
-	return (*Node)(self).Count(r, result)
+	return
 }
-func (self *JSONApi) Next(kr KeyReq, result *common.Item) error {
+func (self *JSONApi) Next(kr KeyReq, result *ValueRes) (err error) {
 	k, v, e := (*Node)(self).client().Next(kr.Key)
-	*result = common.Item{
+	*result = ValueRes{
 		Key:    k,
 		Value:  v,
 		Exists: e,
 	}
 	return nil
 }
-func (self *JSONApi) Prev(kr KeyReq, result *common.Item) error {
+func (self *JSONApi) Prev(kr KeyReq, result *ValueRes) (err error) {
 	k, v, e := (*Node)(self).client().Prev(kr.Key)
-	*result = common.Item{
+	*result = ValueRes{
 		Key:    k,
 		Value:  v,
 		Exists: e,
 	}
 	return nil
 }
-func (self *JSONApi) SubGet(k SubKeyReq, result *common.Item) error {
+func (self *JSONApi) SubGet(k SubKeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key:    k.Key,
 		SubKey: k.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SubGet", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubGet", data.Key, data, &item); !f {
+		err = (*Node)(self).SubGet(data, &item)
 	}
-	return (*Node)(self).SubGet(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) Get(k KeyReq, result *common.Item) error {
+func (self *JSONApi) Get(k KeyReq, result *ValueRes) (err error) {
 	data := common.Item{
 		Key: k.Key,
 	}
-	if f, e := self.forwardUnlessMe("DHash.Get", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.Get", data.Key, data, &item); !f {
+		err = (*Node)(self).Get(data, &item)
 	}
-	return (*Node)(self).Get(data, result)
+	*result = ValueRes{
+		Key:    item.Key,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) Size(x Nothing, result *int) error {
+func (self *JSONApi) Size(x Nothing, result *int) (err error) {
 	*result = (*Node)(self).Size()
 	return nil
 }
-func (self *JSONApi) SubSize(key []byte, result *int) error {
-	if f, e := self.forwardUnlessMe("DHash.SubSize", key, key, result); f {
-		return e
+func (self *JSONApi) SubSize(key []byte, result *int) (err error) {
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubSize", key, key, result); !f {
+		err = (*Node)(self).SubSize(key, result)
 	}
-	return (*Node)(self).SubSize(key, result)
+	return
 }
-func (self *JSONApi) Owned(x Nothing, result *int) error {
+func (self *JSONApi) Owned(x Nothing, result *int) (err error) {
 	*result = (*Node)(self).Owned()
 	return nil
 }
-func (self *JSONApi) Describe(x Nothing, result *common.DHashDescription) error {
+func (self *JSONApi) Describe(x Nothing, result *common.DHashDescription) (err error) {
 	*result = (*Node)(self).Description()
 	return nil
 }
-func (self *JSONApi) DescribeTree(x Nothing, result *string) error {
+func (self *JSONApi) DescribeTree(x Nothing, result *string) (err error) {
 	*result = (*Node)(self).DescribeTree()
 	return nil
 }
-func (self *JSONApi) PrevIndex(i SubIndex, result *common.Item) error {
+func (self *JSONApi) PrevIndex(i SubIndex, result *SubValueIndexRes) (err error) {
 	data := common.Item{
 		Key:   i.Key,
 		Index: i.Index,
 	}
-	if f, e := self.forwardUnlessMe("DHash.PrevIndex", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.PrevIndex", data.Key, data, &item); !f {
+		err = (*Node)(self).PrevIndex(data, &item)
 	}
-	return (*Node)(self).PrevIndex(data, result)
+	*result = SubValueIndexRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Index:  item.Index,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) MirrorPrevIndex(i SubIndex, result *common.Item) error {
+func (self *JSONApi) MirrorPrevIndex(i SubIndex, result *SubValueIndexRes) (err error) {
 	data := common.Item{
 		Key:   i.Key,
 		Index: i.Index,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorPrevIndex", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorPrevIndex", data.Key, data, &item); !f {
+		err = (*Node)(self).MirrorPrevIndex(data, &item)
 	}
-	return (*Node)(self).MirrorPrevIndex(data, result)
+	*result = SubValueIndexRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Index:  item.Index,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) MirrorNextIndex(i SubIndex, result *common.Item) error {
+func (self *JSONApi) MirrorNextIndex(i SubIndex, result *SubValueIndexRes) (err error) {
 	data := common.Item{
 		Key:   i.Key,
 		Index: i.Index,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorNextIndex", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorNextIndex", data.Key, data, &item); !f {
+		err = (*Node)(self).MirrorNextIndex(data, &item)
 	}
-	return (*Node)(self).MirrorNextIndex(data, result)
+	*result = SubValueIndexRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Index:  item.Index,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) NextIndex(i SubIndex, result *common.Item) error {
+func (self *JSONApi) NextIndex(i SubIndex, result *SubValueIndexRes) (err error) {
 	data := common.Item{
 		Key:   i.Key,
 		Index: i.Index,
 	}
-	if f, e := self.forwardUnlessMe("DHash.NextIndex", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.NextIndex", data.Key, data, &item); !f {
+		err = (*Node)(self).NextIndex(data, &item)
 	}
-	return (*Node)(self).NextIndex(data, result)
+	*result = SubValueIndexRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Index:  item.Index,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) MirrorReverseIndexOf(i SubKeyReq, result *common.Index) error {
+func (self *JSONApi) MirrorReverseIndexOf(i SubKeyReq, result *common.Index) (err error) {
 	data := common.Item{
 		Key:    i.Key,
 		SubKey: i.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorReverseIndexOf", data.Key, data, result); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorReverseIndexOf", data.Key, data, result); !f {
+		err = (*Node)(self).MirrorReverseIndexOf(data, result)
 	}
-	return (*Node)(self).MirrorReverseIndexOf(data, result)
+	return
 }
-func (self *JSONApi) MirrorIndexOf(i SubKeyReq, result *common.Index) error {
+func (self *JSONApi) MirrorIndexOf(i SubKeyReq, result *common.Index) (err error) {
 	data := common.Item{
 		Key:    i.Key,
 		SubKey: i.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorIndexOf", data.Key, data, result); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorIndexOf", data.Key, data, result); !f {
+		err = (*Node)(self).MirrorIndexOf(data, result)
 	}
-	return (*Node)(self).MirrorIndexOf(data, result)
+	return
 }
-func (self *JSONApi) ReverseIndexOf(i SubKeyReq, result *common.Index) error {
+func (self *JSONApi) ReverseIndexOf(i SubKeyReq, result *common.Index) (err error) {
 	data := common.Item{
 		Key:    i.Key,
 		SubKey: i.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.ReverseIndexOf", data.Key, data, result); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.ReverseIndexOf", data.Key, data, result); !f {
+		err = (*Node)(self).ReverseIndexOf(data, result)
 	}
-	return (*Node)(self).ReverseIndexOf(data, result)
+	return
 }
-func (self *JSONApi) IndexOf(i SubKeyReq, result *common.Index) error {
+func (self *JSONApi) IndexOf(i SubKeyReq, result *common.Index) (err error) {
 	data := common.Item{
 		Key:    i.Key,
 		SubKey: i.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.IndexOf", data.Key, data, result); f {
-		return e
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.IndexOf", data.Key, data, result); !f {
+		err = (*Node)(self).IndexOf(data, result)
 	}
-	return (*Node)(self).IndexOf(data, result)
+	return
 }
-func (self *JSONApi) SubMirrorPrev(k SubKeyReq, result *common.Item) error {
+func (self *JSONApi) SubMirrorPrev(k SubKeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key:    k.Key,
 		SubKey: k.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SubMirrorPrev", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubMirrorPrev", data.Key, data, &item); !f {
+		err = (*Node)(self).SubMirrorPrev(data, &item)
 	}
-	return (*Node)(self).SubMirrorPrev(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) SubMirrorNext(k SubKeyReq, result *common.Item) error {
+func (self *JSONApi) SubMirrorNext(k SubKeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key:    k.Key,
 		SubKey: k.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SubMirrorNext", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubMirrorNext", data.Key, data, &item); !f {
+		err = (*Node)(self).SubMirrorNext(data, &item)
 	}
-	return (*Node)(self).SubMirrorNext(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) SubPrev(k SubKeyReq, result *common.Item) error {
+func (self *JSONApi) SubPrev(k SubKeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key:    k.Key,
 		SubKey: k.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SubPrev", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubPrev", data.Key, data, &item); !f {
+		err = (*Node)(self).SubPrev(data, &item)
 	}
-	return (*Node)(self).SubPrev(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) SubNext(k SubKeyReq, result *common.Item) error {
+func (self *JSONApi) SubNext(k SubKeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key:    k.Key,
 		SubKey: k.SubKey,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SubNext", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SubNext", data.Key, data, &item); !f {
+		err = (*Node)(self).SubNext(data, &item)
 	}
-	return (*Node)(self).SubNext(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) MirrorFirst(k KeyReq, result *common.Item) error {
+func (self *JSONApi) MirrorFirst(k KeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key: k.Key,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorFirst", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorFirst", data.Key, data, &item); !f {
+		err = (*Node)(self).MirrorFirst(data, &item)
 	}
-	return (*Node)(self).MirrorFirst(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) MirrorLast(k KeyReq, result *common.Item) error {
+func (self *JSONApi) MirrorLast(k KeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key: k.Key,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorLast", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorLast", data.Key, data, &item); !f {
+		err = (*Node)(self).MirrorLast(data, &item)
 	}
-	return (*Node)(self).MirrorLast(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) First(k KeyReq, result *common.Item) error {
+func (self *JSONApi) First(k KeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key: k.Key,
 	}
-	if f, e := self.forwardUnlessMe("DHash.First", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.First", data.Key, data, &item); !f {
+		err = (*Node)(self).First(data, &item)
 	}
-	return (*Node)(self).First(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) Last(k KeyReq, result *common.Item) error {
+func (self *JSONApi) Last(k KeyReq, result *SubValueRes) (err error) {
 	data := common.Item{
 		Key: k.Key,
 	}
-	if f, e := self.forwardUnlessMe("DHash.Last", data.Key, data, result); f {
-		return e
+	var item common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.Last", data.Key, data, &item); !f {
+		err = (*Node)(self).Last(data, &item)
 	}
-	return (*Node)(self).Last(data, result)
+	*result = SubValueRes{
+		Key:    item.Key,
+		SubKey: item.SubKey,
+		Value:  item.Value,
+		Exists: item.Exists,
+	}
+	return
 }
-func (self *JSONApi) MirrorReverseSlice(kr KeyRange, result *[]common.Item) error {
+func (self *JSONApi) MirrorReverseSlice(kr KeyRange, result *[]SubValueRes) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -392,12 +547,15 @@ func (self *JSONApi) MirrorReverseSlice(kr KeyRange, result *[]common.Item) erro
 		MinInc: kr.MinInc,
 		MaxInc: kr.MaxInc,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorReverseSlice", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorReverseSlice", r.Key, r, &items); !f {
+		err = (*Node)(self).MirrorReverseSlice(r, &items)
 	}
-	return (*Node)(self).MirrorReverseSlice(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) MirrorSlice(kr KeyRange, result *[]common.Item) error {
+func (self *JSONApi) MirrorSlice(kr KeyRange, result *[]SubValueRes) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -405,12 +563,15 @@ func (self *JSONApi) MirrorSlice(kr KeyRange, result *[]common.Item) error {
 		MinInc: kr.MinInc,
 		MaxInc: kr.MaxInc,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorSlice", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorSlice", r.Key, r, &items); !f {
+		err = (*Node)(self).MirrorSlice(r, &items)
 	}
-	return (*Node)(self).MirrorSlice(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) MirrorSliceIndex(ir IndexRange, result *[]common.Item) error {
+func (self *JSONApi) MirrorSliceIndex(ir IndexRange, result *[]SubValueRes) (err error) {
 	var mi int
 	var ma int
 	if ir.MinIndex != nil {
@@ -426,12 +587,15 @@ func (self *JSONApi) MirrorSliceIndex(ir IndexRange, result *[]common.Item) erro
 		MinInc:   ir.MinIndex != nil,
 		MaxInc:   ir.MaxIndex != nil,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorSliceIndex", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorSliceIndex", r.Key, r, &items); !f {
+		err = (*Node)(self).MirrorSliceIndex(r, &items)
 	}
-	return (*Node)(self).MirrorSliceIndex(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) MirrorReverseSliceIndex(ir IndexRange, result *[]common.Item) error {
+func (self *JSONApi) MirrorReverseSliceIndex(ir IndexRange, result *[]SubValueRes) (err error) {
 	var mi int
 	var ma int
 	if ir.MinIndex != nil {
@@ -447,36 +611,45 @@ func (self *JSONApi) MirrorReverseSliceIndex(ir IndexRange, result *[]common.Ite
 		MinInc:   ir.MinIndex != nil,
 		MaxInc:   ir.MaxIndex != nil,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorReverseSliceIndex", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorReverseSliceIndex", r.Key, r, &items); !f {
+		err = (*Node)(self).MirrorReverseSliceIndex(r, &items)
 	}
-	return (*Node)(self).MirrorReverseSliceIndex(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) MirrorSliceLen(pr PageRange, result *[]common.Item) error {
+func (self *JSONApi) MirrorSliceLen(pr PageRange, result *[]SubValueRes) (err error) {
 	r := common.Range{
 		Key:    pr.Key,
 		Min:    pr.From,
 		MinInc: pr.FromInc,
 		Len:    pr.Len,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorSliceLen", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorSliceLen", r.Key, r, &items); !f {
+		err = (*Node)(self).MirrorSliceLen(r, &items)
 	}
-	return (*Node)(self).MirrorSliceLen(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) MirrorReverseSliceLen(pr PageRange, result *[]common.Item) error {
+func (self *JSONApi) MirrorReverseSliceLen(pr PageRange, result *[]SubValueRes) (err error) {
 	r := common.Range{
 		Key:    pr.Key,
 		Max:    pr.From,
 		MaxInc: pr.FromInc,
 		Len:    pr.Len,
 	}
-	if f, e := self.forwardUnlessMe("DHash.MirrorReverseSliceLen", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.MirrorReverseSliceLen", r.Key, r, &items); !f {
+		err = (*Node)(self).MirrorReverseSliceLen(r, &items)
 	}
-	return (*Node)(self).MirrorReverseSliceLen(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) ReverseSlice(kr KeyRange, result *[]common.Item) error {
+func (self *JSONApi) ReverseSlice(kr KeyRange, result *[]SubValueRes) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -484,12 +657,15 @@ func (self *JSONApi) ReverseSlice(kr KeyRange, result *[]common.Item) error {
 		MinInc: kr.MinInc,
 		MaxInc: kr.MaxInc,
 	}
-	if f, e := self.forwardUnlessMe("DHash.ReverseSlice", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.ReverseSlice", r.Key, r, &items); !f {
+		err = (*Node)(self).ReverseSlice(r, &items)
 	}
-	return (*Node)(self).ReverseSlice(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) Slice(kr KeyRange, result *[]common.Item) error {
+func (self *JSONApi) Slice(kr KeyRange, result *[]SubValueRes) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -497,12 +673,15 @@ func (self *JSONApi) Slice(kr KeyRange, result *[]common.Item) error {
 		MinInc: kr.MinInc,
 		MaxInc: kr.MaxInc,
 	}
-	if f, e := self.forwardUnlessMe("DHash.Slice", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.Slice", r.Key, r, &items); !f {
+		err = (*Node)(self).Slice(r, &items)
 	}
-	return (*Node)(self).Slice(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) SliceIndex(ir IndexRange, result *[]common.Item) error {
+func (self *JSONApi) SliceIndex(ir IndexRange, result *[]SubValueRes) (err error) {
 	var mi int
 	var ma int
 	if ir.MinIndex != nil {
@@ -518,12 +697,15 @@ func (self *JSONApi) SliceIndex(ir IndexRange, result *[]common.Item) error {
 		MinInc:   ir.MinIndex != nil,
 		MaxInc:   ir.MaxIndex != nil,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SliceIndex", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SliceIndex", r.Key, r, &items); !f {
+		err = (*Node)(self).SliceIndex(r, &items)
 	}
-	return (*Node)(self).SliceIndex(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) ReverseSliceIndex(ir IndexRange, result *[]common.Item) error {
+func (self *JSONApi) ReverseSliceIndex(ir IndexRange, result *[]SubValueRes) (err error) {
 	var mi int
 	var ma int
 	if ir.MinIndex != nil {
@@ -539,46 +721,55 @@ func (self *JSONApi) ReverseSliceIndex(ir IndexRange, result *[]common.Item) err
 		MinInc:   ir.MinIndex != nil,
 		MaxInc:   ir.MaxIndex != nil,
 	}
-	if f, e := self.forwardUnlessMe("DHash.ReverseSliceIndex", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.ReverseSliceIndex", r.Key, r, &items); !f {
+		err = (*Node)(self).ReverseSliceIndex(r, &items)
 	}
-	return (*Node)(self).ReverseSliceIndex(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) SliceLen(pr PageRange, result *[]common.Item) error {
+func (self *JSONApi) SliceLen(pr PageRange, result *[]SubValueRes) (err error) {
 	r := common.Range{
 		Key:    pr.Key,
 		Min:    pr.From,
 		MinInc: pr.FromInc,
 		Len:    pr.Len,
 	}
-	if f, e := self.forwardUnlessMe("DHash.SliceLen", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.SliceLen", r.Key, r, &items); !f {
+		err = (*Node)(self).SliceLen(r, &items)
 	}
-	return (*Node)(self).SliceLen(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) ReverseSliceLen(pr PageRange, result *[]common.Item) error {
+func (self *JSONApi) ReverseSliceLen(pr PageRange, result *[]SubValueRes) (err error) {
 	r := common.Range{
 		Key:    pr.Key,
 		Max:    pr.From,
 		MaxInc: pr.FromInc,
 		Len:    pr.Len,
 	}
-	if f, e := self.forwardUnlessMe("DHash.ReverseSliceLen", r.Key, r, result); f {
-		return e
+	var items []common.Item
+	var f bool
+	if f, err = self.forwardUnlessMe("DHash.ReverseSliceLen", r.Key, r, &items); !f {
+		err = (*Node)(self).ReverseSliceLen(r, &items)
 	}
-	return (*Node)(self).ReverseSliceLen(r, result)
+	self.convert(items, result)
+	return
 }
-func (self *JSONApi) SetExpression(expr setop.SetExpression, items *[]setop.SetOpResult) error {
+func (self *JSONApi) SetExpression(expr setop.SetExpression, items *[]setop.SetOpResult) (err error) {
 	if expr.Op == nil {
 		var err error
 		if expr.Op, err = setop.NewSetOpParser(expr.Code).Parse(); err != nil {
-			return err
+			err = (*Node)(self).SetExpression(expr, items)
 		}
 	}
-	return (*Node)(self).SetExpression(expr, items)
+	return
 }
 
-func (self *JSONApi) AddConfiguration(co Conf, x *Nothing) error {
+func (self *JSONApi) AddConfiguration(co Conf, x *Nothing) (err error) {
 	c := common.ConfItem{
 		Key:   co.Key,
 		Value: co.Value,
@@ -586,7 +777,7 @@ func (self *JSONApi) AddConfiguration(co Conf, x *Nothing) error {
 	(*Node)(self).AddConfiguration(c)
 	return nil
 }
-func (self *JSONApi) SubAddConfiguration(co SubConf, x *Nothing) error {
+func (self *JSONApi) SubAddConfiguration(co SubConf, x *Nothing) (err error) {
 	c := common.ConfItem{
 		TreeKey: co.TreeKey,
 		Key:     co.Key,
@@ -595,12 +786,12 @@ func (self *JSONApi) SubAddConfiguration(co SubConf, x *Nothing) error {
 	(*Node)(self).SubAddConfiguration(c)
 	return nil
 }
-func (self *JSONApi) Configuration(x Nothing, result *common.Conf) error {
+func (self *JSONApi) Configuration(x Nothing, result *common.Conf) (err error) {
 	*result = common.Conf{}
 	(*result).Data, (*result).Timestamp = (*Node)(self).tree.Configuration()
 	return nil
 }
-func (self *JSONApi) SubConfiguration(key []byte, result *common.Conf) error {
+func (self *JSONApi) SubConfiguration(key []byte, result *common.Conf) (err error) {
 	*result = common.Conf{TreeKey: key}
 	(*result).Data, (*result).Timestamp = (*Node)(self).tree.SubConfiguration(key)
 	return nil

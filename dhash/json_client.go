@@ -40,7 +40,7 @@ func (self JSONClient) call(action string, params, result interface{}) {
 }
 func (self JSONClient) SSubPut(key, subKey, value []byte) {
 	var x Nothing
-	item := SubValue{
+	item := SubValueOp{
 		Key:    key,
 		SubKey: subKey,
 		Value:  value,
@@ -50,7 +50,7 @@ func (self JSONClient) SSubPut(key, subKey, value []byte) {
 }
 func (self JSONClient) SubPut(key, subKey, value []byte) {
 	var x Nothing
-	item := SubValue{
+	item := SubValueOp{
 		Key:    key,
 		SubKey: subKey,
 		Value:  value,
@@ -59,7 +59,7 @@ func (self JSONClient) SubPut(key, subKey, value []byte) {
 }
 func (self JSONClient) SPut(key, value []byte) {
 	var x Nothing
-	item := Value{
+	item := ValueOp{
 		Key:   key,
 		Value: value,
 		Sync:  true,
@@ -68,7 +68,7 @@ func (self JSONClient) SPut(key, value []byte) {
 }
 func (self JSONClient) Put(key, value []byte) {
 	var x Nothing
-	item := Value{
+	item := ValueOp{
 		Key:   key,
 		Value: value,
 	}
