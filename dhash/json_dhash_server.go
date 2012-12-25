@@ -763,10 +763,10 @@ func (self *JSONApi) SetExpression(expr setop.SetExpression, items *[]setop.SetO
 	if expr.Op == nil {
 		var err error
 		if expr.Op, err = setop.NewSetOpParser(expr.Code).Parse(); err != nil {
-			err = (*Node)(self).SetExpression(expr, items)
+			return err
 		}
 	}
-	return
+	return (*Node)(self).SetExpression(expr, items)
 }
 
 func (self *JSONApi) AddConfiguration(co Conf, x *Nothing) (err error) {
