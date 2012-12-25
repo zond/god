@@ -5,8 +5,8 @@ A Go database
 
 # TODO
 
-* Replace all returns from the json server with smaller structs containing only what is actually needed.
 * Web interface
+ * Make it easy to decode the returned base64, OR make the returned items encode []byte as regular strings
  * Add links to documentation.
 * Quality
  * Code review
