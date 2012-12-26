@@ -4,6 +4,10 @@
 			Go Database!
 		</title>
 		<link href="/css/{{.T}}/all.css" rel="stylesheet" media="screen">
+		<script type="text/template" id="result_templ">
+			<pre><%= JSON.stringify(data, null, "  ") %></pre>
+			<button id="decode">Decode</button>
+		</script>
 		<script type="text/template" id="api_endpoint_item_templ">
 			<li data-endpoint-name="<%= api_endpoint.name %>"><%= api_endpoint.name %></li>
 		</script>

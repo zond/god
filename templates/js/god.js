@@ -27,6 +27,7 @@ God = function() {
 	that.maxPos = Big(1).times(Big(256).pow(16));
 	that.api_endpoint_templ = _.template($("#api_endpoint_templ").text());
 	that.api_endpoint_item_templ = _.template($("#api_endpoint_item_templ").text());
+	that.result_templ = _.template($("#result_templ").text());
 	that.node_link_templ = _.template($("#node_link_templ").text());
 	that.cx = 1000;
 	that.cy = 1000;
@@ -252,7 +253,7 @@ God = function() {
 	};
 	that.display_endpoint_form = function(endp) {
 		$("#code_container").html(that.api_endpoint_templ({ api_endpoint: endp }));
-    var generated_code = "$.ajax('/rpc/DHash." + endp.name + "', {\n  type: 'POST',\n  contentType: 'application/json; charset=UTF-8',\n  data: JSON.stringify(" + that.generate_example_params(endp) + "),\n  success: function(data) {\n    $('#result_container').html('<pre>' + JSON.stringify(data, null, '  ') + '</pre>');\n  },\n  dataType: 'json',\n});";
+    var generated_code = "$.ajax('/rpc/DHash." + endp.name + "', {\n  type: 'POST',\n  contentType: 'application/json; charset=UTF-8',\n  data: JSON.stringify(" + that.generate_example_params(endp) + "),\n  success: function(data) {\n    displayResult(data);\n  },\n  dataType: 'json',\n});";
 		$("#code").val(generated_code);
 		$("#execute").click(function(ev) {
 		  eval($("#code").val());
@@ -272,6 +273,27 @@ God = function() {
 };
 
 g = new God();
+
+result = null;
+
+function displayResult(data) {
+  result = data;
+  $("#result_container").html(g.result_templ({ data: result }));
+	$("#decode").click(function(ev) {
+    var newResult = {};
+		for (var name in result) {
+		  var value = result[name];
+			if (typeof(value) == "string") {
+			  newResult[name] = $.base64.decode2s(value);
+			} else {
+			  newResult[name] = value;
+			}
+		}
+		console.log(newResult);
+		displayResult(newResult);
+		result = newResult;
+	});
+};
 
 $(function() {
   g.start();
