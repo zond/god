@@ -292,6 +292,7 @@ function displayResult(data) {
 		console.log(newResult);
 		displayResult(newResult);
 		result = newResult;
+		$("#decode").remove();
 	});
 };
 

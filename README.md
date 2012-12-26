@@ -6,6 +6,7 @@ A Go database
 # TODO
 
 * Web interface
+ * Document
  * Add links to documentation.
 * Quality
  * Code review
