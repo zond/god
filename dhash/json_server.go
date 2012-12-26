@@ -1,7 +1,6 @@
 package dhash
 
 import (
-	"bytes"
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"fmt"
@@ -92,19 +91,19 @@ func (self *requestContext) ReadRequestBody(b interface{}) (err error) {
 
 func (self *requestContext) WriteResponse(resp *rpc.Response, b interface{}) (err error) {
 	self.response.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	buffer := new(bytes.Buffer)
+	var bts []byte
 	if resp.Error != "" {
 		self.response.WriteHeader(500)
-		if err = json.NewEncoder(buffer).Encode(resp.Error); err != nil {
+		if bts, err = json.Marshal(resp.Error); err != nil {
 			return
 		}
 	} else {
-		if err = json.NewEncoder(buffer).Encode(b); err != nil {
+		if bts, err = json.Marshal(b); err != nil {
 			return
 		}
 	}
-	self.response.Header().Set("Content-Length", fmt.Sprint(buffer.Len()))
-	_, err = self.response.Write(buffer.Bytes())
+	self.response.Header().Set("Content-Length", fmt.Sprint(len(bts)))
+	_, err = self.response.Write(bts)
 	return
 }
 

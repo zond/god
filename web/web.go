@@ -1,7 +1,6 @@
 package web
 
 import (
-	"bytes"
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"fmt"
@@ -49,11 +48,12 @@ func SetApi(t reflect.Type) {
 			}
 		}
 	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(m); err != nil {
+	var bts []byte
+	var err error
+	if bts, err = json.Marshal(m); err != nil {
 		panic(err)
 	}
-	apiMethods = string(buf.Bytes())
+	apiMethods = string(bts)
 }
 
 type baseData struct {
