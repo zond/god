@@ -13,9 +13,16 @@ import (
 	"time"
 )
 
+// SyncListener is a function listening for sync events where one dhash.Node has pushed items to, and pulled items from, another dhash.Node.
 type SyncListener func(source, dest common.Remote, pulled, pushed int) (keep bool)
+
+// CleanListener is a function listening for clean events where one dhash.Node has cleaned items from itself and pushed items to another dhash.Node.
 type CleanListener func(source, dest common.Remote, cleaned, pushed int) (keep bool)
+
+// MigrateListener is a function listening for migrate events where one dhash.Node has migrated from one position to another.
 type MigrateListener func(dhash *Node, source, destination []byte) (keep bool)
+
+// CommListener is a function listening to generic communications between two dhash.Nodes.
 type CommListener func(comm Comm) (keep bool)
 
 type commListenerContainer struct {
@@ -30,6 +37,7 @@ func (self *commListenerContainer) run() {
 	self.node.removeCommListener(self)
 }
 
+// Comm contains metadata about one communication between two dhash.Nodes.
 type Comm struct {
 	Source      common.Remote
 	Destination common.Remote
@@ -50,6 +58,8 @@ const (
 	stopped
 )
 
+// Node is a node in the database. It contains a discord.Node containing routing and rpc functionality, 
+// a timenet.Timer containing time synchronization functionality and a radix.Tree containing the actual data.
 type Node struct {
 	state            int32
 	lastSync         int64
@@ -66,6 +76,7 @@ type Node struct {
 	tree             *radix.Tree
 }
 
+// NewNode will return a dhash.Node publishing itself on the given address.
 func NewNode(addr string) (result *Node) {
 	result = &Node{
 		node:          discord.NewNode(addr),
@@ -159,12 +170,16 @@ func (self *Node) GetAddr() string {
 func (self *Node) AddChangeListener(f common.RingChangeListener) {
 	self.node.AddChangeListener(f)
 }
+
+// Stop will shut down this dhash.Node permanently.
 func (self *Node) Stop() {
 	if self.changeState(started, stopped) {
 		self.node.Stop()
 		self.timer.Stop()
 	}
 }
+
+// Start will spin up this dhash.Node.
 func (self *Node) Start() (err error) {
 	if !self.changeState(created, started) {
 		return fmt.Errorf("%v can only be started when in state 'created'", self)
@@ -376,6 +391,8 @@ func (self *Node) MustJoin(addr string) {
 func (self *Node) Time() time.Time {
 	return time.Unix(0, self.timer.ContinuousTime())
 }
+
+// Owned returns the number of items, including tombstones, that this node has responsibility for.
 func (self *Node) Owned() int {
 	pred := self.node.GetPredecessor()
 	me := self.node.Remote()
