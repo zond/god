@@ -108,6 +108,7 @@ func Min(i ...int) (result int) {
 	return
 }
 
+// AssertWithin asserts that the given func returns a true bool within d, or it fires an error through t.
 func AssertWithin(t *testing.T, f func() (string, bool), d time.Duration) {
 	deadline := time.Now().Add(d)
 	var ok bool
@@ -124,6 +125,7 @@ func AssertWithin(t *testing.T, f func() (string, bool), d time.Duration) {
 	t.Errorf("%v:%v: Wanted %v to be true within %v, but it never happened: %v", file, line, f, d, msg)
 }
 
+// HexEncode will encode the given bytes to a string, and pad it with 0 until it is at least twice the length of b.
 func HexEncode(b []byte) (result string) {
 	encoded := hex.EncodeToString(b)
 	buffer := new(bytes.Buffer)
@@ -134,6 +136,7 @@ func HexEncode(b []byte) (result string) {
 	return string(buffer.Bytes())
 }
 
+// BetweenII returns whether needle is between fromInc and toInc, inclusive.
 func BetweenII(needle, fromInc, toInc []byte) (result bool) {
 	switch bytes.Compare(fromInc, toInc) {
 	case 0:
@@ -147,6 +150,8 @@ func BetweenII(needle, fromInc, toInc []byte) (result bool) {
 	}
 	return
 }
+
+// BetweenIE returns whether needle is between fromInc, inclusive and toExc, exclusive.
 func BetweenIE(needle, fromInc, toExc []byte) (result bool) {
 	switch bytes.Compare(fromInc, toExc) {
 	case 0:
@@ -161,6 +166,7 @@ func BetweenIE(needle, fromInc, toExc []byte) (result bool) {
 	return
 }
 
+// MergeItems will merge the given slices of Items into a slice with the newest version of each Item, with regard to their keys.
 func MergeItems(arys []*[]Item, up bool) (result []Item) {
 	result = *arys[0]
 	var items []Item
@@ -190,6 +196,7 @@ func MergeItems(arys []*[]Item, up bool) (result []Item) {
 	return
 }
 
+// DHashDescription contains a description of a dhash node.
 type DHashDescription struct {
 	Addr         string
 	Pos          []byte
@@ -202,6 +209,7 @@ type DHashDescription struct {
 	Nodes        Remotes
 }
 
+// Describe will return a humanly readable string description of the dhash node.
 func (self DHashDescription) Describe() string {
 	return fmt.Sprintf("%+v", struct {
 		Addr         string
