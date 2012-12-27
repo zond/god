@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// Description will return a current description of the node.
 func (self *Node) Description() common.DHashDescription {
 	return common.DHashDescription{
 		Addr:         self.GetAddr(),
@@ -23,9 +24,13 @@ func (self *Node) Description() common.DHashDescription {
 		Nodes:        self.node.GetNodes(),
 	}
 }
+
+// Describe will return a humanly readable string describing the node.
 func (self *Node) Describe() string {
 	return self.Description().Describe()
 }
+
+// DescribeTree will return a humanly readable string describing the node contents.
 func (self *Node) DescribeTree() string {
 	return self.tree.Describe()
 }
