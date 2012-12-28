@@ -9,6 +9,7 @@ const (
 	subTreeError = "Illegal, only one level of sub trees supported"
 )
 
+// HashTree is something that can be synchronized using Sync.
 type HashTree interface {
 	Hash() []byte
 
@@ -29,6 +30,7 @@ type HashTree interface {
 	SubDelTimestamp(key, subKey []Nibble, subExpected int64) bool
 }
 
+// Sync synchronizes HashTrees using their fingerprints and mutators.
 type Sync struct {
 	source      HashTree
 	destination HashTree
@@ -46,31 +48,35 @@ func NewSync(source, destination HashTree) *Sync {
 	}
 }
 
-/*
-Inclusive
-*/
+// From defines from what key, inclusive, that this Sync will synchronize.
 func (self *Sync) From(from []byte) *Sync {
 	self.from = Rip(from)
 	return self
 }
 
-/*
-Exclusive
-*/
+// To defines from what key, exclusive, that this Sync will synchronize.
 func (self *Sync) To(to []byte) *Sync {
 	self.to = Rip(to)
 	return self
 }
+
+// Destroy defines that this Sync will delete whatever it copies from the source Tree.
 func (self *Sync) Destroy() *Sync {
 	self.destructive = true
 	return self
 }
+
+// PutCount returns the number of entries this Sync has inserted into the destination Tree.
 func (self *Sync) PutCount() int {
 	return self.putCount
 }
+
+// DelCount returns the number of entries this Sync has deleted from the source Tree.
 func (self *Sync) DelCount() int {
 	return self.delCount
 }
+
+// Run will start this Sync and return when it is finished.
 func (self *Sync) Run() *Sync {
 	// If we have from and to, and they are equal, that means this sync is over an empty set... just ignore it
 	if self.from != nil && self.to != nil && nComp(self.from, self.to) == 0 {
