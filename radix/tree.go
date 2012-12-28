@@ -295,6 +295,8 @@ func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterat
 	mincmp, maxcmp := cmps(mininc, maxinc)
 	self.root.eachBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, byteValue, newNodeIterator(f))
 }
+
+// MirrorReverseEachBetween will iterate between min and max in the mirror tree, in reverse order, using f.
 func (self *Tree) MirrorReverseEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	if self == nil || self.mirror == nil {
 		return
@@ -305,6 +307,8 @@ func (self *Tree) MirrorReverseEachBetween(min, max []byte, mininc, maxinc bool,
 	}
 	self.mirror.ReverseEachBetween(min, max, mininc, maxinc, newMirrorIterator(min, max, mininc, maxinc, f))
 }
+
+// ReverseEachBetween will iterate between min and max in reverse order using f.
 func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	if self == nil {
 		return
@@ -314,6 +318,8 @@ func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f Tre
 	mincmp, maxcmp := cmps(mininc, maxinc)
 	self.root.reverseEachBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, byteValue, newNodeIterator(f))
 }
+
+// MirrorIndexOf will return the index of (or the index it would have if it existed) key in the mirror tree.
 func (self *Tree) MirrorIndexOf(key []byte) (index int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -333,6 +339,8 @@ func (self *Tree) MirrorIndexOf(key []byte) (index int, existed bool) {
 	index, _ = self.mirror.IndexOf(newKey)
 	return
 }
+
+// IndexOf will return the index of (or the index it would have if it existed) key.
 func (self *Tree) IndexOf(key []byte) (index int, existed bool) {
 	if self == nil {
 		return
@@ -343,6 +351,8 @@ func (self *Tree) IndexOf(key []byte) (index int, existed bool) {
 	existed = ex&byteValue != 0
 	return
 }
+
+// MirrorReverseIndexOf will return the index from the end (or the index it would have if it existed) key in the mirror tree.
 func (self *Tree) MirrorReverseIndexOf(key []byte) (index int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -362,6 +372,8 @@ func (self *Tree) MirrorReverseIndexOf(key []byte) (index int, existed bool) {
 	index, _ = self.mirror.ReverseIndexOf(newKey)
 	return
 }
+
+// MirrorReverseIndexOf will return the index from the end (or the index it would have if it existed) key.
 func (self *Tree) ReverseIndexOf(key []byte) (index int, existed bool) {
 	if self == nil {
 		return
