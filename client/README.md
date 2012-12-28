@@ -13,5 +13,4 @@ Then import into your Go project:
 
     import "github.com/zond/god/client"
 
-For examples:
-
+For examples see https://github.com/zond/god/blob/master/client/client_test.go
