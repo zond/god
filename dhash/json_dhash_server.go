@@ -85,11 +85,10 @@ type Conf struct {
 
 type JSONApi Node
 
-func (self *JSONApi) convert(items []common.Item, result *[]SubValueRes) {
+func (self *JSONApi) convert(items []common.Item, result *[]ValueRes) {
 	for _, item := range items {
-		*result = append(*result, SubValueRes{
+		*result = append(*result, ValueRes{
 			Key:    item.Key,
-			SubKey: item.SubKey,
 			Value:  item.Value,
 			Exists: item.Exists,
 		})
@@ -539,7 +538,7 @@ func (self *JSONApi) Last(k KeyReq, result *SubValueRes) (err error) {
 	}
 	return
 }
-func (self *JSONApi) MirrorReverseSlice(kr KeyRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) MirrorReverseSlice(kr KeyRange, result *[]ValueRes) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -555,7 +554,7 @@ func (self *JSONApi) MirrorReverseSlice(kr KeyRange, result *[]SubValueRes) (err
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) MirrorSlice(kr KeyRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) MirrorSlice(kr KeyRange, result *[]ValueRes) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -571,7 +570,7 @@ func (self *JSONApi) MirrorSlice(kr KeyRange, result *[]SubValueRes) (err error)
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) MirrorSliceIndex(ir IndexRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) MirrorSliceIndex(ir IndexRange, result *[]ValueRes) (err error) {
 	var mi int
 	var ma int
 	if ir.MinIndex != nil {
@@ -595,7 +594,7 @@ func (self *JSONApi) MirrorSliceIndex(ir IndexRange, result *[]SubValueRes) (err
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) MirrorReverseSliceIndex(ir IndexRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) MirrorReverseSliceIndex(ir IndexRange, result *[]ValueRes) (err error) {
 	var mi int
 	var ma int
 	if ir.MinIndex != nil {
@@ -619,7 +618,7 @@ func (self *JSONApi) MirrorReverseSliceIndex(ir IndexRange, result *[]SubValueRe
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) MirrorSliceLen(pr PageRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) MirrorSliceLen(pr PageRange, result *[]ValueRes) (err error) {
 	r := common.Range{
 		Key:    pr.Key,
 		Min:    pr.From,
@@ -634,7 +633,7 @@ func (self *JSONApi) MirrorSliceLen(pr PageRange, result *[]SubValueRes) (err er
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) MirrorReverseSliceLen(pr PageRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) MirrorReverseSliceLen(pr PageRange, result *[]ValueRes) (err error) {
 	r := common.Range{
 		Key:    pr.Key,
 		Max:    pr.From,
@@ -649,7 +648,7 @@ func (self *JSONApi) MirrorReverseSliceLen(pr PageRange, result *[]SubValueRes) 
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) ReverseSlice(kr KeyRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) ReverseSlice(kr KeyRange, result *[]ValueRes) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -665,7 +664,7 @@ func (self *JSONApi) ReverseSlice(kr KeyRange, result *[]SubValueRes) (err error
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) Slice(kr KeyRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) Slice(kr KeyRange, result *[]ValueRes) (err error) {
 	r := common.Range{
 		Key:    kr.Key,
 		Min:    kr.Min,
@@ -681,7 +680,7 @@ func (self *JSONApi) Slice(kr KeyRange, result *[]SubValueRes) (err error) {
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) SliceIndex(ir IndexRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) SliceIndex(ir IndexRange, result *[]ValueRes) (err error) {
 	var mi int
 	var ma int
 	if ir.MinIndex != nil {
@@ -705,7 +704,7 @@ func (self *JSONApi) SliceIndex(ir IndexRange, result *[]SubValueRes) (err error
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) ReverseSliceIndex(ir IndexRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) ReverseSliceIndex(ir IndexRange, result *[]ValueRes) (err error) {
 	var mi int
 	var ma int
 	if ir.MinIndex != nil {
@@ -729,7 +728,7 @@ func (self *JSONApi) ReverseSliceIndex(ir IndexRange, result *[]SubValueRes) (er
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) SliceLen(pr PageRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) SliceLen(pr PageRange, result *[]ValueRes) (err error) {
 	r := common.Range{
 		Key:    pr.Key,
 		Min:    pr.From,
@@ -744,7 +743,7 @@ func (self *JSONApi) SliceLen(pr PageRange, result *[]SubValueRes) (err error) {
 	self.convert(items, result)
 	return
 }
-func (self *JSONApi) ReverseSliceLen(pr PageRange, result *[]SubValueRes) (err error) {
+func (self *JSONApi) ReverseSliceLen(pr PageRange, result *[]ValueRes) (err error) {
 	r := common.Range{
 		Key:    pr.Key,
 		Max:    pr.From,

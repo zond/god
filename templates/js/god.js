@@ -276,22 +276,34 @@ g = new God();
 
 result = null;
 
+function b64decode(obj) {
+  if (obj instanceof Array) {
+	  var rval = [];
+		for (var i = 0; i < obj.length; i++) {
+			rval.push(b64decode(obj[i]));
+		}
+		return rval;
+	} else {
+		var rval = {};
+		for (var name in obj) {
+			var value = obj[name];
+			if (typeof(value) == "string") {
+				rval[name] = $.base64.decode2s(value);
+			} else if (value != null && typeof(value) == "object") {
+				rval[name] = b64decode(value);
+			} else {
+				rval[name] = value;
+			}
+		}
+		return rval;
+	}
+};
+
 function displayResult(data) {
   result = data;
   $("#result_container").html(g.result_templ({ data: result }));
 	$("#decode").click(function(ev) {
-    var newResult = {};
-		for (var name in result) {
-		  var value = result[name];
-			if (typeof(value) == "string") {
-			  newResult[name] = $.base64.decode2s(value);
-			} else {
-			  newResult[name] = value;
-			}
-		}
-		console.log(newResult);
-		displayResult(newResult);
-		result = newResult;
+		displayResult(b64decode(result));
 		$("#decode").remove();
 	});
 };
