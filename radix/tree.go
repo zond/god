@@ -90,8 +90,13 @@ func newNodeIndexIterator(f TreeIndexIterator) nodeIndexIterator {
 	}
 }
 
-// Tree defines a more specialized wrapper around the node structure.
-// It contains an RWMutex to make it thread safe, and it defines a simplified and limited access API.
+// Tree is a merkle tree inside a radix tree, where each node can contain a separate sub tree.
+//
+// Any method called Sub* does the same to a sub tree as the same method without Sub does to the main tree.
+//
+// A Tree can be mirrored, which means that it contains another Tree where the keys are the values of the master Tree, and the values are the keys of the master Tree.
+//
+// A Tree is configured to be mirrored or not by using AddConfiguration or SubAddConfiguration (for a sub tree) setting 'mirrored' to 'yes'.
 type Tree struct {
 	lock                   *sync.RWMutex
 	timer                  Timer
@@ -678,6 +683,8 @@ func (self *Tree) PrevMarkerIndex(index int) (key []byte, existed bool) {
 	})
 	return
 }
+
+// MirrorNextIndex will return the next key, value, timestamp and index after index in the mirror Tree.
 func (self *Tree) MirrorNextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -688,6 +695,8 @@ func (self *Tree) MirrorNextIndex(index int) (key, value []byte, timestamp int64
 	}
 	return
 }
+
+// MirrorPrevIndex will return the previous key, value, timestamp and index before index in the mirror Tree.
 func (self *Tree) MirrorPrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -698,6 +707,8 @@ func (self *Tree) MirrorPrevIndex(index int) (key, value []byte, timestamp int64
 	}
 	return
 }
+
+// NextIndex will return the next key, value, timestamp and index after index in this Tree.
 func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
 	n := index + 1
 	self.EachBetweenIndex(&n, &n, func(k, v []byte, t int64, i int) bool {
@@ -706,6 +717,8 @@ func (self *Tree) NextIndex(index int) (key, value []byte, timestamp int64, ind 
 	})
 	return
 }
+
+// PrevIndex will return the previous key, value, timestamp and index before index in this Tree.
 func (self *Tree) PrevIndex(index int) (key, value []byte, timestamp int64, ind int, existed bool) {
 	p := index - 1
 	self.EachBetweenIndex(&p, &p, func(k, v []byte, t int64, i int) bool {
@@ -714,6 +727,8 @@ func (self *Tree) PrevIndex(index int) (key, value []byte, timestamp int64, ind 
 	})
 	return
 }
+
+// MirrorFirst will return the first key, value and timestamp of the mirror Tree.
 func (self *Tree) MirrorFirst() (key, byteValue []byte, timestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -722,6 +737,8 @@ func (self *Tree) MirrorFirst() (key, byteValue []byte, timestamp int64, existed
 	key = key[:len(key)-len(escapeBytes(byteValue))-1]
 	return
 }
+
+// MirrorLast will return the last key, value and timestamp of the mirror Tree.
 func (self *Tree) MirrorLast() (key, byteValue []byte, timestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -730,6 +747,8 @@ func (self *Tree) MirrorLast() (key, byteValue []byte, timestamp int64, existed 
 	key = key[:len(key)-len(escapeBytes(byteValue))-1]
 	return
 }
+
+// First returns the first key, value and timestamp in this Tree.
 func (self *Tree) First() (key, byteValue []byte, timestamp int64, existed bool) {
 	self.Each(func(k []byte, b []byte, ver int64) bool {
 		key, byteValue, timestamp, existed = k, b, ver, true
@@ -737,6 +756,8 @@ func (self *Tree) First() (key, byteValue []byte, timestamp int64, existed bool)
 	})
 	return
 }
+
+// Last returns the last key, value and timestamp in this Tree.
 func (self *Tree) Last() (key, byteValue []byte, timestamp int64, existed bool) {
 	self.ReverseEach(func(k []byte, b []byte, ver int64) bool {
 		key, byteValue, timestamp, existed = k, b, ver, true
@@ -744,6 +765,8 @@ func (self *Tree) Last() (key, byteValue []byte, timestamp int64, existed bool) 
 	})
 	return
 }
+
+// MirrorIndex returns the key, value and timestamp at index in the mirror Tree.
 func (self *Tree) MirrorIndex(n int) (key, byteValue []byte, timestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -752,6 +775,8 @@ func (self *Tree) MirrorIndex(n int) (key, byteValue []byte, timestamp int64, ex
 	key = key[:len(key)-len(escapeBytes(byteValue))-1]
 	return
 }
+
+// MirrorReverseIndex returns the key, value and timestamp at index from the end in the mirror Tree.
 func (self *Tree) MirrorReverseIndex(n int) (key, byteValue []byte, timestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -760,6 +785,8 @@ func (self *Tree) MirrorReverseIndex(n int) (key, byteValue []byte, timestamp in
 	key = key[:len(key)-len(escapeBytes(byteValue))-1]
 	return
 }
+
+// Index returns the key, value and timestamp at index in this Tree.
 func (self *Tree) Index(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
 	self.EachBetweenIndex(&n, &n, func(k []byte, b []byte, ver int64, index int) bool {
 		key, byteValue, timestamp, existed = k, b, ver, true
@@ -767,6 +794,8 @@ func (self *Tree) Index(n int) (key []byte, byteValue []byte, timestamp int64, e
 	})
 	return
 }
+
+// ReverseIndex returns the key, value and timestamp at index from the end in this Tree.
 func (self *Tree) ReverseIndex(n int) (key []byte, byteValue []byte, timestamp int64, existed bool) {
 	self.ReverseEachBetweenIndex(&n, &n, func(k []byte, b []byte, ver int64, index int) bool {
 		key, byteValue, timestamp, existed = k, b, ver, true
@@ -774,15 +803,22 @@ func (self *Tree) ReverseIndex(n int) (key []byte, byteValue []byte, timestamp i
 	})
 	return
 }
+
+// Kill will remove all content of this Tree (including tombstones and sub trees) and any mirror Tree without keeping tombstones, and clear any persistence.Logger assigned to this Tree.
 func (self *Tree) Kill() {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.root = nil
 	self.root, _, _, _, _ = self.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), self.timer.ContinuousTime())
+	if self.mirror != nil {
+		self.mirror.Kill()
+	}
 	if self.logger != nil {
 		self.logger.Clear()
 	}
 }
+
+// Clear will replace all content of this Tree (but not any sub trees) and any mirror Tree with tombstones.
 func (self *Tree) Clear(timestamp int64) (result int) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -801,6 +837,7 @@ func (self *Tree) del(key []Nibble) (oldBytes []byte, existed bool) {
 	return
 }
 
+// Del will remove key from this Tree without keeping a tombstone.
 func (self *Tree) Del(key []byte) (oldBytes []byte, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
