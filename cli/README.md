@@ -5,6 +5,12 @@ A simple command line interface to http://github.com/zond/god/client to try out 
 
 # Usage
 
+Install with `go get`:
+
+    go get github.com/zond/god/cli
+
+Then run from the command line:
+
     cli [-ip 127.0.0.1] [-port 9191] [-enc string] COMMAND
 
 The `-ip` and `-port` options are, not surprisingly, the address and port of a node in the database cluster.
