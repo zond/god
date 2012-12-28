@@ -12,8 +12,10 @@ import (
 	"time"
 )
 
+// CommListener is a function listening for generic communication between two Nodes.
 type CommListener func(source, dest common.Remote, typ string) bool
 
+// PingPack contains the sender and a hash of its discord ring, to let the receiver compare to its current ring.
 type PingPack struct {
 	Caller   common.Remote
 	RingHash []byte
@@ -25,6 +27,10 @@ const (
 	stopped
 )
 
+// Node is a node in a chord like cluster.
+//
+// Like chord networks, it is a ring of nodes ordered by a position metric. Unlike chord, every node has every other node in its routing table.
+// This allows stable networks to route with a constant time complexity.
 type Node struct {
 	ring          *common.Ring
 	position      []byte
@@ -48,6 +54,8 @@ func NewNode(addr string) (result *Node) {
 		state:     created,
 	}
 }
+
+// Export will export the given api on a net/rpc server running on this Node.
 func (self *Node) Export(name string, api interface{}) error {
 	if self.hasState(created) {
 		self.metaLock.Lock()
@@ -90,12 +98,18 @@ func (self *Node) SetPosition(position []byte) *Node {
 	self.ring.Add(self.Remote())
 	return self
 }
+
+// GetNodes will return remotes to all Nodes in the ring.
 func (self *Node) GetNodes() (result common.Remotes) {
 	return self.ring.Nodes()
 }
+
+// Redundancy will return the current maximum redundancy in the ring.
 func (self *Node) Redundancy() int {
 	return self.ring.Redundancy()
 }
+
+// CountNodes returns the number of Nodes in the ring.
 func (self *Node) CountNodes() int {
 	return self.ring.Size()
 }
@@ -114,6 +128,8 @@ func (self *Node) GetAddr() string {
 func (self *Node) String() string {
 	return fmt.Sprintf("<%v@%v>", common.HexEncode(self.GetPosition()), self.GetAddr())
 }
+
+// Describe returns a humanly readable string describing the address, position and ring of this Node.
 func (self *Node) Describe() string {
 	self.metaLock.RLock()
 	buffer := bytes.NewBufferString(fmt.Sprintf("%v@%v\n", common.HexEncode(self.position), self.addr))
@@ -143,10 +159,13 @@ func (self *Node) setAddr(addr string) {
 	defer self.metaLock.Unlock()
 	self.addr = addr
 }
+
+// Remote returns a remote to this Node.
 func (self *Node) Remote() common.Remote {
 	return common.Remote{self.GetPosition(), self.GetAddr()}
 }
 
+// Stop will shut down this Node permanently.
 func (self *Node) Stop() {
 	if self.changeState(started, stopped) {
 		self.getListener().Close()
@@ -157,6 +176,8 @@ func (self *Node) MustStart() {
 		panic(err)
 	}
 }
+
+// Start will spin up this Node, export all its api interfaces and start its notify and ping jobs.
 func (self *Node) Start() (err error) {
 	if !self.changeState(created, started) {
 		return fmt.Errorf("%v can only be started when in state 'created'", self)
@@ -204,9 +225,13 @@ func (self *Node) pingPeriodically() {
 		time.Sleep(common.PingInterval)
 	}
 }
+
+// RingHash returns a hash of the discord ring of this Node.
 func (self *Node) RingHash() []byte {
 	return self.ring.Hash()
 }
+
+// Ping will compare the hash of this Node with the one in the received PingPack, and request the entire routing ring from the sender if they are not equal.
 func (self *Node) Ping(ping PingPack) (me common.Remote) {
 	me = self.Remote()
 	if bytes.Compare(ping.RingHash, self.ring.Hash()) != 0 {
@@ -242,9 +267,13 @@ func (self *Node) pingPredecessor() {
 		self.ring.Add(newPred)
 	}
 }
+
+// Nodes will return remotes for all Nodes in the ring.
 func (self *Node) Nodes() common.Remotes {
 	return self.ring.Nodes()
 }
+
+// Notify will add the caller to the ring of this Node.
 func (self *Node) Notify(caller common.Remote) common.Remote {
 	self.routeLock.Lock()
 	defer self.routeLock.Unlock()
@@ -272,6 +301,8 @@ func (self *Node) MustJoin(addr string) {
 		panic(err)
 	}
 }
+
+// Join will fetch the routing ring of the Node at addr, pick a location on an empty spot in the received ring and notify the other Node of our joining.
 func (self *Node) Join(addr string) (err error) {
 	var newNodes common.Remotes
 	if err = common.Switch.Call(addr, "Discord.Nodes", 0, &newNodes); err != nil {
@@ -289,6 +320,8 @@ func (self *Node) Join(addr string) (err error) {
 	}
 	return
 }
+
+// RemoveNode will remove the provided remote from our routing ring.
 func (self *Node) RemoveNode(remote common.Remote) {
 	if remote.Addr == self.GetAddr() {
 		panic(fmt.Errorf("%v is trying to remove itself from the routing!", self))
@@ -297,28 +330,43 @@ func (self *Node) RemoveNode(remote common.Remote) {
 	defer self.routeLock.Unlock()
 	self.ring.Remove(remote)
 }
+
+// GetPredecessor will return our predecessor on the ring.
 func (self *Node) GetPredecessor() common.Remote {
 	return self.GetPredecessorForRemote(self.Remote())
 }
+
+// GetPredecessorForRemote will return the predecessor for the provided remote.
 func (self *Node) GetPredecessorForRemote(r common.Remote) common.Remote {
 	return self.ring.Predecessor(r)
 }
+
+// GetPredecessorFor will return the predecessor for the provided key.
 func (self *Node) GetPredecessorFor(key []byte) common.Remote {
 	pred, _, _ := self.ring.Remotes(key)
 	return *pred
 }
+
+// HasNode will return true if there is a Node on the ring with the given pos.
 func (self *Node) HasNode(pos []byte) bool {
 	if _, match, _ := self.ring.Remotes(pos); match != nil {
 		return true
 	}
 	return false
 }
+
+// GetSuccessor will return our successor on the ring.
 func (self *Node) GetSuccessor() common.Remote {
 	return self.GetSuccessorForRemote(self.Remote())
 }
+
+// GetSuccessorFor will return the successor for the provided remote.
 func (self *Node) GetSuccessorForRemote(r common.Remote) common.Remote {
 	return self.ring.Successor(r)
 }
+
+// GetSuccessorFor will return the successor for the provided key.
+// If the successor is not this Node, it will assert that the provided key is between the found successor and the predecessor it claims to have.
 func (self *Node) GetSuccessorFor(key []byte) common.Remote {
 	// Guess according to our route cache
 	predecessor, match, successor := self.ring.Remotes(key)

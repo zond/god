@@ -171,7 +171,7 @@ func (self *Node) AddChangeListener(f common.RingChangeListener) {
 	self.node.AddChangeListener(f)
 }
 
-// Stop will shut down this dhash.Node permanently.
+// Stop will shut down this dhash.Node, including its discord.Node and timenet.Timer,  permanently.
 func (self *Node) Stop() {
 	if self.changeState(started, stopped) {
 		self.node.Stop()
@@ -179,7 +179,8 @@ func (self *Node) Stop() {
 	}
 }
 
-// Start will spin up this dhash.Node.
+// Start will spin up this dhash.Node, including its discord.Node and timenet.Timer.
+// It will also start the sync, clean and migrate jobs.
 func (self *Node) Start() (err error) {
 	if !self.changeState(created, started) {
 		return fmt.Errorf("%v can only be started when in state 'created'", self)
