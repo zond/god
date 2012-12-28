@@ -121,6 +121,8 @@ func (self *Tree) conf() (result map[string]string, ts int64) {
 	}
 	return result, self.configurationTimestamp
 }
+
+// Configuration returns the current configuration and its timestamp.
 func (self *Tree) Configuration() (map[string]string, int64) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -178,11 +180,17 @@ func (self *Tree) configure(conf map[string]string, ts int64) {
 		Timestamp:     ts,
 	})
 }
+
+// Configure will set a new configuration and timestamp to this tree.
+// If the configuration has mirrored=yes this tree will start mirroring all its keys and values in a mirror tree.
 func (self *Tree) Configure(conf map[string]string, ts int64) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.configure(conf, ts)
 }
+
+// AddConfiguration will set the key and value in the configuration of this tree, and set the provided timestamp as the
+// new configuration timestamp.
 func (self *Tree) AddConfiguration(ts int64, key, value string) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -190,11 +198,16 @@ func (self *Tree) AddConfiguration(ts int64, key, value string) {
 	oldConf[key] = value
 	self.configure(oldConf, ts)
 }
+
+// Log will make this Tree start logging using a new persistence.Logger.
 func (self *Tree) Log(dir string) *Tree {
 	self.logger = persistence.NewLogger(dir)
 	<-self.logger.Record()
 	return self
 }
+
+// Restore will temporarily stop the Logger of this Tree, make it replay all operations
+// to allow us to restore the state logged in that directory, and then start recording again.
 func (self *Tree) Restore() *Tree {
 	self.logger.Stop()
 	self.logger.Play(func(op persistence.Op) {
@@ -239,6 +252,8 @@ func (self *Tree) newTreeWith(key []Nibble, byteValue []byte, timestamp int64) (
 	result.PutTimestamp(key, byteValue, true, 0, timestamp)
 	return
 }
+
+// Each will iterate over the entire tree using f.
 func (self *Tree) Each(f TreeIterator) {
 	if self == nil {
 		return
@@ -247,6 +262,8 @@ func (self *Tree) Each(f TreeIterator) {
 	defer self.lock.RUnlock()
 	self.root.each(nil, byteValue, newNodeIterator(f))
 }
+
+// ReverseEach will iterate over the entire tree in reverse order using f.
 func (self *Tree) ReverseEach(f TreeIterator) {
 	if self == nil {
 		return
@@ -255,6 +272,8 @@ func (self *Tree) ReverseEach(f TreeIterator) {
 	defer self.lock.RUnlock()
 	self.root.reverseEach(nil, byteValue, newNodeIterator(f))
 }
+
+// MirrorEachBetween will iterate between min and max in the mirror tree using f.
 func (self *Tree) MirrorEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	if self == nil || self.mirror == nil {
 		return
@@ -265,6 +284,8 @@ func (self *Tree) MirrorEachBetween(min, max []byte, mininc, maxinc bool, f Tree
 	}
 	self.mirror.EachBetween(min, max, mininc, maxinc, newMirrorIterator(min, max, mininc, maxinc, f))
 }
+
+// EachBetween will iterate between min and max using f.
 func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	if self == nil {
 		return
