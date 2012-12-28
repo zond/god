@@ -13,6 +13,7 @@ var encodeChars = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a"
 // all byte slices that are supposed to be exploded are Nibble slices.
 type Nibble byte
 
+// Since the Trees remove tombstones lazily, and after a timeout, we need something to provide times.
 type Timer interface {
 	ContinuousTime() int64
 }
@@ -31,6 +32,7 @@ func nComp(a, b []Nibble) int {
 	return bytes.Compare(toBytes(a), toBytes(b))
 }
 
+// Rip will explode a byte slice into a nibble slice.
 func Rip(b []byte) (result []Nibble) {
 	if b == nil {
 		return nil
@@ -50,6 +52,8 @@ func stringEncode(b []byte) string {
 	}
 	return string(buffer.Bytes())
 }
+
+// Stitch will implode a nibble slice into a byte slice.
 func Stitch(b []Nibble) (result []byte) {
 	if b == nil {
 		return nil
@@ -63,6 +67,7 @@ func Stitch(b []Nibble) (result []byte) {
 	return
 }
 
+// SubPrints are used to record hashes for child trees.
 type SubPrint struct {
 	Key    []Nibble
 	Sum    []byte
@@ -73,6 +78,7 @@ func (self SubPrint) equals(other SubPrint) bool {
 	return bytes.Compare(other.Sum, self.Sum) == 0
 }
 
+// Prints are used to record hashes for Nodes.
 type Print struct {
 	Exists    bool
 	Key       []Nibble

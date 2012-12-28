@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 )
 
+// NaiveTimer is a Timer that just provides the current system time.
 type NaiveTimer struct{}
 
 var faketime int64
@@ -19,8 +20,12 @@ func (self NaiveTimer) ContinuousTime() int64 {
 	return atomic.AddInt64(&faketime, 1)
 }
 
+// TreeIterators iterate over trees, and see the key, value and timestamp of what they iterate over.
+// If they return false, the iteration will end.
 type TreeIterator func(key, value []byte, timestamp int64) (cont bool)
 
+// TreeIndexIterators iterate over trees, and see the key, value, timestamp and index of what they iterate over.
+// If they return false, the iteration will end.
 type TreeIndexIterator func(key, value []byte, timestamp int64, index int) (cont bool)
 
 func cmps(mininc, maxinc bool) (mincmp, maxcmp int) {
