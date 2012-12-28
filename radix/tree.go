@@ -182,7 +182,7 @@ func (self *Tree) configure(conf map[string]string, ts int64) {
 }
 
 // Configure will set a new configuration and timestamp to this tree.
-// If the configuration has mirrored=yes this tree will start mirroring all its keys and values in a mirror tree.
+// If the configuration has mirrored=yes this tree will start mirroring all its keys and values in a mirror Tree.
 func (self *Tree) Configure(conf map[string]string, ts int64) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -273,7 +273,7 @@ func (self *Tree) ReverseEach(f TreeIterator) {
 	self.root.reverseEach(nil, byteValue, newNodeIterator(f))
 }
 
-// MirrorEachBetween will iterate between min and max in the mirror tree using f.
+// MirrorEachBetween will iterate between min and max in the mirror Tree using f.
 func (self *Tree) MirrorEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	if self == nil || self.mirror == nil {
 		return
@@ -296,7 +296,7 @@ func (self *Tree) EachBetween(min, max []byte, mininc, maxinc bool, f TreeIterat
 	self.root.eachBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, byteValue, newNodeIterator(f))
 }
 
-// MirrorReverseEachBetween will iterate between min and max in the mirror tree, in reverse order, using f.
+// MirrorReverseEachBetween will iterate between min and max in the mirror Tree, in reverse order, using f.
 func (self *Tree) MirrorReverseEachBetween(min, max []byte, mininc, maxinc bool, f TreeIterator) {
 	if self == nil || self.mirror == nil {
 		return
@@ -319,7 +319,7 @@ func (self *Tree) ReverseEachBetween(min, max []byte, mininc, maxinc bool, f Tre
 	self.root.reverseEachBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, byteValue, newNodeIterator(f))
 }
 
-// MirrorIndexOf will return the index of (or the index it would have if it existed) key in the mirror tree.
+// MirrorIndexOf will return the index of (or the index it would have if it existed) key in the mirror Tree.
 func (self *Tree) MirrorIndexOf(key []byte) (index int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -352,7 +352,7 @@ func (self *Tree) IndexOf(key []byte) (index int, existed bool) {
 	return
 }
 
-// MirrorReverseIndexOf will return the index from the end (or the index it would have if it existed) key in the mirror tree.
+// MirrorReverseIndexOf will return the index from the end (or the index it would have if it existed) key in the mirror Tree.
 func (self *Tree) MirrorReverseIndexOf(key []byte) (index int, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -384,12 +384,16 @@ func (self *Tree) ReverseIndexOf(key []byte) (index int, existed bool) {
 	existed = ex&byteValue != 0
 	return
 }
+
+// MirrorEachBetweenIndex will iterate between the min'th and the max'th entry in the mirror Tree using f.
 func (self *Tree) MirrorEachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	if self == nil || self.mirror == nil {
 		return
 	}
 	self.mirror.EachBetweenIndex(min, max, newMirrorIndexIterator(f))
 }
+
+// EachBetweenIndex will iterate between the min'th and the max'th entry using f.
 func (self *Tree) EachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	if self == nil {
 		return
@@ -398,12 +402,16 @@ func (self *Tree) EachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	defer self.lock.RUnlock()
 	self.root.eachBetweenIndex(nil, 0, min, max, byteValue, newNodeIndexIterator(f))
 }
+
+// MirrorReverseEachBetweenIndex will iterate between the min'th and the max'th entry of the mirror Tree, in reverse order, using f.
 func (self *Tree) MirrorReverseEachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	if self == nil || self.mirror == nil {
 		return
 	}
 	self.mirror.ReverseEachBetweenIndex(min, max, newMirrorIndexIterator(f))
 }
+
+// ReverseEachBetweenIndex will iterate between the min'th and the max'th entry in reverse order using f.
 func (self *Tree) ReverseEachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	if self == nil {
 		return
@@ -412,6 +420,8 @@ func (self *Tree) ReverseEachBetweenIndex(min, max *int, f TreeIndexIterator) {
 	defer self.lock.RUnlock()
 	self.root.reverseEachBetweenIndex(nil, 0, min, max, byteValue, newNodeIndexIterator(f))
 }
+
+// Hash returns the merkle hash of this Tree.
 func (self *Tree) Hash() []byte {
 	if self == nil {
 		return nil
@@ -421,6 +431,8 @@ func (self *Tree) Hash() []byte {
 	hash := murmur.NewString(fmt.Sprint(self.configuration))
 	return hash.Sum(self.root.hash)
 }
+
+// ToMap will return a dubious map representation of this Tree, where each byte slice key is converted to a string.
 func (self *Tree) ToMap() (result map[string][]byte) {
 	if self == nil {
 		return
@@ -432,6 +444,8 @@ func (self *Tree) ToMap() (result map[string][]byte) {
 	})
 	return
 }
+
+// String returns a humanly readable string representation of this Tree.
 func (self *Tree) String() string {
 	if self == nil {
 		return ""
@@ -447,9 +461,13 @@ func (self *Tree) sizeBetween(min, max []byte, mininc, maxinc bool, use int) int
 	mincmp, maxcmp := cmps(mininc, maxinc)
 	return self.root.sizeBetween(nil, Rip(min), Rip(max), mincmp, maxcmp, use)
 }
+
+// RealSizeBetween returns the real, as in 'including tombstones and sub trees', size of this Tree between min anx max.
 func (self *Tree) RealSizeBetween(min, max []byte, mininc, maxinc bool) int {
 	return self.sizeBetween(min, max, mininc, maxinc, 0)
 }
+
+// MirrorSizeBetween returns the virtual, as in 'not including tombstones and sub trees', size of the mirror Tree between min and max.
 func (self *Tree) MirrorSizeBetween(min, max []byte, mininc, maxinc bool) (i int) {
 	if self == nil || self.mirror == nil {
 		return
@@ -464,9 +482,13 @@ func (self *Tree) MirrorSizeBetween(min, max []byte, mininc, maxinc bool) (i int
 	}
 	return self.mirror.SizeBetween(min, max, mininc, maxinc)
 }
+
+// SizeBetween returns the virtual, as in 'not including tombstones and sub trees', size of this Tree between min and max.
 func (self *Tree) SizeBetween(min, max []byte, mininc, maxinc bool) int {
 	return self.sizeBetween(min, max, mininc, maxinc, byteValue|treeValue)
 }
+
+// RealSize returns the real, as in 'including tombstones and sub trees', size of this Tree.
 func (self *Tree) RealSize() int {
 	if self == nil {
 		return 0
@@ -475,6 +497,8 @@ func (self *Tree) RealSize() int {
 	defer self.lock.RUnlock()
 	return self.root.realSize
 }
+
+// Size returns the virtual, as in 'not including tombstones and sub trees', size of this Tree.
 func (self *Tree) Size() int {
 	if self == nil {
 		return 0
@@ -502,6 +526,8 @@ func (self *Tree) describeIndented(first, indent int) string {
 	}
 	return string(buffer.Bytes())
 }
+
+// Describe will return a complete and humanly readable (albeit slightly convoluted) description of this Tree.
 func (self *Tree) Describe() string {
 	if self == nil {
 		return ""
@@ -511,6 +537,7 @@ func (self *Tree) Describe() string {
 	return self.describeIndented(0, 0)
 }
 
+// FakeDel will insert a tombstone at key with timestamp in this Tree.
 func (self *Tree) FakeDel(key []byte, timestamp int64) (oldBytes []byte, oldTree *Tree, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -529,6 +556,8 @@ func (self *Tree) put(key []Nibble, byteValue []byte, treeValue *Tree, use int, 
 	self.root, oldBytes, oldTree, _, existed = self.root.insert(nil, newNode(key, byteValue, treeValue, timestamp, false, use), self.timer.ContinuousTime())
 	return
 }
+
+// Put will put key and value with timestamp in this Tree.
 func (self *Tree) Put(key []byte, bValue []byte, timestamp int64) (oldBytes []byte, existed bool) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -546,6 +575,8 @@ func (self *Tree) Put(key []byte, bValue []byte, timestamp int64) (oldBytes []by
 	})
 	return
 }
+
+// Get will return the value and timestamp at key.
 func (self *Tree) Get(key []byte) (bValue []byte, timestamp int64, existed bool) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -553,6 +584,8 @@ func (self *Tree) Get(key []byte) (bValue []byte, timestamp int64, existed bool)
 	existed = ex&byteValue != 0
 	return
 }
+
+// PrevMarker returns the previous key of tombstone or real value before key.
 func (self *Tree) PrevMarker(key []byte) (prevKey []byte, existed bool) {
 	if self == nil {
 		return
@@ -565,6 +598,8 @@ func (self *Tree) PrevMarker(key []byte) (prevKey []byte, existed bool) {
 	})
 	return
 }
+
+// NextMarker returns the next key of tombstone or real value after key.
 func (self *Tree) NextMarker(key []byte) (nextKey []byte, existed bool) {
 	if self == nil {
 		return
@@ -577,6 +612,8 @@ func (self *Tree) NextMarker(key []byte) (nextKey []byte, existed bool) {
 	})
 	return
 }
+
+// MirrorPrev returns the previous key, value and timestamp before key in the mirror Tree.
 func (self *Tree) MirrorPrev(key []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -585,6 +622,8 @@ func (self *Tree) MirrorPrev(key []byte) (prevKey, prevValue []byte, prevTimesta
 	prevKey = prevKey[:len(prevKey)-len(escapeBytes(prevValue))-1]
 	return
 }
+
+// MirrorNext returns the next key, value and timestamp after key in the mirror Tree.
 func (self *Tree) MirrorNext(key []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
 	if self == nil || self.mirror == nil {
 		return
@@ -593,6 +632,8 @@ func (self *Tree) MirrorNext(key []byte) (nextKey, nextValue []byte, nextTimesta
 	nextKey = nextKey[:len(nextKey)-len(escapeBytes(nextValue))-1]
 	return
 }
+
+// Prev will return the previous key, value and timestamp before key in this Tree.
 func (self *Tree) Prev(key []byte) (prevKey, prevValue []byte, prevTimestamp int64, existed bool) {
 	self.ReverseEachBetween(nil, key, false, false, func(k, v []byte, timestamp int64) bool {
 		prevKey, prevValue, prevTimestamp, existed = k, v, timestamp, true
@@ -600,6 +641,8 @@ func (self *Tree) Prev(key []byte) (prevKey, prevValue []byte, prevTimestamp int
 	})
 	return
 }
+
+// Next will return the next key, value and timestamp after key in this Tree.
 func (self *Tree) Next(key []byte) (nextKey, nextValue []byte, nextTimestamp int64, existed bool) {
 	self.EachBetween(key, nil, false, false, func(k, v []byte, timestamp int64) bool {
 		nextKey, nextValue, nextTimestamp, existed = k, v, timestamp, true
@@ -607,6 +650,8 @@ func (self *Tree) Next(key []byte) (nextKey, nextValue []byte, nextTimestamp int
 	})
 	return
 }
+
+// NextMarkerIndex will return the next key of tombstone or real value after the given index in this Tree.
 func (self *Tree) NextMarkerIndex(index int) (key []byte, existed bool) {
 	if self == nil {
 		return
@@ -619,6 +664,8 @@ func (self *Tree) NextMarkerIndex(index int) (key []byte, existed bool) {
 	})
 	return
 }
+
+// PrevMarkerIndex will return the previous key of tombstone or real value before the given index in this Tree.
 func (self *Tree) PrevMarkerIndex(index int) (key []byte, existed bool) {
 	if self == nil {
 		return
