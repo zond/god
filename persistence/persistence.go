@@ -29,6 +29,7 @@ const (
 	unfinishedSuffix = "unfinished"
 )
 
+// Op is a simple get/put/clear or configuration operation to log or replay.
 type Op struct {
 	Key           []byte
 	SubKey        []byte
@@ -129,8 +130,11 @@ func (self logfiles) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
 
+// Operate is a function that operates on an Op, for replay purposes.
+// It is supposed to insert Ops with the Put flag, Clear data if the Clear flag is set, handle configuration changes or delete data.
 type Operate func(o Op)
 
+// Logger is something that can log or replay Ops.
 type Logger struct {
 	ops      chan Op
 	stops    chan chan bool
@@ -143,6 +147,7 @@ type Logger struct {
 	lock     *sync.Mutex
 }
 
+// NewLogger will return a Logger that will dump data into dir, or replay data from dir.
 func NewLogger(dir string) *Logger {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		panic(err)
@@ -170,6 +175,9 @@ func (self *Logger) setSuffix(s string) *Logger {
 	return self
 }
 
+// Limit will limit the size of the last logfile to maxSize bytes.
+// When the last logfile is bigger than maxSize, it will merge the last snapshot and any logfile created after it into a new snapshot, 
+// and start a new logfile to continue. All this will happen transparently in a separate goroutine.
 func (self *Logger) Limit(maxSize int64) *Logger {
 	self.maxSize = maxSize
 	return self
@@ -214,10 +222,12 @@ func (self *Logger) latest() (latestSnapshot *logfile, logs logfiles) {
 	return
 }
 
+// Recording returns true if this Logger is currently recording (as opposed to replaying or idling).
 func (self *Logger) Recording() bool {
 	return self.hasState(recording)
 }
 
+// Play will replay the latest snapshot and all logfiles created after it using the provided operate.
 func (self *Logger) Play(operate Operate) {
 	if self.changeState(stopped, playing) {
 		defer self.changeState(playing, stopped)
@@ -229,6 +239,7 @@ func (self *Logger) Play(operate Operate) {
 	}
 }
 
+// Stop will stop this Logger. It will not return until all running recordings or snaphots are finished.
 func (self *Logger) Stop() *Logger {
 	if self.hasState(recording) {
 		stop := make(chan bool)
@@ -255,6 +266,7 @@ func (self *Logger) clearOlderThan(t time.Time) {
 	}
 }
 
+// Clear will stop this Logger and remove all snapshots or logfiles older than now.
 func (self *Logger) Clear() {
 	self.Stop()
 	self.clearOlderThan(time.Now())
@@ -361,6 +373,7 @@ func (self *Logger) swap(fi *os.FileInfo, err *error, rec *logfile) *logfile {
 	return rec
 }
 
+// Record will make this Logger start recording.
 func (self *Logger) Record() (rval chan *logfile) {
 	if !self.changeState(stopped, recording) {
 		panic(fmt.Errorf("%v unable to change state from stopped to recording", self))
@@ -410,6 +423,7 @@ func (self *Logger) record(p chan *logfile) {
 	}
 }
 
+// Dump will accept an operation if this Logger is recording, and dump it into a logfile.
 func (self *Logger) Dump(o Op) {
 	if !self.hasState(recording) {
 		panic(fmt.Errorf("%v is not recording", self))
