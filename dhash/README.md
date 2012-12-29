@@ -28,7 +28,7 @@ between the misplaced entry and the position of the proper owner.
 
 Using non hashed values as keys in the cluster would normally cause severe imbalances between the Nodes, since it would be very unlikely that the spread out position they take by default would represent the actual keys used.
 
-To avoid this, it is normally recommended to use a hashing function, for example murmur.Hash, to create keys for the data.
+To avoid this, it is normally recommended to use a hashing function, for example [murmur.Hash](../../blob/master/murmur/murmur.go), to create keys for the data.
 
 But to allow those user who so wish to use other data (perhaps ordered, or segmented in some way) as keys, the Nodes will migrate to cover roughly the same amount of data each.
 
