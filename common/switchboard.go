@@ -5,8 +5,10 @@ import (
 	"sync"
 )
 
+// Switch is the default Switchboard.
 var Switch = newSwitchboard()
 
+// Switchboard is a simple map of net/rpc.Clients, to avoid having to set up new connections for each remote call.
 type Switchboard struct {
 	lock    *sync.RWMutex
 	clients map[string]*rpc.Client
