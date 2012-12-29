@@ -1,7 +1,5 @@
-god
+Go Database!
 ===
-
-A Go database
 
 # TODO
 
