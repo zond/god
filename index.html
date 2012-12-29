@@ -37,9 +37,16 @@
 				<h2 id="namespace">Namespace</h2>
 				<h3>Chord circle</h3>
 				<object data="chord-circle.svg" type="image/svg+xml"></object>
-				<p>The namespace of Go Database, as for the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a> project, is a conceptual circle where each actor, be it database node or data item, has a position.</p>
+				<p>The namespace of Go Database, as for the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a> project, is a conceptual circle where each actor, be it database node or data item, has a position. Usually the circle overflows at the maximum value for a selected hash function used to spread keys over the namespace.</p>
 				<h3>Murmur</h3>
+				<p>The hash function used in Go Database is <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a>, a fairly new and extremely fast hash function. Unlike other hash functions it makes no cryptographical claims, but focuses solely on speed and distribution.</p>
+				<p>Go Database contains a slightly modified (only to let it compile in a C compiler) of the 128 bit, x64 version of <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a> wrapped in a thin layer of Go.</p>
 				<h3>Hashed vs non hashed keys</h3>
+				<p>The main reason to hash keys before inserting them into the namespace is to avoid concentrating keys in a part of the circle, to facilitate letting all nodes share as equal an amount of data as possible.</p>
+				<p>However, since it could be very useful for users of a database to store ordered data, or to wilfully concentrate certain data on certain parts of the cluster, Go Database does not force the user to hash the keys.</p>
+				<p>Instead, the nodes in Go Database are able to migrate along the circle to hand off data to one another when an imbalance is detected.</p>
+				<p>This would allow, for example, data for a geographical region to be prefixed with a code, and making data with that prefix go on designated servers placed in the same geographical region. The cluster could also be configured so that all backups for data positioned in one region was positioned in other regions for greated safety in the face of disasters of different kinds.</p>
+				<p>Currently there is no option to either limit node migrations (to force nodes in one datacenter to stay in one part of the namespace), or to force backups to live on nodes in other datacenters, but it would be fairly easy, conceptually, to add in a future version if the need was felt.</p>
 				<h2 id="structure">Structure</h2>
 				<h3>Byte values</h3>
 				<h3>Sub trees</h3>
