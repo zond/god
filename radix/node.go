@@ -25,7 +25,7 @@ type nodeIterator func(key, byteValue []byte, treeValue *Tree, use int, timestam
 // node is the generic implementation of a combined radix/merkle tree with size for each subtree (both regarding bytes and inner trees) cached.
 // it also contains both byte slices and inner trees in each node.
 type node struct {
-	segment   []Nibble
+	segment   []Nibble // the bit of the key for this node that separates it from its parent
 	byteValue []byte
 	byteHash  []byte // cached hash of the byteValue
 	treeValue *Tree
@@ -52,11 +52,21 @@ func newNode(segment []Nibble, byteValue []byte, treeValue *Tree, timestamp int6
 		use:       use,
 	}
 }
+
+// setSegment copies the given part to be our segment.
 func (self *node) setSegment(part []Nibble) {
 	new_segment := make([]Nibble, len(part))
 	copy(new_segment, part)
 	self.segment = new_segment
 }
+
+// rehash will recount the size of this node by summing the sizes of its own data and
+// the data of its children.
+//
+// It will also rehash the hash of this node by recalculating the hash sum of its own
+// data and the hashes of its children.
+//
+// Finally it will remove any children that are timed out tombstones.
 func (self *node) rehash(key []Nibble, now int64) {
 	self.treeSize = 0
 	self.byteSize = 0
