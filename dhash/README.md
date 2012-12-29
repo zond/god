@@ -7,7 +7,17 @@ The distributed hash bits and pieces in Go Database. Uses radix for tree structu
 
 Go Database is mainly inspired by the scalability of Chord/DHash, and the performance and feature set of Redis.
 
-It tries to couple a performant in memory database with simple yet powerful features with a scalable and operationally simple cluster concept.
+It tries to couple a performant in-memory database and simple yet powerful features with a scalable and operationally simple cluster concept.
+
+# Timestamps
+
+To avoid temporarily disconnected nodes from rejoining the network and either reanimating deleted entries or just reintroducing previously changed data,
+all entries have a timestamp based on the time synchronization of the [timenet.Timer](../../blob/master/timenet.timer.go).
+
+All removed entries are replaced with a tombstone, also having a timestamp, which makes it less likely that old data may live again.
+
+Tombstones are lazily removed after 24 hours, when data in their vicinity is changed. This makes it imperative that any network splits or temporarily dead 
+nodes be fixed _or_ cleaned before rejoining the main cluster again.
 
 # Synchronization
 
