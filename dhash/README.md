@@ -12,7 +12,7 @@ It tries to couple a performant in-memory database and simple yet powerful featu
 # Timestamps
 
 To avoid temporarily disconnected nodes from rejoining the network and either reanimating deleted entries or just reintroducing previously changed data,
-all entries have a timestamp based on the time synchronization of the [timenet.Timer](../../blob/master/timenet.timer.go).
+all entries have a timestamp based on the time synchronization of the [timenet.Timer](../../blob/master/timenet/timer.go).
 
 All removed entries are replaced with a tombstone, also having a timestamp, which makes it less likely that old data may live again.
 
