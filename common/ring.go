@@ -10,8 +10,12 @@ import (
 	"sync"
 )
 
+// RingChangeListener is a function listening to changes in a Ring (ie changes in Node composition or position).
 type RingChangeListener func(ring *Ring) (keep bool)
 
+// Ring contains an ordered set of routes to discord.Nodes. 
+// It can fetch predecessor, match and successor for any key or remote (remotes are ordeded first on position, then on address, so that we have
+// a defined orded even between nodes with the same position).
 type Ring struct {
 	nodes           Remotes
 	lock            *sync.RWMutex
@@ -35,6 +39,8 @@ func (self *Ring) AddChangeListener(f RingChangeListener) {
 	defer self.lock.Unlock()
 	self.changeListeners = append(self.changeListeners, f)
 }
+
+// Random returns a random Node in this Ring.
 func (self *Ring) Random() Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -48,11 +54,15 @@ func (self *Ring) hash() []byte {
 	}
 	return hasher.Get()
 }
+
+// Hash returns a hash of the contents of this Ring.
 func (self *Ring) Hash() []byte {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.hash()
 }
+
+// Validate, used for testing, validates the orded in this Ring.
 func (self *Ring) Validate() {
 	clone := self.Clone()
 	seen := make(map[string]bool)
@@ -68,11 +78,15 @@ func (self *Ring) Validate() {
 		seen[node.Addr] = true
 	}
 }
+
+// Describe returns a humanly readable description of this Ring.
 func (self *Ring) Describe() string {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.nodes.Describe()
 }
+
+// SetNodes copies the nodes to replace the Nodes in this Ring.
 func (self *Ring) SetNodes(nodes Remotes) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -94,11 +108,15 @@ func (self *Ring) sendChanges(oldHash []byte) {
 		self.changeListeners = newListeners
 	}
 }
+
+// Nodes returns a copy of the Nodes of this Ring.
 func (self *Ring) Nodes() Remotes {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return self.nodes.Clone()
 }
+
+// Clone returns a copy of this Ring and its contents.
 func (self *Ring) Clone() *Ring {
 	return NewRingNodes(self.Nodes())
 }
@@ -138,6 +156,8 @@ func (self *Ring) Successor(r Remote) Remote {
 	defer self.lock.RUnlock()
 	return self.nodes[self.successorIndex(r)].Clone()
 }
+
+// Add adds r to this Ring. If a Node with the same address is already present, it will be updated if needed.
 func (self *Ring) Add(r Remote) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -161,6 +181,8 @@ func (self *Ring) Add(r Remote) {
 	}
 	self.sendChanges(oldHash)
 }
+
+// Redundancy returns the minimum of the number of nodes present and the Redundancy const.
 func (self *Ring) Redundancy() int {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -169,6 +191,8 @@ func (self *Ring) Redundancy() int {
 	}
 	return Redundancy
 }
+
+// Remotes returns the predecessor of pos, any Remote at pos and the successor of pos.
 func (self *Ring) Remotes(pos []byte) (before, at, after *Remote) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -287,6 +311,8 @@ func (self *Ring) indices(pos Remote) (before, at, after int) {
 	}
 	return
 }
+
+// GetSlot returns the biggest free spot in this Ring, assuming a maximum size 2 ^ (murmur.Size * 8).
 func (self *Ring) GetSlot() []byte {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -310,6 +336,8 @@ func (self *Ring) GetSlot() []byte {
 	}
 	return new(big.Int).Add(new(big.Int).SetBytes(self.nodes[biggestSpaceIndex].Pos), new(big.Int).Div(biggestSpace, big.NewInt(2))).Bytes()
 }
+
+// Remove deletes any Nodes in this Ring with the same address as remote.
 func (self *Ring) Remove(remote Remote) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -324,6 +352,8 @@ func (self *Ring) Remove(remote Remote) {
 	}
 	self.sendChanges(oldHash)
 }
+
+// Clean removes any Nodes in this Ring between predecessor and successor (exclusive).
 func (self *Ring) Clean(predecessor, successor Remote) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
