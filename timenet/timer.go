@@ -26,6 +26,14 @@ type PeerProducer interface {
 	Peers() map[string]Peer
 }
 
+// Timer is an abstract time synchronization structure that needs a PeerProducer
+// to provide it with peers from a set of other Timers. It will randomly contact
+// the Peers produced by the PeerProducer to synchronize its time with other peers
+// in the network.
+//
+// It calculates deviation from _normal_ network latency, and only uses time measurements
+// that respond within standard deviation from the normal response times when adjusting
+// its timer.
 type Timer struct {
 	lock          *sync.RWMutex
 	state         int32
@@ -49,11 +57,17 @@ func NewTimer(producer PeerProducer) *Timer {
 func (self *Timer) adjustments() int64 {
 	return self.offset + self.dilations.delta()
 }
+
+// ActualTime will return what time this Timer thinks it is. It may change forwards or backwards
+// non continuously depending on network interactions.
 func (self *Timer) ActualTime() time.Time {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
 	return time.Unix(0, time.Now().UnixNano()+self.adjustments())
 }
+
+// ContinuousTime will return a continous nice version of the time this Timer thinks it is. It us guaranteed
+// to never move backwards, and to only move forwards in a smooth fashion.
 func (self *Timer) ContinuousTime() (result int64) {
 	self.lock.RLock()
 	temporaryEffect, permanentEffect := self.dilations.effect()
@@ -66,6 +80,8 @@ func (self *Timer) ContinuousTime() (result int64) {
 	}
 	return
 }
+
+// Error returns the deviation of the error of this Timer.
 func (self *Timer) Error() (err time.Duration) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -81,6 +97,8 @@ func (self *Timer) Error() (err time.Duration) {
 	}
 	return
 }
+
+// Stability returns the deviation of the latency between this Timer and its peers.
 func (self *Timer) Stability() (result time.Duration) {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
@@ -136,17 +154,23 @@ func (self *Timer) timeAndLatency(peer Peer) (peerTime, latency, myTime int64) {
 	myTime = self.ActualTime().UnixNano()
 	return
 }
+
+// Conform will adjust this Timer to be as exactly as possible that of the provided peer.
 func (self *Timer) Conform(peer Peer) {
 	peerTime, _, myTime := self.timeAndLatency(peer)
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.offset += (peerTime - myTime)
 }
+
+// Skew will change the actual time of this timer with delta, adjusting the continuous time in a smooth fashion.
 func (self *Timer) Skew(delta time.Duration) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	self.offset += int64(delta)
 }
+
+// Sample will make this Timer sample a random Peer produced by the PeerProducer, and Skew according to the delta with the time of that Peer.
 func (self *Timer) Sample() {
 	self.lock.RLock()
 	peerId, peer, oldLatencies := self.randomPeer()
@@ -190,15 +214,21 @@ func (self *Timer) sleep() {
 		time.Sleep(sleepyTime)
 	}
 }
+
+// Run will make this Timer regularly Sample. 
 func (self *Timer) Run() {
 	for self.hasState(started) {
 		self.Sample()
 		self.sleep()
 	}
 }
+
+// Stop will permanently stop this Timer.
 func (self *Timer) Stop() {
 	self.changeState(started, stopped)
 }
+
+// Start will start a goroutine Running this Timer.
 func (self *Timer) Start() {
 	if self.changeState(created, started) {
 		go self.Run()
