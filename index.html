@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 	<head>
 		<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
@@ -5,6 +6,66 @@
 		<script src="js/bootstrap.min.js"></script>
 		<title>Go Database!</title>
 	</head>
-	<body>
+	<body data-spy="scroll" data-target="#sidebar">
+		<div class="row">
+			<div id="sidebar" class="span3">
+				<ul class="nav nav-list affix">
+					<li><a href="#overview">Overview</a></li>
+					<li><a href="#namespace">Namespace</a></li>
+					<li><a href="#structure">Structure</a></li>
+					<li><a href="#persistence">Persistence</a></li>
+					<li><a href="#routing">Routing</a></li>
+					<li><a href="#responsibility">Responsibility</a></li>
+					<li><a href="#redundancy">Redundancy</a></li>
+					<li><a href="#timestamps">Timestamps</a></li>
+					<li><a href="#synchronization">Synchronization</a></li>
+					<li><a href="#cleaning">Cleaning</a></li>
+					<li><a href="#migration">Migration</a></li>
+				</ul>
+			</div>
+			<div class="span9">
+				<h1>Go Database!</h1>
+				<h2 id="overview">Overview</h2>
+				<p>
+				Go Database is a scalable, performant, persistence in memory data structure server. It allows massively distributed applications to update and fetch common data in a structured and sorted format.
+				</p>
+				<p>
+				Its main inspirations are <a href="http://redis.io/">Redis</a> and <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a>.
+				From <a href="http://redis.io/">Redis</a> it lends a focus on performance, ease of use and small and, simple yet powerful feature set, 
+				while from the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a> projects comes the
+				scalability, redundance and transparent failover behaviour.
+				<h2 id="namespace">Namespace</h2>
+				<h3>Chord circle</h3>
+				<h3>Murmur</h3>
+				<h3>Hashed vs non hashed keys</h3>
+				<h2 id="structure">Structure</h2>
+				<h3>Byte values</h3>
+				<h3>Sub trees</h3>
+				<h3>Mirror trees</h3>
+				<h2 id="persistence">Persistence</h2>
+        <h3>Logfiles</h3>
+				<h3>Snapshots</h3>
+				<h3>Automatic snapshotting</h3>
+				<h2 id="routing">Routing</h2>
+				<h3>Notify</h3>
+				<h3>Ping</h3>
+				<h2 id="responsibility">Responsibility</h2>
+        <h3>Successors</h3>
+				<h2 id="redundancy">Redundancy</h2>
+        <h3>N successive backups</h3>
+				<h2 id="timestamps">Timestamps</h2>
+				<h3>Zombies</h3>
+				<h3>Undone changes</h3>
+				<h3>Time network</h3>
+				<h2 id="synchronization">Synchronization</h2>
+				<h3>Merkle trees</h3>
+				<h3>Comparing hashes</h3>
+				<h2 id="cleaning">Cleaning</h2>
+				<h3>Destructive synchronization</h3>
+				<h2 id="migration">Migration</h2>
+				<h3>Imbalance</h3>
+				<h3>Changing positions</h3>
+			</div>
+		</div>
 	</body>
 </html>
