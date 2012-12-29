@@ -1,11 +1,13 @@
 Go Database!
 ===
 
+# Documents
+
+Architectural presentation/documentation in progress: http://zond.github.com/god/
+
 # TODO
 
 * Quality
- * Code review
- * Code comments
  * Architectural documentation
 * Benchmark
 * Example app
