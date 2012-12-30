@@ -1,11 +1,11 @@
 dhash
 ===
 
-The distributed hash bits and pieces in Go Database. Uses radix for tree structure, discord for routing and timenet for clock synchronization.
+The distributed hash bits and pieces in god. Uses radix for tree structure, discord for routing and timenet for clock synchronization.
 
 # Inspiration
 
-Go Database is mainly inspired by the scalability of Chord/DHash, and the performance and feature set of Redis.
+god is mainly inspired by the scalability of Chord/DHash, and the performance and feature set of Redis.
 
 It tries to couple a performant in-memory database and simple yet powerful features with a scalable and operationally simple cluster concept.
 

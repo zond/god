@@ -1,7 +1,7 @@
 cli
 ===
 
-A simple command line interface to http://github.com/zond/god/client to try out the Go Database from a shell.
+A simple command line interface to http://github.com/zond/god/client to try out god from a shell.
 
 # Usage
 

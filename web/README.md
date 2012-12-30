@@ -1,4 +1,4 @@
 web
 ===
 
-The administrative/demo web interface for Go Database.
+The administrative/demo web interface for god.
