@@ -114,9 +114,13 @@
 				To control how trees behave, for example (and currently only) to control whether they are mirrored or not, there is a configuration map for each sub tree. Setting the key <code>mirrored</code> to <code>yes</code> will make the tree keep a mirror.
 				</p>
 				<h2 id="setops">Set operations</h2>
+				<object class="illustration" data="setops.svg" type="image/svg+xml"></object>
 				<h3>Operations</h3>
 				<p>
 				The sub trees in god can be used for various kinds of set operations: union, intersection, subtraction and xor.
+				</p>
+				<p>
+				Since all sets in god are both sorted and possible to skip through at logarithmic time, the set operations are usually efficient and take time depending on the logarithm of the size of the source sets.
 				</p>
 				<p>
 				god includes a simple s-expression parser that parses these kinds of expressions. The code <code>(I (U set1 set2 set3) (U set4 set5 set6))</code>, for example, will calculate the intersection of the unions of set1-3 and set4-6.
@@ -138,7 +142,13 @@
 				<p>
 				If such an encoding is used, it is also possible to use more clever mergers, such as IntegerSum, FloatMul or BigIntAnd.
 				</p>
-				<h3>Destinations</h3>
+				<h3>Parameters</h3>
+				<p>
+				Set expressions can be given start and stop conditions, such as the minimum key to start with, the maximum key to look at, or the maximum number of items to return. This way even the set expressions can be paginated and treated as slices.
+				</p>
+				<p>
+				If a set expression also has a destination provided, the results of the set expression will not be returned to the caller, but put inside the sub tree defined by the destinatino key.
+				</p>
 				<h2 id="persistence">Persistence</h2>
         <h3>Logfiles</h3>
 				<h3>Snapshots</h3>
