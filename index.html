@@ -79,6 +79,9 @@
 				This allows us to, for example, store user metadata in the top level byte values, while storing the set of friends in a sub tree. Then we can easily fetch, slice and store friends without having to reserialize the user data (or even worse, the entire set of friends).
 				</p>
 				<h3>Mirror trees</h3>
+				<object class="illustration" data="mirror-trees.svg" type="image/svg+xml"></object>
+				<p>To allow us to sort, paginate, slice and dice the data depending on not only key, but also value, each tree can also be 'mirrored'. This, in essence, means that the tree will contain another tree that is exactly mirroring the state of the first tree, except that the keys of the outer tree is the values of the inner tree and vice versa.<p>
+				<p>To avoid colliding keys in the mirror trees, when the several keys in the outer tree have the same values, each key in the mirror tree is appended with the corresponding value. Those appendages are removed, however, when key/value pairs are fetched or sliced from the mirror tree.</p>
 				<h2 id="setops">Set operations</h2>
 				<h3>Operations</h3>
 				<h3>Mergers</h3>
