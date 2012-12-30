@@ -4,6 +4,11 @@
 		<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
 		<script src="http://code.jquery.com/jquery-latest.js"></script>
 		<script src="js/bootstrap.min.js"></script>
+		<style type="text/css">
+			.illustration {
+				float: right;
+			}
+		</style>
 		<title>Go Database!</title>
 	</head>
 	<body data-spy="scroll" data-target="#sidebar">
@@ -13,6 +18,7 @@
 					<li><a href="#overview">Overview</a></li>
 					<li><a href="#namespace">Namespace</a></li>
 					<li><a href="#structure">Structure</a></li>
+					<li><a href="#setops">Set operations</a></li>
 					<li><a href="#persistence">Persistence</a></li>
 					<li><a href="#routing">Routing</a></li>
 					<li><a href="#responsibility">Responsibility</a></li>
@@ -27,17 +33,16 @@
 				<h1>Go Database!</h1>
 				<h2 id="overview">Overview</h2>
 				<p>
-				Go Database is a scalable, performant, persistence in memory data structure server. It allows massively distributed applications to update and fetch common data in a structured and sorted format.
+				Go Database is a scalable, performant, persistent in memory data structure server. It allows massively distributed applications to update and fetch common data in a structured and sorted format.
 				</p>
 				<p>
 				Its main inspirations are <a href="http://redis.io/">Redis</a> and <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a>.
-				From <a href="http://redis.io/">Redis</a> it lends a focus on performance, ease of use and small and, simple yet powerful feature set, 
-				while from the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a> projects comes the
-				scalability, redundance and transparent failover behaviour.
+				Like <a href="http://redis.io/">Redis</a> it focuses on performance, ease of use and a small, simple yet powerful feature set, 
+				while from the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a> projects it inherits scalability, redundancy and transparent failover behaviour.
 				<p>To try it out right now, <code>go get github.com/zond/god</code>, then run <code>server</code>.</p>
 				<h2 id="namespace">Namespace</h2>
 				<h3>Chord circle</h3>
-				<object data="chord-circle.svg" type="image/svg+xml"></object>
+				<object class="illustration" data="chord-circle.svg" type="image/svg+xml"></object>
 				<p>The namespace of Go Database, as for the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a> project, is a conceptual circle where each actor, be it database node or data item, has a position. Usually the circle overflows at the maximum value for a selected hash function used to spread keys over the namespace.</p>
 				<h3>Murmur</h3>
 				<p>The hash function used in Go Database is <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a>, a fairly new and extremely fast hash function. Unlike other hash functions it makes no cryptographical claims, but focuses solely on speed and distribution.</p>
@@ -49,9 +54,34 @@
 				<p>This would allow, for example, data for a geographical region to be prefixed with a code, and making data with that prefix go on designated servers placed in the same geographical region. The cluster could also be configured so that all backups for data positioned in one region was positioned in other regions for greated safety in the face of disasters of different kinds.</p>
 				<p>Currently there is no option to either limit node migrations (to force nodes in one datacenter to stay in one part of the namespace), or to force backups to live on nodes in other datacenters, but it would be fairly easy, conceptually, to add in a future version if the need was felt.</p>
 				<h2 id="structure">Structure</h2>
+				<h3>Radix trees</h3>
+				<object class="illustration" data="radix-tree.svg" type="image/svg+xml"></object>
+				<p>
+				To map keys to values, a mapping structure is needed. For infrastructural reasons (<a href="#synchronization">synchronization</a> and <a href="#cleaning">cleaning</a>) as well as for functionality of different kinds, we need a sorted mapping, and it has to be deterministically structured.
+				</p>
+				<p>
+				Radix trees have all these attributes, and are somewhat frugal when it comes to memory consumption due to the common parts of keys only being stored once.
+				</p>
+				<p>
+				In the illustration to the right, nodes only contain the part of their key differing from the key of their parent, and the nodes marked red don't contain data at all but only contain common parts of keys for their children. Note that the root node contains the empty key, and in this case it actually has a value as well.
+				</p>
 				<h3>Byte values</h3>
+				<p>
+				All nodes in the main tree can contain byte values, which can be encoded to contain strings, integers, floats or whatever kind of data one wants to store.
+				</p>
 				<h3>Sub trees</h3>
+				<object class="illustration" data="tree-values.svg" type="image/svg+xml"></object>
+				<p>
+				In addition, since the need for structured data (in the sense that one can sort, paginate, slice and dice it) is one of the things that makes a vanilla key/value store hard to use in many common use cases, each key in a Tree can also contain a separate sub tree.
+				</p>
+				<p>
+				This allows us to, for example, store user metadata in the top level byte values, while storing the set of friends in a sub tree. Then we can easily fetch, slice and store friends without having to reserialize the user data (or even worse, the entire set of friends).
+				</p>
 				<h3>Mirror trees</h3>
+				<h2 id="setops">Set operations</h2>
+				<h3>Operations</h3>
+				<h3>Mergers</h3>
+				<h3>Destinations</h3>
 				<h2 id="persistence">Persistence</h2>
         <h3>Logfiles</h3>
 				<h3>Snapshots</h3>
