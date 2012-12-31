@@ -190,9 +190,18 @@
 				The predecessor will then clean its routing table by removing all nodes between its confirmed (being a notifier) predecessor and itself, so that nodes having been removed after a failed ping will not get reintroduced by a successor.
 				</p>
 				<h2 id="responsibility">Responsibility</h2>
-        <h3>Successors</h3>
+				<h3>Successors</h3>
+				<p>
+				Like in <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a>, each node is responsible for all items between its predecessor and itself. Since the predecessor is the one node each node keeps pinging, this works out well since we can trust each node to know if a key is between its predecessor and itself.
+				</p>
 				<h2 id="redundancy">Redundancy</h2>
-        <h3>N successive backups</h3>
+				<h3>N successive backups</h3>
+				<p>
+				To allow for a transparent failover, where the new owner of a set of data already has it available, god lets each node keep a backup of the data of a number of its predecessors.
+				</p>
+				<p>
+				If a node disappears, this will allow the cluster to stay in a valid state, since the new owner already has the backup (now master) copy of the data in its local storage.
+				</p>
 				<h2 id="timestamps">Timestamps</h2>
 				<h3>Zombies</h3>
 				<h3>Undone changes</h3>
