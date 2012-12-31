@@ -17,7 +17,7 @@ func getMerger(m SetOpMerge) mergeFunc {
 	case ConCat:
 		return conCat
 	case IntegerSum:
-		return integerSub
+		return integerSum
 	case IntegerSub:
 		return integerSub
 	case IntegerDiv:
