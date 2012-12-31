@@ -150,9 +150,27 @@
 				If a set expression also has a destination provided, the results of the set expression will not be returned to the caller, but put inside the sub tree defined by the destination key.
 				</p>
 				<h2 id="persistence">Persistence</h2>
-        <h3>Logfiles</h3>
+				<object class="illustration" data="logfiles.svg" type="image/svg+xml"></object>
+        <h3>Log files</h3>
+				<p>
+				god nodes stay persistent between restarts by always <a href="#synchronization">synchronizing</a> with sibling nodes. But when the entire cluster needs to be restarted, some kind of disk based persistence is needed.
+				</p>
+				<p>
+				For that purpose a log file based persistence engine logs all mutating operations (put, delete, clear, configure) performed by each node and streams them to disk.
+				</p>
 				<h3>Snapshots</h3>
+				<p>
+				Since the same keys will often be changed many times over during the lifetime of a database, only log files would quickly prove inefficient, since the same log file would contain multiple puts, deletes and new puts of the same key.
+				</p>
+				<p>
+				To alleviate this, snapshot files can be created that contain the merged sum of all operations in a set of log files. Only the latest operation on each key in the snapshot is recorded to get rid of redundant operations.
+				</p>
+				<p>
+				god does this by reading the latest snapshot and all log files following it into a set of nested maps, overwriting and deleting the map data as new operations stream in from the log files. Then the map set is streamed into a snapshot file.</p>
 				<h3>Automatic snapshotting</h3>
+				<p>
+				To avoid cluttering the disk with huge log files containing redundant data, god always automatically creates new snapshots when the last log file grows too largs. This is done in a separate goroutine and thus does not have to take away from the performance of the node, but it will require extra memory to build the map set.
+				</p>
 				<h2 id="routing">Routing</h2>
 				<h3>Notify</h3>
 				<h3>Ping</h3>
