@@ -187,7 +187,7 @@
 				The predecessor will add the successor to its routing table and compare the hash with that of its own routing table. If different, it will also request the complete routing table from the successor.
 				</p>
 				<p>
-				The predecessor will also clean its routing table by removing all nodes between its confirmed (being a notifier) predecessor and itself, so that nodes having been removed after a failed ping will not get reintroduced by a successor.
+				The predecessor will then clean its routing table by removing all nodes between its confirmed (being a notifier) predecessor and itself, so that nodes having been removed after a failed ping will not get reintroduced by a successor.
 				</p>
 				<h2 id="responsibility">Responsibility</h2>
         <h3>Successors</h3>
