@@ -13,7 +13,6 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
 # TODO
 
-* Try to avoid loading entire routing tables for each ping when something is removed?
 * Quality
  * Architectural documentation
 * Benchmark
