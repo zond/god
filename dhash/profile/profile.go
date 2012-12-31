@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	. "github.com/zond/god/"
-	"github.com/zond/god/../common"
-	"github.com/zond/god/../murmur"
+	"github.com/zond/god/common"
+	. "github.com/zond/god/dhash"
+	"github.com/zond/god/murmur"
 	"os"
 	"runtime/pprof"
 )
