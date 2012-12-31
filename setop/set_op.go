@@ -6,10 +6,14 @@ import (
 	"strings"
 )
 
+// RawSourceCreator is a function that takes the name of a raw skippable sortable set, and returns a Skipper interface.
 type RawSourceCreator func(b []byte) Skipper
+
+// SetOpResultIterator is something that handles the results of a set expression.
 type SetOpResultIterator func(res *SetOpResult)
 
 const (
+	// Append simply appends all elements in the input lists and builds an output list from them.
 	Append = iota
 	ConCat
 	IntegerSum

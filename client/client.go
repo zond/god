@@ -989,7 +989,7 @@ func (self *Conn) Describe() string {
 //
 // Either expr.Op or expr.Code has to be set. 
 //
-// If expr.Op is nil expr.Code will be parsed to provide expr.Op.
+// If expr.Op is nil expr.Code will be parsed using SetOpParser to provide expr.Op.
 func (self *Conn) SetExpression(expr setop.SetExpression) (result []setop.SetOpResult) {
 	if expr.Op == nil {
 		expr.Op = setop.MustParse(expr.Code)
