@@ -56,7 +56,7 @@
 				</p>
 				<h3>Murmur</h3>
 				<p>
-				The hash function used in god is <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a>, a fairly new and extremely fast hash function. Unlike other hash functions it makes no cryptographical claims, but focuses solely on speed and distribution.
+				The hash function used in god is <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a>, a fairly new and extremely fast hash function. Unlike many other hash functions it makes no cryptographical claims, but focuses solely on high speed and low collision distribution.
 				</p>
 				<p>
 				god contains a slightly modified (only to let it compile in a C compiler) of the 128 bit, x64 version of <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a> wrapped in a thin layer of Go.
@@ -75,7 +75,7 @@
 				This would allow, for example, data for a geographical region to be prefixed with a code, and making data with that prefix go on designated servers placed in the same geographical region. The cluster could also be configured so that all backups for data positioned in one region was positioned in other regions for greated safety in the face of disasters of different kinds.
 				</p>
 				<p>
-				Currently there is no option to either limit node migrations (to force nodes in one datacenter to stay in one part of the namespace), or to force backups to live on nodes in other datacenters, but it would be fairly easy, conceptually, to add in a future version if the need was felt.
+				Currently there is no option to either limit node migrations (to force nodes in one datacenter to stay in one part of the namespace), or to force backups to live on nodes in other datacenters, but it would be fairly easy, conceptually, to add in a future version if the need arose.
 				</p>
 				<h2 id="structure">Structure</h2>
 				<h3>Radix trees</h3>
@@ -107,7 +107,7 @@
 				To allow us to sort, paginate, slice and dice the data depending on not only key, but also value, each tree can also be 'mirrored'. This, in essence, means that the tree will contain another tree that is exactly mirroring the state of the first tree, except that the keys of the outer tree is the values of the inner tree and vice versa.
 				<p>
 				<p>
-				To avoid colliding keys in the mirror trees, when the several keys in the outer tree have the same values, each key in the mirror tree is appended with the corresponding value. Those appendages are removed, however, when key/value pairs are fetched or sliced from the mirror tree.
+				To avoid colliding keys in the mirror trees, when several keys in the outer tree have the same values, each key in the mirror tree is appended with the corresponding value. Those appendages are removed, however, when key/value pairs are fetched or sliced from the mirror tree.
 				</p>
 				<h3>Configuration</h3>
 				<p>
@@ -133,11 +133,11 @@
 				These merge operations range from trivial, like ConCat that simply concatenates the bytes in all input values and puts the result in a single element list and Append that simply creates an output list out of all values in the input lists.
 				</p>
 				<p>
-				To use a merger other than Append (which is the default), simply add <code>:MERGERNAME</code> to the function symbol in your s-expression. For example: <code>(I:ConCat set1 (U:ConCat set2 set3))</code> will concatenate the union of set2-3, then concatenate those results to the intersection with set.
+				To use a merger other than Append (which is the default), simply add <code>:MERGERNAME</code> to the function symbol in your s-expression. For example: <code>(I:ConCat set1 (U:ConCat set2 set3))</code> will concatenate the union of set2-3, then concatenate those results to the intersection with set1.
 				</p>
 				<h3>Encodings</h3>
 				<p>
-        To enable the merge operations to do more interesting things, and to simplify for users of god to store more interesting things than byte slices in the database, there are multiple predefined encodings implemented for encoding integers, floats and bigints into byte slices.
+        To enable the merge operations to do more interesting things, and to simplify for users of god to store more interesting things than byte slices in the database, there are predefined encodings implemented for encoding integers, floats and bigints into byte slices.
 				</p>
 				<p>
 				If such an encoding is used, it is also possible to use more clever mergers, such as IntegerSum, FloatMul or BigIntAnd.
@@ -147,7 +147,7 @@
 				Set expressions can be given start and stop conditions, such as the minimum key to start with, the maximum key to look at, or the maximum number of items to return. This way even the set expressions can be paginated and treated as slices.
 				</p>
 				<p>
-				If a set expression also has a destination provided, the results of the set expression will not be returned to the caller, but put inside the sub tree defined by the destinatino key.
+				If a set expression also has a destination provided, the results of the set expression will not be returned to the caller, but put inside the sub tree defined by the destination key.
 				</p>
 				<h2 id="persistence">Persistence</h2>
         <h3>Logfiles</h3>
