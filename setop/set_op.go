@@ -9,33 +9,53 @@ import (
 // RawSourceCreator is a function that takes the name of a raw skippable sortable set, and returns a Skipper interface.
 type RawSourceCreator func(b []byte) Skipper
 
-// SetOpResultIterator is something that handles the results of a set expression.
+// SetOpResultIterator is something that handles the results of a SetExpression.
 type SetOpResultIterator func(res *SetOpResult)
 
 const (
 	// Append simply appends all elements in the input lists and builds an output list from them.
 	Append = iota
+	// ConCat appends all elements in the input lists into a single element, and builds an output list with only that element.
 	ConCat
+	// IntegerSum decodes all values as int64 using common.DecodeInt64 and sums them.
 	IntegerSum
+	// IntegerSub decodes all values as int64 using common.DecodeInt64 and subtracts all values from the first one in the input lists.
 	IntegerSub
+	// IntegerDiv decodes all values as int64 using common.DecodeInt64 and divides the first value in the input lists by all other values in turn.
 	IntegerDiv
+	// IntegerMul decodes all values as int64 using common.DecodeInt64 and multiplies them with each other.
 	IntegerMul
+	// FloatSum decodes all values as float64 using common.DecodeFloat64 and sums them.
 	FloatSum
+	// FloatSub decodes all values as float64 using common.DecodeFloat64 and subtracts all values from the first one in the input lists.
 	FloatSub
+	// FloatDiv decodes all values as float64 using common.DecodeFloat64 and divides the first value in the input lists by all other values in turn.
 	FloatDiv
+	// FloatMul decodes all values as float64 using common.DecodeFloat64 and multiplies them with each other.
 	FloatMul
+	// BigIntAnd decodes all values as big.Ints using common.DecodeBigInt and logical ANDs them with each other.
 	BigIntAnd
+	// BigIntAdd decodes all values as big.Ints using common.DecodeBigInt and sums them.
 	BigIntAdd
+	// BigIntAndNot decodes all values as big.Ints using common.DecodeBigInt and logcal AND NOTs them with each other.
 	BigIntAndNot
+	// BigIntDiv decodes all values as big.Ints using common.DecodeBigInt and divides the first value in the input lists by all other values in them.
 	BigIntDiv
+	// BigIntMod decodes all values as big.Ints using common.DecodeBigInt and does a modulo operation on each one in turn, with the first one as source value.
 	BigIntMod
+	// BigIntMul decodes all values as big.Ints using common.DecodeBigInt and multiplies them with each other.
 	BigIntMul
+	// BigIntOr decodes all values as big.Ints using common.DecodeBigInt and logical ORs them with each other.
 	BigIntOr
+	// BigIntRem decodes all values as big.Ints using common.DecodeBigInt and does a remainder operation on each one in turn, with the first one as source value.
 	BigIntRem
+	// BigIntSub decodes all values as big.Ints using common.DecodeBigInt and subtracts all values from the first one in the input lists.
 	BigIntSub
+	// BigIntXor decodes all values as big.Ints using common.DecodeBigInt and logical XORs them with each other.
 	BigIntXor
 )
 
+// SetOpMerge defines how a SetOp merges the values in the input sets.
 type SetOpMerge int
 
 func ParseSetOpMerge(s string) (result SetOpMerge, err error) {
@@ -136,9 +156,11 @@ const (
 	Union = iota
 	Intersection
 	Difference
+	// Xor differs from the definition in http://en.wikipedia.org/wiki/Exclusive_or by only returning keys present in exactly ONE input set.
 	Xor
 )
 
+// SetOpType is the set operation to perform in a SetExpression.
 type SetOpType int
 
 func (self SetOpType) String() string {
@@ -155,11 +177,13 @@ func (self SetOpType) String() string {
 	panic(fmt.Errorf("Unknown SetOpType %v", int(self)))
 }
 
+// SetOpSource is either a key to a raw source producing input data, or another SetOp that calculates input data.
 type SetOpSource struct {
 	Key   []byte
 	SetOp *SetOp
 }
 
+// SetOp is a set operation to perform on a slice of SetOpSources, using a SetOpMerge function to merge the calculated values.
 type SetOp struct {
 	Sources []SetOpSource
 	Type    SetOpType
@@ -178,6 +202,7 @@ func (self *SetOp) String() string {
 	return fmt.Sprintf("(%v %v)", self.Type, strings.Join(sources, " "))
 }
 
+// SetExpression is a set operation defined by the Op or Code fields, coupled with range parameters and a Dest key defining where to put the results.
 type SetExpression struct {
 	Op     *SetOp
 	Code   string
@@ -189,6 +214,7 @@ type SetExpression struct {
 	Dest   []byte
 }
 
+// Each will execute the set expression, using the provided RawSourceCreator, and iterate over the result using f. 
 func (self *SetExpression) Each(r RawSourceCreator, f SetOpResultIterator) (err error) {
 	if self.Op == nil {
 		self.Op = MustParse(self.Code)
@@ -214,11 +240,13 @@ func (self *SetExpression) Each(r RawSourceCreator, f SetOpResultIterator) (err 
 	return
 }
 
+// SetOpResult is a key and any values the Merge returned.
 type SetOpResult struct {
 	Key    []byte
 	Values [][]byte
 }
 
+// ShallowCopy returns another SetOpResult with the same Key and a copy of the Values.
 func (self *SetOpResult) ShallowCopy() (result *SetOpResult) {
 	result = &SetOpResult{
 		Key:    self.Key,
