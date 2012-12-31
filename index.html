@@ -173,7 +173,22 @@
 				</p>
 				<h2 id="routing">Routing</h2>
 				<h3>Notify</h3>
+				<p>
+				Each node in the cluster regularly notifies its successor of its presence. The successor, in its turn, will add the notifier to its routing table and respond with the node it considers to be its predecessor.
+				</p>
+				<p>
+				The notifier will compare the returned predecessor to itself, and add it to its own routing table if different.
+				</p>
 				<h3>Ping</h3>
+				<p>
+				Each node also takes responsibility for regularly pinging its successor with a packet containing itself and a hash of its routing table.
+				</p>
+				<p>
+				The predecessor will add the successor to its routing table and compare the hash with that of its own routing table. If different, it will also request the complete routing table from the successor.
+				</p>
+				<p>
+				The predecessor will also clean its routing table by removing all nodes between its confirmed (being a notifier) predecessor and itself, so that nodes having been removed after a failed ping will not get reintroduced by a successor.
+				</p>
 				<h2 id="responsibility">Responsibility</h2>
         <h3>Successors</h3>
 				<h2 id="redundancy">Redundancy</h2>
