@@ -288,7 +288,11 @@ function b64decode(obj) {
 		for (var name in obj) {
 			var value = obj[name];
 			if (typeof(value) == "string") {
-				rval[name] = $.base64.decode2s(value);
+			  try {
+					rval[name] = $.base64.decode2s(value);
+				} catch (e) {
+				  rval[name] = value;
+				}
 			} else if (value != null && typeof(value) == "object") {
 				rval[name] = b64decode(value);
 			} else {

@@ -90,7 +90,7 @@ func (self *JSONApi) convert(items []common.Item, result *[]ValueRes) {
 		*result = append(*result, ValueRes{
 			Key:    item.Key,
 			Value:  item.Value,
-			Exists: item.Exists,
+			Exists: true,
 		})
 	}
 }
@@ -259,7 +259,8 @@ func (self *JSONApi) Size(x Nothing, result *int) (err error) {
 	*result = (*Node)(self).Size()
 	return nil
 }
-func (self *JSONApi) SubSize(key []byte, result *int) (err error) {
+func (self *JSONApi) SubSize(k KeyReq, result *int) (err error) {
+	key := k.Key
 	var f bool
 	if f, err = self.forwardUnlessMe("DHash.SubSize", key, key, result); !f {
 		err = (*Node)(self).SubSize(key, result)
@@ -790,7 +791,8 @@ func (self *JSONApi) Configuration(x Nothing, result *common.Conf) (err error) {
 	(*result).Data, (*result).Timestamp = (*Node)(self).tree.Configuration()
 	return nil
 }
-func (self *JSONApi) SubConfiguration(key []byte, result *common.Conf) (err error) {
+func (self *JSONApi) SubConfiguration(k KeyReq, result *common.Conf) (err error) {
+	key := k.Key
 	*result = common.Conf{TreeKey: key}
 	(*result).Data, (*result).Timestamp = (*Node)(self).tree.SubConfiguration(key)
 	return nil
