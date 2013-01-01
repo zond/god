@@ -26,7 +26,6 @@
 					<li><a href="#timestamps">Timestamps</a></li>
 					<li><a href="#synchronization">Synchronization</a></li>
 					<li><a href="#cleaning">Cleaning</a></li>
-					<li><a href="#migration">Migration</a></li>
 				</ul>
 			</div>
 			<div class="span9">
@@ -68,6 +67,8 @@
 				<p>
 				However, since it could be very useful for users of a database to store ordered data, or to wilfully concentrate certain data on certain parts of the cluster, god does not force the user to hash the keys.
 				</p>
+				<h3>Migrations</h3>
+				<object class="illustration" data="migrations.svg" type="image/svg+xml"></object>
 				<p>
 				Instead, the nodes in god are able to migrate along the circle to hand off data to one another when an imbalance is detected.
 				</p>
@@ -236,13 +237,33 @@
 				The time network in god is an extremely simple one, though, and makes no claim to knowing the real time at any point. It simply synchronizes clocks randomly across the cluster, and dilates time for each server so that they converge on as small a difference as possible.
 				</p>
 				<h2 id="synchronization">Synchronization</h2>
+				<h3>Ensuring backups</h3>
+				<p>
+				To make sure that the data in god is always distributed the way it should be, with backups of each key segment on the nodes succeeding the first successor of the segment, each node regularly synchronizes the data it is responsible for with its successors.
+				</p>
+				<p>
+				This synchronization will compare contents and timestamps, and make sure that all nodes supposed to hold a segment will hold the same data, and that said data will be that having the latest timestamps.
+				</p>
 				<h3>Merkle trees</h3>
-				<h3>Comparing hashes</h3>
+				<object class="illustration" data="hash-tree.svg" type="image/svg+xml"></object>
+				<p>
+				To allow nodes to compare any segment of their database to each other without having to iterate through entire key sets, the radix trees in god also contain hashes of their sub trees, in essence turning them into <a href="http://en.wikipedia.org/wiki/Hash_tree">Merkle trees</a>.
+				</p>
+				<p>
+				This enables comparing two equal trees with a single byte slice comparison, and finding the differences in two unequal trees a matter of recursing down the child nodes themselves having differing hashes.
+				</p>
 				<h2 id="cleaning">Cleaning</h2>
+				<object class="illustration" data="cleaning.svg" type="image/svg+xml"></object>
 				<h3>Destructive synchronization</h3>
-				<h2 id="migration">Migration</h2>
-				<h3>Imbalance</h3>
-				<h3>Changing positions</h3>
+				<p>
+				Having the data one should have is just half the work. To get rid of the data it shouldn't have, god nodes will regularly look for the first key in its data succeding its own position.
+				</p>
+				<p>
+				If said key is not between the predecessor of the node and the node itself, the node will start a synchronization of the segment between the misplaced key and its first successor. This synchronization will push this data to all nodes in the cluster that ought to have it (its immediate successor and its backup nodes).
+				</p>
+				<p>
+				The last synchronization in this cleanup operation will also remove, without leaving tombstones, the data from the cleaning node.
+				</p>
 			</div>
 		</div>
 	</body>
