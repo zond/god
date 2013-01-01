@@ -1,8 +1,6 @@
 
 #include "murmur.h"
 
-#define FORCE_INLINE __attribute__((always_inline))
-
 inline uint64_t rotl64 ( uint64_t x, int8_t r )
 {
   return (x << r) | (x >> (64 - r));
@@ -16,7 +14,7 @@ inline uint64_t rotl64 ( uint64_t x, int8_t r )
 // Block read - if your platform needs to do endian-swapping or can only
 // handle aligned reads, do the conversion here
 
-FORCE_INLINE uint64_t getblock ( const uint64_t * p, int i )
+uint64_t getblock ( const uint64_t * p, int i )
 {
   return p[i];
 }
@@ -24,7 +22,7 @@ FORCE_INLINE uint64_t getblock ( const uint64_t * p, int i )
 //-----------------------------------------------------------------------------
 // Finalization mix - force all bits of a hash block to avalanche
 
-FORCE_INLINE uint64_t fmix ( uint64_t k )
+uint64_t fmix ( uint64_t k )
 {
   k ^= k >> 33;
   k *= BIG_CONSTANT(0xff51afd7ed558ccd);
