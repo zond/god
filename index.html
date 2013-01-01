@@ -206,9 +206,35 @@
 				If a node disappears, this will allow the cluster to stay in a valid state, since the new owner already has the backup (now master) copy of the data in its local storage.
 				</p>
 				<h2 id="timestamps">Timestamps</h2>
-				<h3>Zombies</h3>
+				<h3>Latest write wins</h3>
+				<p>
+				Since god is intended to work with hundreds or even thousands of nodes, it is likely that some nodes will experience temporary outages or net splits. Since god does not have eventual consistency and versioned entries, a situation where the cluster is split in isolated parts still accessed by clients will lead to the rejoined cluster containing a mix of the latest writes for all rejoined parts.
+				</p>
+				<p>
+				However, as long as the disconnected parts of the cluster are not used for writing (being crashed, completely disconnected or just turned off), timestamps do a sufficient job of avoiding conflicts.
+				</p>
 				<h3>Undone changes</h3>
+				<p>
+				When a node is somehow disconnected and reconnected without being emptied of all data, it will potentially contain stale values for all its contained keys.
+				</p>
+				<p>
+				To avoid this stale data being redistributed across the cluster, each value has a timestamp and newer timestamps always override older timestamps.
+				</p>
+				<h3>Zombies</h3>
+				<object class="illustration" data="zombies.svg" type="image/svg+xml"></object>
+				<p>
+				If a node gets disconnected and reconnected without being cleared in between, it could conceivably contain data that was removed in its absence.
+				</p>
+				<p>
+				To avoid these values being reanimated and haunt you as zombie data, each delete or clear (except the <code>kill</code> command, ironically) will result in tombstones replacing the data you remove. These tombstones are timestamped just like any other piece of data, and will disperse through the cluster just like a put.
+				</p>
 				<h3>Time network</h3>
+				<p>
+				To make sure that the timestamps as far as possible reflect the actual sequence of events in the cluster, and avoid putting additional burdens on the operations part of things, god contains its own time network.
+				</p>
+				<p>
+				The time network in god is an extremely simple one, though, and makes no claim to knowing the real time at any point. It simply synchronizes clocks randomly across the cluster, and dilates time for each server so that they converge on as small a difference as possible.
+				</p>
 				<h2 id="synchronization">Synchronization</h2>
 				<h3>Merkle trees</h3>
 				<h3>Comparing hashes</h3>
