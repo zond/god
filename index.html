@@ -172,6 +172,7 @@
 				To avoid cluttering the disk with huge log files containing redundant data, god always automatically creates new snapshots when the last log file grows too largs. This is done in a separate goroutine and thus does not have to take away from the performance of the node, but it will require extra memory to build the map set.
 				</p>
 				<h2 id="routing">Routing</h2>
+				<object class="illustration" data="ping_notify.svg" type="image/svg+xml"></object>
 				<h3>Notify</h3>
 				<p>
 				Each node in the cluster regularly notifies its successor of its presence. The successor, in its turn, will add the notifier to its routing table and respond with the node it considers to be its predecessor.
@@ -195,6 +196,8 @@
 				Like in <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a>, each node is responsible for all items between its predecessor and itself. Since the predecessor is the one node each node keeps pinging, this works out well since we can trust each node to know if a key is between its predecessor and itself.
 				</p>
 				<h2 id="redundancy">Redundancy</h2>
+				<object class="illustration" data="backups.svg" type="image/svg+xml"></object>
+				<h3>Notify</h3>
 				<h3>N successive backups</h3>
 				<p>
 				To allow for a transparent failover, where the new owner of a set of data already has it available, god lets each node keep a backup of the data of a number of its predecessors.
