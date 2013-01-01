@@ -7,7 +7,7 @@ god
 
 # Documents
 
-Architectural documentation: http://zond.github.com/god/
+Architectural overview: http://zond.github.com/god/
 
 godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
