@@ -121,10 +121,15 @@
 				The sub trees in god can be used for various kinds of set operations: union, intersection, subtraction and xor.
 				</p>
 				<p>
+				god includes a simple s-expression parser that parses these kinds of expressions. The code <code>(I (U set1 set2 set3) (U set4 set5 set6))</code>, for example, will calculate the intersection of the unions of set1-3 and set4-6.
+				</p>
+				<h3>Complexity</h3>
+				<object class="illustration" data="skip-intersection.svg" type="image/svg+xml"></object>
+				<p>
 				Since all sets in god are both sorted and possible to skip through at logarithmic time, the set operations are usually efficient and take time depending on the logarithm of the size of the source sets.
 				</p>
 				<p>
-				god includes a simple s-expression parser that parses these kinds of expressions. The code <code>(I (U set1 set2 set3) (U set4 set5 set6))</code>, for example, will calculate the intersection of the unions of set1-3 and set4-6.
+				This means that, instead of iterating through one set (in the intersection example) and skipping all keys not present in all other sets, we skip to the next value equal to or greater than the greatest value we looked at in the last iteration. This will let us skip through great patches of keyspace where there are no matches in one or more sets at the same time as guaranteeing that we find commonalities if there are any.
 				</p>
 				<h3>Mergers</h3>
 				<p>
