@@ -22,10 +22,8 @@
 					<li><a href="#persistence">Persistence</a></li>
 					<li><a href="#routing">Routing</a></li>
 					<li><a href="#responsibility">Responsibility</a></li>
-					<li><a href="#redundancy">Redundancy</a></li>
 					<li><a href="#timestamps">Timestamps</a></li>
 					<li><a href="#synchronization">Synchronization</a></li>
-					<li><a href="#cleaning">Cleaning</a></li>
 				</ul>
 			</div>
 			<div class="span9">
@@ -85,7 +83,7 @@
 				To map keys to values, a mapping structure is needed. For infrastructural reasons (<a href="#synchronization">synchronization</a> and <a href="#cleaning">cleaning</a>) as well as for functionality of different kinds, we need a sorted mapping, and it has to be deterministically structured.
 				</p>
 				<p>
-				Radix trees have all these attributes, and are somewhat frugal when it comes to memory consumption due to the common parts of keys only being stored once.
+				<a href="http://en.wikipedia.org/wiki/Radix_tree">Radix</a> trees have all these attributes, and are somewhat frugal when it comes to memory consumption due to the common parts of keys only being stored once. god uses <a href="http://en.wikipedia.org/wiki/Radix_tree">radix</a> trees for all data structures, each node has a tree containing a segment of the keyspace.
 				</p>
 				<p>
 				In the illustration to the right, nodes only contain the part of their key differing from the key of their parent, and the nodes marked red don't contain data at all but only contain common parts of keys for their children. Note that the root node contains the empty key, and in this case it actually has a value as well.
@@ -106,7 +104,10 @@
 				<object class="illustration" data="mirror-trees.svg" type="image/svg+xml"></object>
 				<p>
 				To allow us to sort, paginate, slice and dice the data depending on not only key, but also value, each tree can also be 'mirrored'. This, in essence, means that the tree will contain another tree that is exactly mirroring the state of the first tree, except that the keys of the outer tree is the values of the inner tree and vice versa.
+				</p>
 				<p>
+				All this goodness comes at a cost, of course. Mutating mirrored trees take about three times as much resources as regular trees, since each update has to first remove the key from the mirror tree, then update the main tree and lastly insert the new key/value combination in the mirror.
+				</p>
 				<p>
 				To avoid colliding keys in the mirror trees, when several keys in the outer tree have the same values, each key in the mirror tree is appended with the corresponding value. Those appendages are removed, however, when key/value pairs are fetched or sliced from the mirror tree.
 				</p>
@@ -118,7 +119,7 @@
 				<object class="illustration" data="setops.svg" type="image/svg+xml"></object>
 				<h3>Operations</h3>
 				<p>
-				The sub trees in god can be used for various kinds of set operations: union, intersection, subtraction and xor.
+				The sub trees in god can be used for various kinds of set operations: union, intersection, subtraction and xor. Note that xor does currently not follow the definition at <a href="http://en.wikipedia.org/wiki/Exclusive_or">http://en.wikipedia.org/wiki/Exclusive_or</a>, but instead matches only keys present in exactly one of the input sets.
 				</p>
 				<p>
 				god includes a simple s-expression parser that parses these kinds of expressions. The code <code>(I (U set1 set2 set3) (U set4 set5 set6))</code>, for example, will calculate the intersection of the unions of set1-3 and set4-6.
@@ -197,14 +198,12 @@
 				The predecessor will then clean its routing table by removing all nodes between its confirmed (being a notifier) predecessor and itself, so that nodes having been removed after a failed ping will not get reintroduced by a successor.
 				</p>
 				<h2 id="responsibility">Responsibility</h2>
+				<object class="illustration" data="backups.svg" type="image/svg+xml"></object>
 				<h3>Successors</h3>
 				<p>
 				Like in <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a>, each node is responsible for all items between its predecessor and itself. Since the predecessor is the one node each node keeps pinging, this works out well since we can trust each node to know if a key is between its predecessor and itself.
 				</p>
-				<h2 id="redundancy">Redundancy</h2>
-				<object class="illustration" data="backups.svg" type="image/svg+xml"></object>
-				<h3>Notify</h3>
-				<h3>N successive backups</h3>
+				<h3>Redundancy</h3>
 				<p>
 				To allow for a transparent failover, where the new owner of a set of data already has it available, god lets each node keep a backup of the data of a number of its predecessors.
 				</p>
@@ -252,14 +251,13 @@
 				<h3>Merkle trees</h3>
 				<object class="illustration" data="hash-tree.svg" type="image/svg+xml"></object>
 				<p>
-				To allow nodes to compare any segment of their database to each other without having to iterate through entire key sets, the radix trees in god also contain hashes of their sub trees, in essence turning them into <a href="http://en.wikipedia.org/wiki/Hash_tree">Merkle trees</a>.
+				To allow nodes to compare any segment of their database to each other without having to iterate through entire key sets, the <a href="http://en.wikipedia.org/wiki/Radix_tree">radix</a> trees in god also contain hashes of their sub trees, in essence turning them into <a href="http://en.wikipedia.org/wiki/Hash_tree">Merkle trees</a>.
 				</p>
 				<p>
 				This enables comparing two equal trees with a single byte slice comparison, and finding the differences in two unequal trees a matter of recursing down the child nodes themselves having differing hashes.
 				</p>
-				<h2 id="cleaning">Cleaning</h2>
+				<h3>Cleaning</h3>
 				<object class="illustration" data="cleaning.svg" type="image/svg+xml"></object>
-				<h3>Destructive synchronization</h3>
 				<p>
 				Having the data one should have is just half the work. To get rid of the data it shouldn't have, god nodes will regularly look for the first key in its data succeding its own position.
 				</p>
