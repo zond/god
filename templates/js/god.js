@@ -118,7 +118,7 @@ God = function() {
 		stage.update();
 
     if (that.last_meta_update > that.last_meta_redraw) {
-			if (that.node != null) {
+		  if (that.node != null) {
 				$("#node_json_addr").text(that.node.json_addr);
 				$("#node_gob_addr").text(that.node.gob_addr);
 				$("#node_pos").text(that.node.hexpos);
@@ -133,6 +133,11 @@ God = function() {
 		  if (a == addr) {
 			  that.node = that.node_by_addr[a];
 				that.last_meta_update = new Date().getTime();
+			  $("#node_container").css('display', 'block');
+			  $("#hide_node_container").click(function(e) {
+				  e.preventDefault();
+				  $("#node_container").css('display', 'none');
+				});
 			}
 		}
 	};
@@ -174,7 +179,6 @@ God = function() {
 						}
 						if (that.node == null) {
 							that.last_meta_update = new Date().getTime();
-						  that.node = newNode;
 						}
 					},
 					Comm: function(e) {

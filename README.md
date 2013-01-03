@@ -17,7 +17,6 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
 # TODO
 
-* Update architectural docs to further explain what the set operations do to be efficient.
 * Benchmark
 * Example app
  * Implementation

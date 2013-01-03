@@ -14,6 +14,7 @@
 	font-family: "Courier";
 }
 #node_container {
+	display: none;
 	float: left;
 	font-family: "Courier";
 }
