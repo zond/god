@@ -27,10 +27,10 @@
 				</ul>
 			</div>
 			<div class="span9">
-				<h1>god</h1>
+				<h1><i>god</i></h1>
 				<h2 id="overview">Overview</h2>
 				<p>
-				god is a scalable, performant, persistent in memory data structure server. It allows massively distributed applications to update and fetch common data in a structured and sorted format.
+				<i>god</i> is a scalable, performant, persistent in memory data structure server. It allows massively distributed applications to update and fetch common data in a structured and sorted format.
 				</p>
 				<p>
 				Its main inspirations are <a href="http://redis.io/">Redis</a> and <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a>.
@@ -49,26 +49,26 @@
 				<h3>Chord circle</h3>
 				<object class="illustration" data="chord-circle.svg" type="image/svg+xml"></object>
 				<p>
-				The namespace of god, as for the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a> project, is a conceptual circle where each actor, be it database node or data item, has a position. Usually the circle overflows at the maximum value for a selected hash function used to spread keys over the namespace.
+				The namespace of <i>god</i>, as for the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a> project, is a conceptual circle where each actor, be it database node or data item, has a position. Usually the circle overflows at the maximum value for a selected hash function used to spread keys over the namespace.
 				</p>
 				<h3>Murmur</h3>
 				<p>
-				The hash function used in god is <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a>, a fairly new and extremely fast hash function. Unlike many other hash functions it makes no cryptographical claims, but focuses solely on high speed and low collision distribution.
+				The hash function used in <i>god</i> is <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a>, a fairly new and extremely fast hash function. Unlike many other hash functions it makes no cryptographical claims, but focuses solely on high speed and low collision distribution.
 				</p>
 				<p>
-				god contains a slightly modified (only to let it compile in a C compiler) of the 128 bit, x64 version of <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a> wrapped in a thin layer of Go.
+				<i>god</i> contains a slightly modified (only to let it compile in a C compiler) version of the 128 bit, x64 <a href="http://code.google.com/p/smhasher/wiki/MurmurHash3">MurmurHash3</a> wrapped in a thin layer of Go.
 				</p>
 				<h3>Hashed vs non hashed keys</h3>
 				<p>
 				The main reason to hash keys before inserting them into the namespace is to avoid concentrating keys in a part of the circle, to facilitate letting all nodes share as equal an amount of data as possible.
 				</p>
 				<p>
-				However, since it could be very useful for users of a database to store ordered data, or to wilfully concentrate certain data on certain parts of the cluster, god does not force the user to hash the keys.
+				However, since it could be very useful for users of a database to store ordered data, or to wilfully concentrate certain data on certain parts of the cluster, <i>god</i> does not force the user to hash the keys.
 				</p>
 				<h3>Migrations</h3>
 				<object class="illustration" data="migrations.svg" type="image/svg+xml"></object>
 				<p>
-				Instead, the nodes in god are able to migrate along the circle to hand off data to one another when an imbalance is detected.
+				Instead, the nodes in <i>god</i> are able to migrate along the circle to hand off data to one another when an imbalance is detected.
 				</p>
 				<p>
 				This would allow, for example, data for a geographical region to be prefixed with a code, and making data with that prefix go on designated servers placed in the same geographical region. The cluster could also be configured so that all backups for data positioned in one region was positioned in other regions for greated safety in the face of disasters of different kinds.
@@ -83,7 +83,7 @@
 				To map keys to values, a mapping structure is needed. For infrastructural reasons (<a href="#synchronization">synchronization</a> and <a href="#cleaning">cleaning</a>) as well as for functionality of different kinds, we need a sorted mapping, and it has to be deterministically structured.
 				</p>
 				<p>
-				<a href="http://en.wikipedia.org/wiki/Radix_tree">Radix</a> trees have all these attributes, and are somewhat frugal when it comes to memory consumption due to the common parts of keys only being stored once. god uses <a href="http://en.wikipedia.org/wiki/Radix_tree">radix</a> trees for all data structures, each node has a tree containing a segment of the keyspace.
+				<a href="http://en.wikipedia.org/wiki/Radix_tree">Radix</a> trees have all these attributes, and are somewhat frugal when it comes to memory consumption due to the common parts of keys only being stored once. <i>god</i> uses <a href="http://en.wikipedia.org/wiki/Radix_tree">radix</a> trees for all data structures, each node has a tree containing a segment of the keyspace.
 				</p>
 				<p>
 				In the illustration to the right, nodes only contain the part of their key differing from the key of their parent, and the nodes marked red don't contain data at all but only contain common parts of keys for their children. Note that the root node contains the empty key, and in this case it actually has a value as well.
@@ -119,15 +119,15 @@
 				<object class="illustration" data="setops.svg" type="image/svg+xml"></object>
 				<h3>Operations</h3>
 				<p>
-				The sub trees in god can be used for various kinds of set operations: union, intersection, subtraction and xor. Note that xor does currently not follow the definition at <a href="http://en.wikipedia.org/wiki/Exclusive_or">http://en.wikipedia.org/wiki/Exclusive_or</a>, but instead matches only keys present in exactly one of the input sets.
+				The sub trees in <i>god</i> can be used for various kinds of set operations: union, intersection, subtraction and xor. Note that xor does currently not follow the definition at <a href="http://en.wikipedia.org/wiki/Exclusive_or">http://en.wikipedia.org/wiki/Exclusive_or</a>, but instead matches only keys present in exactly one of the input sets.
 				</p>
 				<p>
-				god includes a simple s-expression parser that parses these kinds of expressions. The code <code>(I (U set1 set2 set3) (U set4 set5 set6))</code>, for example, will calculate the intersection of the unions of set1-3 and set4-6.
+				<i>god</i> includes a simple s-expression parser that parses these kinds of expressions. The code <code>(I (U set1 set2 set3) (U set4 set5 set6))</code>, for example, will calculate the intersection of the unions of set1-3 and set4-6.
 				</p>
 				<h3>Complexity</h3>
 				<object class="illustration" data="skip-intersection.svg" type="image/svg+xml"></object>
 				<p>
-				Since all sets in god are both sorted and possible to skip through at logarithmic time, the set operations are usually efficient and take time depending on the logarithm of the size of the source sets.
+				Since all sets in <i>god</i> are both sorted and possible to skip through at logarithmic time, the set operations are usually efficient and take time depending on the logarithm of the size of the source sets.
 				</p>
 				<p>
 				This means that, instead of iterating through one set (in the intersection example) and skipping all keys not present in all other sets, we skip to the next value equal to or greater than the greatest value we looked at in the last iteration. This will let us skip through great patches of keyspace where there are no matches in one or more sets at the same time as guaranteeing that we find commonalities if there are any.
@@ -144,7 +144,7 @@
 				</p>
 				<h3>Encodings</h3>
 				<p>
-        To enable the merge operations to do more interesting things, and to simplify for users of god to store more interesting things than byte slices in the database, there are predefined encodings implemented for encoding integers, floats and bigints into byte slices.
+				To enable the merge operations to do more interesting things, and to simplify for users of <i>god</i> to store more interesting things than byte slices in the database, there are predefined encodings implemented for encoding integers, floats and bigints into byte slices.
 				</p>
 				<p>
 				If such an encoding is used, it is also possible to use more clever mergers, such as IntegerSum, FloatMul or BigIntAnd.
@@ -160,7 +160,7 @@
 				<object class="illustration" data="logfiles.svg" type="image/svg+xml"></object>
         <h3>Log files</h3>
 				<p>
-				god nodes stay persistent between restarts by always <a href="#synchronization">synchronizing</a> with sibling nodes. But when the entire cluster needs to be restarted, some kind of disk based persistence is needed.
+				<i>god</i> nodes stay persistent between restarts by always <a href="#synchronization">synchronizing</a> with sibling nodes. But when the entire cluster needs to be restarted, some kind of disk based persistence is needed.
 				</p>
 				<p>
 				For that purpose a log file based persistence engine logs all mutating operations (put, delete, clear, configure) performed by each node and streams them to disk.
@@ -173,10 +173,10 @@
 				To alleviate this, snapshot files can be created that contain the merged sum of all operations in a set of log files. Only the latest operation on each key in the snapshot is recorded to get rid of redundant operations.
 				</p>
 				<p>
-				god does this by reading the latest snapshot and all log files following it into a set of nested maps, overwriting and deleting the map data as new operations stream in from the log files. Then the map set is streamed into a snapshot file.</p>
+				<i>god</i> does this by reading the latest snapshot and all log files following it into a set of nested maps, overwriting and deleting the map data as new operations stream in from the log files. Then the map set is streamed into a snapshot file.</p>
 				<h3>Automatic snapshotting</h3>
 				<p>
-				To avoid cluttering the disk with huge log files containing redundant data, god always automatically creates new snapshots when the last log file grows too largs. This is done in a separate goroutine and thus does not have to take away from the performance of the node, but it will require extra memory to build the map set.
+				To avoid cluttering the disk with huge log files containing redundant data, <i>god</i> always automatically creates new snapshots when the last log file grows too largs. This is done in a separate goroutine and thus does not have to take away from the performance of the node, but it will require extra memory to build the map set.
 				</p>
 				<h2 id="routing">Routing</h2>
 				<object class="illustration" data="ping_notify.svg" type="image/svg+xml"></object>
@@ -205,7 +205,7 @@
 				</p>
 				<h3>Redundancy</h3>
 				<p>
-				To allow for a transparent failover, where the new owner of a set of data already has it available, god lets each node keep a backup of the data of a number of its predecessors.
+				To allow for a transparent failover, where the new owner of a set of data already has it available, <i>god</i> lets each node keep a backup of the data of a number of its predecessors.
 				</p>
 				<p>
 				If a node disappears, this will allow the cluster to stay in a valid state, since the new owner already has the backup (now master) copy of the data in its local storage.
@@ -213,7 +213,7 @@
 				<h2 id="timestamps">Timestamps</h2>
 				<h3>Latest write wins</h3>
 				<p>
-				Since god is intended to work with hundreds or even thousands of nodes, it is likely that some nodes will experience temporary outages or net splits. Since god does not have eventual consistency and versioned entries, a situation where the cluster is split in isolated parts still accessed by clients will lead to the rejoined cluster containing a mix of the latest writes for all rejoined parts.
+				Since <i>god</i> is intended to work with hundreds or even thousands of nodes, it is likely that some nodes will experience temporary outages or net splits. Since <i>god</i> does not have eventual consistency and versioned entries, a situation where the cluster is split in isolated parts still accessed by clients will lead to the rejoined cluster containing a mix of the latest writes for all rejoined parts.
 				</p>
 				<p>
 				However, as long as the disconnected parts of the cluster are not used for writing (being crashed, completely disconnected or just turned off), timestamps do a sufficient job of avoiding conflicts.
@@ -235,15 +235,15 @@
 				</p>
 				<h3>Time network</h3>
 				<p>
-				To make sure that the timestamps as far as possible reflect the actual sequence of events in the cluster, and avoid putting additional burdens on the operations part of things, god contains its own time network.
+				To make sure that the timestamps as far as possible reflect the actual sequence of events in the cluster, and avoid putting additional burdens on the operations part of things, <i>god</i> contains its own time network.
 				</p>
 				<p>
-				The time network in god is an extremely simple one, though, and makes no claim to knowing the real time at any point. It simply synchronizes clocks randomly across the cluster, and dilates time for each server so that they converge on as small a difference as possible.
+				The time network in <i>god</i> is an extremely simple one, though, and makes no claim to knowing the real time at any point. It simply synchronizes clocks randomly across the cluster, and dilates time for each server so that they converge on as small a difference as possible.
 				</p>
 				<h2 id="synchronization">Synchronization</h2>
 				<h3>Ensuring backups</h3>
 				<p>
-				To make sure that the data in god is always distributed the way it should be, with backups of each key segment on the nodes succeeding the first successor of the segment, each node regularly synchronizes the data it is responsible for with its successors.
+				To make sure that the data in <i>god</i> is always distributed the way it should be, with backups of each key segment on the nodes succeeding the first successor of the segment, each node regularly synchronizes the data it is responsible for with its successors.
 				</p>
 				<p>
 				This synchronization will compare contents and timestamps, and make sure that all nodes supposed to hold a segment will hold the same data, and that said data will be that having the latest timestamps.
@@ -251,7 +251,7 @@
 				<h3>Merkle trees</h3>
 				<object class="illustration" data="hash-tree.svg" type="image/svg+xml"></object>
 				<p>
-				To allow nodes to compare any segment of their database to each other without having to iterate through entire key sets, the <a href="http://en.wikipedia.org/wiki/Radix_tree">radix</a> trees in god also contain hashes of their sub trees, in essence turning them into <a href="http://en.wikipedia.org/wiki/Hash_tree">Merkle trees</a>.
+				To allow nodes to compare any segment of their database to each other without having to iterate through entire key sets, the <a href="http://en.wikipedia.org/wiki/Radix_tree">radix</a> trees in <i>god</i> also contain hashes of their sub trees, in essence turning them into <a href="http://en.wikipedia.org/wiki/Hash_tree">Merkle trees</a>.
 				</p>
 				<p>
 				This enables comparing two equal trees with a single byte slice comparison, and finding the differences in two unequal trees a matter of recursing down the child nodes themselves having differing hashes.
@@ -259,7 +259,7 @@
 				<h3>Cleaning</h3>
 				<object class="illustration" data="cleaning.svg" type="image/svg+xml"></object>
 				<p>
-				Having the data one should have is just half the work. To get rid of the data it shouldn't have, god nodes will regularly look for the first key in its data succeding its own position.
+				Having the data one should have is just half the work. To get rid of the data it shouldn't have, <i>god</i> nodes will regularly look for the first key in its data succeding its own position.
 				</p>
 				<p>
 				If said key is not between the predecessor of the node and the node itself, the node will start a synchronization of the segment between the misplaced key and its first successor. This synchronization will push this data to all nodes in the cluster that ought to have it (its immediate successor and its backup nodes).
