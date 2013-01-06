@@ -23,16 +23,16 @@ func RunMaster() {
 		Addr:   fmt.Sprintf("%v:%v", *ip, *port),
 		MaxKey: *maxKey,
 	}
-	for _, client := range clients {
+	for index, client := range clients {
 		if err = client.Call("Slave.Spin", command, &Nothing{}); err == nil {
-			fmt.Println(client, "is alive")
+			fmt.Println(flag.Args()[index], "is alive")
 		} else {
 			panic(err)
 		}
 	}
 	for index, client := range clients {
 		if err = client.Call("Slave.Wait", Nothing{}, &(rps[index])); err == nil {
-			fmt.Println(client, "peaked")
+			fmt.Println(flag.Args()[index], "peaked")
 		} else {
 			panic(err)
 		}
@@ -41,5 +41,5 @@ func RunMaster() {
 	for _, r := range rps {
 		sum += r
 	}
-	fmt.Println("Sum:", sum)
+	fmt.Println("Peaked at", sum, "rps")
 }
