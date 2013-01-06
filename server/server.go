@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/zond/god/common"
 	"github.com/zond/god/dhash"
+	"runtime"
 	"time"
 )
 
@@ -14,6 +15,7 @@ var joinIp = flag.String("joinIp", "", "IP address to join.")
 var joinPort = flag.Int("joinPort", 9191, "Port to join.")
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
 	s := dhash.NewNode(fmt.Sprintf("%v:%v", *ip, *port))
 	s.AddChangeListener(func(ring *common.Ring) bool {

@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net"
 	"net/rpc"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -36,6 +37,7 @@ type Slave struct {
 	addr   string
 	state  int32
 	client *client.Conn
+	wg     *sync.WaitGroup
 }
 
 func (self *Slave) switchState(expected, wanted int32) bool {
@@ -64,14 +66,30 @@ func (self *Slave) run() {
 			self.req = 0
 			self.start = time.Now()
 			go self.spinner()
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second)
+		} else {
+			fmt.Println("Peaked at", self.maxRps)
+			self.wg.Done()
+			return
 		}
 	}
+}
+
+func (self *Slave) Wait(x Nothing, rps *float64) error {
+	if self.hasState(started) {
+		self.wg.Wait()
+		self.switchState(started, stopped)
+		*rps = self.maxRps
+		return nil
+	}
+	return fmt.Errorf("%v is not started", self)
 }
 
 func (self *Slave) Spin(command SpinCommand, o *Nothing) error {
 	if self.switchState(stopped, started) {
 		fmt.Println("Spinning on ", command.Addr)
+		self.wg = new(sync.WaitGroup)
+		self.wg.Add(1)
 		self.maxRps = 0
 		self.client = client.MustConn(command.Addr)
 		self.maxKey = command.MaxKey
