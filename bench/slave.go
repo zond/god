@@ -76,6 +76,7 @@ func (self *Slave) run() {
 }
 
 func (self *Slave) Prepare(r [2]int64, x *Nothing) error {
+	self.client = client.MustConn(command.Addr)
 	var kv []byte
 	for i := r[0]; i < r[1]; i++ {
 		kv = murmur.HashInt64(i)
