@@ -17,7 +17,9 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
 # TODO
 
+* Test synchronization of large (>1e6) keysets
 * Benchmark
+ * Consecutively start 1-20 ec2 small instances and benchmark against eachs ize
 * Example app
  * Implementation
  * Documentation
