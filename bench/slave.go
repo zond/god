@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/zond/god/client"
-	"github.com/zond/god/common"
+	"github.com/zond/god/murmur"
 	"math/rand"
 	"net"
 	"net/rpc"
@@ -50,7 +50,7 @@ func (self *Slave) hasState(s int32) bool {
 func (self *Slave) spinner() {
 	var kv []byte
 	for self.hasState(started) {
-		kv = common.EncodeInt64(rand.Int63n(self.maxKey))
+		kv = murmur.HashInt64(rand.Int63n(self.maxKey))
 		self.client.Put(kv, kv)
 		atomic.AddInt64(&self.req, 1)
 	}
