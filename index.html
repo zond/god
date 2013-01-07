@@ -21,6 +21,7 @@
 					<li><a href="#setops">Set operations</a></li>
 					<li><a href="#persistence">Persistence</a></li>
 					<li><a href="#routing">Routing</a></li>
+					<li><a href="#connection">Connection</a></li>
 					<li><a href="#responsibility">Responsibility</a></li>
 					<li><a href="#timestamps">Timestamps</a></li>
 					<li><a href="#synchronization">Synchronization</a></li>
@@ -188,6 +189,18 @@
 				</p>
 				<p>
 				The predecessor will then clean its routing table by removing all nodes between its confirmed (being a notifier) predecessor and itself, so that nodes having been removed after a failed ping will not get reintroduced by a successor.
+				</p>
+				<h2 id="connection">Connection</h2>
+				<h3>net/rpc client</h3>
+				<p>
+				To make sure that the native go client fails as seldom as possible when the cluster configuration changes, the client has an entire routing table cached. Whenever an error occurs when doing an operation against a node, that node is removed from the routing table and a new complete table is fetched from a randomly selected node of those still in the table.
+				</p>
+				<p>
+				As even this scenario is troublesome, since it delays the current operation, <code>client.Conn#Start</code> triggers a periodic comparison of the routing table against randomly chosen nodes in the cluster, where any differences will cause the table to be downloaded again.
+				</p>
+				<h3>JSON/HTTP API</h3>
+				<p>
+				The JSON API is unfortunately not this clever, and any failover or error handling must be handled by the client code.
 				</p>
 				<h2 id="responsibility">Responsibility</h2>
 				<object class="illustration" data="backups.svg" type="image/svg+xml"></object>
