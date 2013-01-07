@@ -22,6 +22,11 @@ const (
 	started
 )
 
+type PrepareCommand struct {
+	Addr  string
+	Range [2]int64
+}
+
 type SpinCommand struct {
 	Addr   string
 	MaxKey int64
@@ -75,10 +80,10 @@ func (self *Slave) run() {
 	}
 }
 
-func (self *Slave) Prepare(r [2]int64, x *Nothing) error {
+func (self *Slave) Prepare(command PrepareCommand, x *Nothing) error {
 	self.client = client.MustConn(command.Addr)
 	var kv []byte
-	for i := r[0]; i < r[1]; i++ {
+	for i := command.Range[0]; i < command.Range[1]; i++ {
 		kv = murmur.HashInt64(i)
 		self.client.Put(kv, kv)
 	}
