@@ -28,8 +28,8 @@ func RunMaster() {
 		calls := make([]*rpc.Call, len(clients))
 		for index, client := range clients {
 			calls[index] = client.Go("Slave.Prepare", PrepareCommand{
-				Addr: command.Addr, 
-				Range: [2]int64{int64(index) * (*maxKey / int64(len(clients))), (int64(index) + 1) * (*maxKey / int64(len(clients))),
+				Addr:  command.Addr,
+				Range: [2]int64{int64(index) * (*maxKey / int64(len(clients))), (int64(index) + 1) * (*maxKey / int64(len(clients)))},
 			}, &Nothing{}, nil)
 		}
 		for _, call := range calls {
