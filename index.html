@@ -65,16 +65,8 @@
 				<p>
 				However, since it could be very useful for users of a database to store ordered data, or to wilfully concentrate certain data on certain parts of the cluster, <i>god</i> does not force the user to hash the keys.
 				</p>
-				<h3>Migrations</h3>
-				<object class="illustration" data="migrations.svg" type="image/svg+xml"></object>
 				<p>
 				Instead, the nodes in <i>god</i> are able to migrate along the circle to hand off data to one another when an imbalance is detected.
-				</p>
-				<p>
-				This would allow, for example, data for a geographical region to be prefixed with a code, and making data with that prefix go on designated servers placed in the same geographical region. The cluster could also be configured so that all backups for data positioned in one region was positioned in other regions for greated safety in the face of disasters of different kinds.
-				</p>
-				<p>
-				Currently there is no option to either limit node migrations (to force nodes in one datacenter to stay in one part of the namespace), or to force backups to live on nodes in other datacenters, but it would be fairly easy, conceptually, to add in a future version if the need arose.
 				</p>
 				<h2 id="structure">Structure</h2>
 				<h3>Radix trees</h3>
@@ -210,6 +202,20 @@
 				<p>
 				If a node disappears, this will allow the cluster to stay in a valid state, since the new owner already has the backup (now master) copy of the data in its local storage.
 				</p>
+				<h3>Migrations</h3>
+				<object class="illustration" data="migrations.svg" type="image/svg+xml"></object>
+				<p>
+				To enable efficient separation of responsibility without forcing all keys to be hashed, <i>god</i> makes nodes migrate along the namespace to balance their responsibilities between themselves.
+				</p>
+				<p>
+				All nodes in the cluster periodically ask their successors about the amount of data they are responsible for, and if the successor is responsible for too much data compared to the asking node, the asking node will move backwards in the namespace to hand off responsibility for a set of keys to the successor. 
+				</p>
+				<p>
+				Not forcing hashed keys would allow, for example, data for a geographical region to be prefixed with a code, and making data with that prefix go on designated servers placed in the same geographical region. The cluster could also be configured so that all backups for data positioned in one region was positioned in other regions for greated safety in the face of disasters of different kinds.
+				</p>
+				<p>
+				Currently there is no option to either limit node migrations (to force nodes in one datacenter to stay in one part of the namespace), or to force backups to live on nodes in other datacenters, but it would be conceptually fairly easy to add in a future version if the need arose.
+				</p>
 				<h2 id="timestamps">Timestamps</h2>
 				<h3>Latest write wins</h3>
 				<p>
@@ -238,7 +244,7 @@
 				To make sure that the timestamps as far as possible reflect the actual sequence of events in the cluster, and avoid putting additional burdens on the operations part of things, <i>god</i> contains its own time network.
 				</p>
 				<p>
-				The time network in <i>god</i> is an extremely simple one, though, and makes no claim to knowing the real time at any point. It simply synchronizes clocks randomly across the cluster, and dilates time for each server so that they converge on as small a difference as possible.
+				The time network in <i>god</i> is an extremely simple one, though, and makes no claim to knowing the real time at any point. It simply synchronizes clocks randomly across the cluster, and for each node updates an offset to the local cpu clock so that they converge on as small a difference as possible.
 				</p>
 				<h2 id="synchronization">Synchronization</h2>
 				<h3>Ensuring backups</h3>
