@@ -75,6 +75,15 @@ func (self *Slave) run() {
 	}
 }
 
+func (self *Slave) Prepare(r [2]int64, x *Nothing) error {
+	var kv []byte
+	for i := r[0]; i < r[1]; i++ {
+		kv = murmur.HashInt64(i)
+		self.client.Put(kv, kv)
+	}
+	return nil
+}
+
 func (self *Slave) Wait(x Nothing, rps *float64) error {
 	if self.hasState(started) {
 		self.wg.Wait()
