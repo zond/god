@@ -9,7 +9,7 @@ import (
 func RunMaster() {
 	var ip = flag.String("ip", "127.0.0.1", "IP address to find a node at")
 	var port = flag.Int("port", 9191, "Port to find a node at")
-	var maxKey = flag.Int64("maxKey", 1000000, "Biggest key as int64 converted to []byte using common.EncodeInt64")
+	var maxKey = flag.Int64("maxKey", 10000, "Biggest key as int64 converted to []byte using common.EncodeInt64")
 	var prepare = flag.Bool("prepare", false, "Whether to make sure that all keys within the maxKey range are set before starting")
 	flag.Parse()
 	clients := make([]*rpc.Client, len(flag.Args()))
