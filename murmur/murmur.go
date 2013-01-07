@@ -2,6 +2,7 @@ package murmur
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"unsafe"
 )
@@ -30,12 +31,20 @@ func HashString(s string) []byte {
 
 // HashInt will return the hash for the provided int.
 func HashInt(i int) []byte {
-	return NewString(fmt.Sprint(i)).Get()
+	b := new(bytes.Buffer)
+	if err := binary.Write(b, binary.BigEndian, i); err != nil {
+		panic(err)
+	}
+	return NewBytes(b.Bytes()).Get()
 }
 
 // HashInt64 will return the hash for the provided int64.
 func HashInt64(i int64) []byte {
-	return NewString(fmt.Sprint(i)).Get()
+	b := new(bytes.Buffer)
+	if err := binary.Write(b, binary.BigEndian, i); err != nil {
+		panic(err)
+	}
+	return NewBytes(b.Bytes()).Get()
 }
 
 // HashBytes will return the hash for the provided byte slice.
