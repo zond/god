@@ -50,7 +50,7 @@
 				This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore.
 				</p>
 				<p>
-				To try it out right now, <code>go get github.com/zond/god/server</code>, then run <code>server</code> and browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
+				To try it out right now, <code>go get github.com/zond/god/god_server</code>, then run <code>god_server</code> and browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
 				</p>
 				<p>
 				For API documentation, go to <a href="http://go.pkgdoc.org/github.com/zond/god">http://go.pkgdoc.org/github.com/zond/god</a>.
@@ -60,7 +60,22 @@
 				</p>
 				<h2 id="operations">Operations</h2>
 				<p>
-				Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+				<i>god</i> is built to be simple to use, and as such has no dependencies for building apart from the Go standard library. For running, all you need is one statically linked binary.
+				</p>
+				<p>
+				If you have a working <a href="http://golang.org/doc/install">Go</a> environment installed (specifically a writable <code>$GOPATH</code>), you just run <code>go get github.com/zond/god/god_server</code>. This will download, compile and install <i>god</i> and all its dependencies. After this you will find <code>god_server</code> in <code>$GOPATH/bin</code>. To start a server, just run <code>god_server -verbose=true</code>. Other option can be listed if you run <code>god_server -help</code>.
+				</p>
+				<p>
+				Since there are a plethora of ways to daemonize such a program, and since Go doesn't currently contain its own way of doing it, daemonizing this binary is left to creative ops people out there.
+				</p>
+				<p>
+				To make your server join an existing cluster/server, just run <code>god_server -joinIp HOST/IP</code>. It will default to using port 9191, but using the switch <code>-port</code> can force it to try another port.
+				</p>
+				<p>
+				To make it easy to use, <i>god</i> always exports its interface on both Go <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON. The HTTP/JSON interface is always exported on the next port after the main one where the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> interface is exported. By default this is port 9192. If you started your server by running <code>god_server -verbose=true</code> as suggested above, you will find a small administrative/monitoring tool at <a href="http://localhost:9192">http://localhost:9192</a>.
+				</p>
+				<p>
+				The server only listens to the default network interface for <code>localhost</code> by default. To make it listen to (and advertise itself to the cluster on) another network interface, use the switch <code>-ip HOST/IP</code>.
 				</p>
 				<h2 id="clients">Clients</h2>
 				<p>
