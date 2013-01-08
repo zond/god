@@ -33,6 +33,7 @@
 					<li><a href="#responsibility">Responsibility</a></li>
 					<li><a href="#timestamps">Timestamps</a></li>
 					<li><a href="#synchronization">Synchronization</a></li>
+					<li><a href="#consequences">Consequences</a></li>
 				</ul>
 			</div>
 			<div class="span9">
@@ -297,6 +298,27 @@
 				</p>
 				<p>
 				The last synchronization in this cleanup operation will also remove, without leaving tombstones, the data from the cleaning node.
+				</p>
+				<h2 id="consequences">Consequences</h2>
+				<h3>Node joins</h3>
+				<object class="illustration" data="node-join.svg" type="image/svg+xml"></object>
+				<p>
+				When a node joins the network, it will immediately start notifying its successor of its presence. The successor in its turn will tell its previous predecessor (when it notifies the successor) of the new node, which will cause the old predecessor to start notifying the new node instead. The predecessor node will now deliver a new hash of the routing table to its predecessor, which will request a new routing table, and in its turn deliver it backwards.
+				</p>
+				<p>
+				The synchronization protocols will force N predecessors of the new node to start comparing the parts of their trees that they own with the same part of the tree of the new node, and start pushing data to it so that it gets a complete set of all data it should backup.
+				</p>
+				<p>
+				At the same time, the new node will start comparing the part of its tree that it owns with the same part of the trees of its N successors, which will make it pull all the data it is responsible for from them. The last node that used to be responsible for backing up the data of the new node will also notice that is now holds data it should not, and start pushing it to the new node and cleaning it from its own tree when done.
+				</P>
+				<p>
+				Note that the illustration does not show all these operations, since it would make the image completely unintelligble.
+				</p>
+				<h3>Leaving nodes</h3>
+				<p>
+				</p>
+				<h3>Returning nodes</h3>
+				<p>
 				</p>
 			</div>
 		</div>

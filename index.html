@@ -5,6 +5,9 @@
 		<script src="http://code.jquery.com/jquery-latest.js"></script>
 		<script src="js/bootstrap.min.js"></script>
 		<style type="text/css">
+			img.illustration {
+				width: 50%;
+			}
 			.illustration {
 				float: right;
 			}
@@ -71,6 +74,7 @@
 				<p>
 				To make your server join an existing cluster/server, just run <code>god_server -joinIp HOST/IP</code>. It will default to using port 9191, but using the switch <code>-port</code> can force it to try another port.
 				</p>
+				<img class="illustration" src="web-gui.png"></object>
 				<p>
 				To make it easy to use, <i>god</i> always exports its interface on both Go <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON. The HTTP/JSON interface is always exported on the next port after the main one where the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> interface is exported. By default this is port 9192. If you started your server by running <code>god_server -verbose=true</code> as suggested above, you will find a small administrative/monitoring tool at <a href="http://localhost:9192">http://localhost:9192</a>.
 				</p>
@@ -79,11 +83,20 @@
 				</p>
 				<h2 id="clients">Clients</h2>
 				<p>
-				Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+				As mentioned there are two APIs for <i>god</i>, <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON.
+				</p>
+				<p>
+				Using the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> API is as simple as <code>go get github.com/zond/god/client</code>, and then <code>import "github.com/zond/god/client"</code>. See <a href="http://godoc.org/github.com/zond/god/client">http://godoc.org/github.com/zond/god/client</a> for godoc generated documentation.
+				</p>
+				<p>
+				To simplify trying it out from the command line, there is also a command line interface available. To install it, run <code>go get github.com/zond/god/god_cli</code>, and then run <code>god_cli</code>. Documentation for the command format for this tool can be found at <a href="https://github.com/zond/god/tree/master/god_cli">https://github.com/zond/god/tree/master/god_cli</a>.
+				</p>
+				<p>
+				Since the HTTP/JSON API is designed to be as simple as possible to interact with from any type of client system, there isn't really much to say about how to use it. Examples for the different commands found in the web monitor at <a href="http://localhost:9192">http://localhost:9192</a> (if the server is started via <code>god_server</code> with default options) along with the generated documentation at <a href="http://godoc.org/github.com/zond/god/client">http://godoc.org/github.com/zond/god/client</a> are likely the best way to learn and explore.
 				</p>
 				<h2 id="bytestorage">Storing bytes</h2>
 				<p>
-				Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+				The simplest and most obvious way to use <i>god</i> is to store bytes in it. Like all content in <i>god</i> nodes, the bytes you put in the system will be stored in RAM in one or more (if you have a cluster, which is really recommended) servers. To store byte arrays in the database, use the <b>put</b> command, either via <code>client.Conn#Put</code> or <code>POST /rpc/DHash.Put</code>.
 				</p>
 				<h2 id="users">Users</h2>
 				<p>
