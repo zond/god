@@ -7,7 +7,7 @@ A simple command line interface to http://github.com/zond/god/client to try out 
 
 Install with `go get`:
 
-    go get github.com/zond/god/cli
+    go get github.com/zond/god/god_cli
 
 Then run from the command line:
 
@@ -26,4 +26,4 @@ It is one of:
 
 If `COMMAND` is ommitted, cli will display the address and position of all nodes in the cluster.
 
-The implemented `COMMAND`s are listed in https://github.com/zond/god/blob/master/cli/god_cli.go#L95 and descriptions about them can be found at http://godoc.org/github.com/zond/god/client.
+The implemented `COMMAND`s are listed in https://github.com/zond/god/blob/master/god_cli/god_cli.go#L95 and descriptions about them can be found at http://godoc.org/github.com/zond/god/client.
