@@ -316,9 +316,20 @@
 				</p>
 				<h3>Leaving nodes</h3>
 				<p>
+				When a node leaves the network its predecessor and successor will notice when the node stops responding to pings and notifications. This will cause them to remove the node from their routing tables, and start propagating the new tables backwards throught the ring.
+				</p>
+				<p>
+				The successor of the lost node will now be responsible for the namespace the lost node had, and since it already has the backup of this namespace clients will be able to continue accessing the data without interruption. It will also start synchronizing said namespace with its N successors, to make sure there are enough backups.
 				</p>
 				<h3>Returning nodes</h3>
 				<p>
+				As a former member of the cluster returns to the system, it may have old keys (either deleted or changed in the current cluster), and it will try to synchronize them with the rest of the cluster. But since the timestamps of the changed keys will be older than in the live cluster, they will be overwritten by more current data.
+				</p>
+				<p>
+        Since the trees in <i>god</i> lazily remove tombstones after 24 hours, operations should take care to never let nodes having been disconnected for more than 24 hours reconnect again.
+				</p>
+				<p>
+				Other than these time synchronization issues, returning nodes are treated the same as joining nodes.
 				</p>
 			</div>
 		</div>
