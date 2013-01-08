@@ -11,7 +11,7 @@ Its main inspirations are Redis and Chord/DHash. Like Redis it focuses on perfor
 
 # Documents
 
-Architectural overview: http://zond.github.com/god/
+HTML documentation in progress: http://zond.github.com/god/
 
 godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
