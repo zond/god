@@ -7,7 +7,7 @@ Its main inspirations are Redis and Chord/DHash. Like Redis it focuses on perfor
 
 # Try it out
 
-<code>go get github.com/zond/god/server</code>, run <code>server</code>, browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
+<code>go get github.com/zond/god/server</code>, run <code>god_server</code>, browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
 
 # Documents
 

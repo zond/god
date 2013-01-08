@@ -11,7 +11,7 @@ Install with `go get`:
 
 Then run from the command line:
 
-    cli [-ip 127.0.0.1] [-port 9191] [-enc string] COMMAND
+    god_cli [-ip 127.0.0.1] [-port 9191] [-enc string] COMMAND
 
 The `-ip` and `-port` options are, not surprisingly, the address and port of a node in the database cluster.
 
@@ -26,4 +26,4 @@ It is one of:
 
 If `COMMAND` is ommitted, cli will display the address and position of all nodes in the cluster.
 
-The implemented `COMMAND`s are listed in https://github.com/zond/god/blob/master/cli/cli.go#L95 and descriptions about them can be found at http://godoc.org/github.com/zond/god/client.
+The implemented `COMMAND`s are listed in https://github.com/zond/god/blob/master/cli/god_cli.go#L95 and descriptions about them can be found at http://godoc.org/github.com/zond/god/client.
