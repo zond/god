@@ -12,7 +12,7 @@
 				float: right;
 			}
 		</style>
-		<title>Go Database!</title>
+		<title>Go Database! Docs</title>
 	</head>
 	<body data-spy="scroll" data-target="#sidebar">
 		<div class="row">
@@ -100,8 +100,37 @@
 				</p>
 				<h2 id="users">Users</h2>
 				<p>
-				Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+				A trivial example would be to store application users in <i>god</i>. Here is a bit of example Go code that would store a user object:
 				</p>
+				<pre class="prettyprint">
+conn := client.MustConn("localhost:9191")
+user := User{
+ Email: email,
+ Password: crypt(password),
+ Name: name,
+}
+if bytes, err := json.Marshal(user); err != nil {
+ panic(err)
+} else {
+ conn.Put(murmur.HashString(user.Email), bytes)
+}
+				</pre>
+				<p>
+				And here is a bit of JavaScript doing the same thing against the JSON API:
+				</p>
+				<pre class="prettyprint">
+$.ajax('/rpc/DHash.Put', {
+  type: 'POST',
+  contentType: 'application/json; charset=UTF-8',
+  data: JSON.stringify({
+    Key: $.base64.encode(email),
+    Sync: false,
+    Value: $.base64.encode(JSON.stringify({Email: email, Password: crypt(password), Name: name})),
+  }),
+  success: callback,
+  dataType: 'json',
+});
+				</pre>
 				<h2 id="structstorage">Storing structures</h2>
 				<p>
 				Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
