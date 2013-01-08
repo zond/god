@@ -141,43 +141,6 @@ func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
 	}
 	panic("Shouldn't happen")
 }
-func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int) (result int) {
-	prefix = append(prefix, self.segment...)
-	m := len(prefix)
-	if m > len(min) {
-		m = len(min)
-	}
-	if m > len(max) {
-		m = len(max)
-	}
-	if (min == nil || nComp(prefix[:m], min[:m]) > 0) && (max == nil || nComp(prefix[:m], max[:m]) < 0) {
-		if use == 0 {
-			result += self.realSize
-		} else {
-			if use&byteValue != 0 {
-				result += self.byteSize
-			}
-			if use&treeValue != 0 {
-				result += self.treeSize
-			}
-		}
-		return
-	}
-	if !self.empty && (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
-		if use == 0 || self.use&use&byteValue != 0 {
-			result++
-		}
-		if use == 0 || self.use&use&treeValue != 0 {
-			result += self.treeValue.Size()
-		}
-	}
-	for _, child := range self.children {
-		if child != nil {
-			result += child.sizeBetween(prefix, min, max, mincmp, maxcmp, use)
-		}
-	}
-	return
-}
 func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index int, existed int) {
 	beyond_self := false
 	beyond_segment := false
