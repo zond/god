@@ -17,7 +17,6 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
 # TODO
 
-* Test synchronization of large (>1e6) keysets
 * Docs
  * Add a user centric document describing a couple of typical uses and how to perform them with the go/json clients
  * Add examples of how the routing and synchronization make data persist between node parts/joins
