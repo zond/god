@@ -437,7 +437,7 @@ func (self JSONClient) Get(key []byte) (value []byte, existed bool) {
 	return result.Value, result.Exists
 }
 func (self JSONClient) SubSize(key []byte) (result int) {
-	self.call("SubSize", key, &result)
+	self.call("SubSize", KeyReq{Key: key}, &result)
 	return result
 }
 func (self JSONClient) Size() (result int) {
