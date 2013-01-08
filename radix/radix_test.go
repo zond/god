@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/zond/god/common"
 	"github.com/zond/god/murmur"
+	"math/big"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -388,18 +389,20 @@ func TestSyncRandomLimits(t *testing.T) {
 			if fromIndex != toIndex {
 				fromKey = keys[fromIndex]
 				toKey = keys[toIndex]
-				tree2 = NewTree()
-				tree1.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
-					if common.BetweenIE(key, fromKey, toKey) {
-						tree2.Put(key, byteValue, 1)
+				if bytes.Compare(fromKey, toKey) < 0 {
+					tree2 = NewTree()
+					tree1.Each(func(key []byte, byteValue []byte, timestamp int64) bool {
+						if common.BetweenIE(key, fromKey, toKey) {
+							tree2.Put(key, byteValue, 1)
+						}
+						return true
+					})
+					tree3 = NewTree()
+					s = NewSync(tree1, tree3).From(fromKey).To(toKey)
+					s.Run()
+					if !reflect.DeepEqual(tree3, tree2) {
+						t.Errorf("when syncing from %v to %v, %v and %v have hashes\n%v\n%v\nand they should be equal!", common.HexEncode(fromKey), common.HexEncode(toKey), tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
 					}
-					return true
-				})
-				tree3 = NewTree()
-				s = NewSync(tree1, tree3).From(fromKey).To(toKey)
-				s.Run()
-				if !reflect.DeepEqual(tree3, tree2) {
-					t.Errorf("when syncing from %v to %v, %v and %v have hashes\n%v\n%v\nand they should be equal!", common.HexEncode(fromKey), common.HexEncode(toKey), tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
 				}
 			}
 		}
@@ -1042,10 +1045,8 @@ func BenchmarkTreeSync100000_1000(b *testing.B) {
 	benchTreeSync(b, 100000, 1000)
 }
 
-func benchTree(b *testing.B, n int, put, get bool) {
+func fillBenchTree(b *testing.B, n int) {
 	b.StopTimer()
-	oldprocs := runtime.GOMAXPROCS(runtime.NumCPU())
-	defer runtime.GOMAXPROCS(oldprocs)
 	for len(benchmarkTestKeys) < n {
 		benchmarkTestKeys = append(benchmarkTestKeys, murmur.HashString(fmt.Sprint(len(benchmarkTestKeys))))
 		benchmarkTestValues = append(benchmarkTestValues, []byte(fmt.Sprint(len(benchmarkTestValues))))
@@ -1053,6 +1054,14 @@ func benchTree(b *testing.B, n int, put, get bool) {
 	for benchmarkTestTree.Size() < n {
 		benchmarkTestTree.Put(benchmarkTestKeys[benchmarkTestTree.Size()], benchmarkTestValues[benchmarkTestTree.Size()], 1)
 	}
+	b.StartTimer()
+}
+
+func benchTree(b *testing.B, n int, put, get bool) {
+	fillBenchTree(b, n)
+	b.StopTimer()
+	oldprocs := runtime.GOMAXPROCS(runtime.NumCPU())
+	defer runtime.GOMAXPROCS(oldprocs)
 	var keys [][]byte
 	var vals [][]byte
 	for i := 0; i < b.N; i++ {
@@ -1123,6 +1132,30 @@ func BenchmarkTreePut1000000(b *testing.B) {
 
 func BenchmarkTreeGet1000000(b *testing.B) {
 	benchTree(b, 1000000, false, true)
+}
+
+func BenchmarkTreeRealSizeBetween0_8_100000(b *testing.B) {
+	fillBenchTree(b, 100000)
+	max := new(big.Int).Div(new(big.Int).Lsh(big.NewInt(1), murmur.Size*8), big.NewInt(2))
+	for i := 0; i < b.N; i++ {
+		benchmarkTestTree.RealSizeBetween(nil, max.Bytes(), true, false)
+	}
+}
+
+func BenchmarkTreeRealSizeBetween8_0_100000(b *testing.B) {
+	fillBenchTree(b, 100000)
+	max := new(big.Int).Div(new(big.Int).Lsh(big.NewInt(1), murmur.Size*8), big.NewInt(2))
+	for i := 0; i < b.N; i++ {
+		benchmarkTestTree.RealSizeBetween(max.Bytes(), nil, true, false)
+	}
+}
+
+func BenchmarkTreeNextMarkerIndex1000000(b *testing.B) {
+	fillBenchTree(b, 100000)
+	s := benchmarkTestTree.RealSize()
+	for i := 0; i < b.N; i++ {
+		benchmarkTestTree.NextMarkerIndex(int(rand.Int31n(int32(s))))
+	}
 }
 
 func BenchmarkTreeMirrorPut10(b *testing.B) {
