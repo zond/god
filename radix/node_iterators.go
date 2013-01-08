@@ -48,14 +48,15 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int
 				childKey := make([]Nibble, len(prefix)+len(child.segment))
 				copy(childKey, prefix)
 				copy(childKey[len(prefix):], child.segment)
-				m := len(childKey)
-				if m > len(min) {
-					m = len(min)
+				mmi := len(childKey)
+				if mmi > len(min) {
+					mmi = len(min)
 				}
-				if m > len(max) {
-					m = len(max)
+				mma := len(childKey)
+				if mma > len(max) {
+					mma = len(max)
 				}
-				if (min == nil || nComp(childKey[:m], min[:m]) > -1) && (max == nil || nComp(childKey[:m], max[:m]) < 1) {
+				if (min == nil || nComp(childKey[:mmi], min[:mmi]) > -1) && (max == nil || nComp(childKey[:mma], max[:mma]) < 1) {
 					cont = child.eachBetween(prefix, min, max, mincmp, maxcmp, use, f)
 				}
 				if !cont {
@@ -76,14 +77,15 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, 
 			childKey := make([]Nibble, len(prefix)+len(child.segment))
 			copy(childKey, prefix)
 			copy(childKey[len(prefix):], child.segment)
-			m := len(childKey)
-			if m > len(min) {
-				m = len(min)
+			mmi := len(childKey)
+			if mmi > len(min) {
+				mmi = len(min)
 			}
-			if m > len(max) {
-				m = len(max)
+			mma := len(childKey)
+			if mma > len(max) {
+				mma = len(max)
 			}
-			if (min == nil || nComp(childKey[:m], min[:m]) > -1) && (max == nil || nComp(childKey[:m], max[:m]) < 1) {
+			if (min == nil || nComp(childKey[:mmi], min[:mmi]) > -1) && (max == nil || nComp(childKey[:mma], max[:mma]) < 1) {
 				cont = child.reverseEachBetween(prefix, min, max, mincmp, maxcmp, use, f)
 			}
 			if !cont {
@@ -94,6 +96,52 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, 
 	if cont {
 		if !self.empty && (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
 			cont = f(Stitch(prefix), self.byteValue, self.treeValue, self.use, self.timestamp)
+		}
+	}
+	return
+}
+
+func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int) (result int) {
+	prefix = append(prefix, self.segment...)
+	if !self.empty && (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
+		if use == 0 || self.use&use&byteValue != 0 {
+			result++
+		}
+		if use == 0 || self.use&use&treeValue != 0 {
+			result += self.treeValue.Size()
+		}
+	}
+	for _, child := range self.children {
+		if child != nil {
+			childKey := make([]Nibble, len(prefix)+len(child.segment))
+			copy(childKey, prefix)
+			copy(childKey[len(prefix):], child.segment)
+			mmi := len(childKey)
+			if mmi > len(min) {
+				mmi = len(min)
+			}
+			mma := len(childKey)
+			if mma > len(max) {
+				mma = len(max)
+			}
+			mires := nComp(childKey[:mmi], min[:mmi])
+			mares := nComp(childKey[:mma], max[:mma])
+			if (min == nil || mires > -1) && (max == nil || mares < 1) {
+				if (min == nil || mires > 0) && (max == nil || mares < 0) {
+					if use == 0 {
+						result += child.realSize
+					} else {
+						if use&byteValue != 0 {
+							result += child.byteSize
+						}
+						if use&treeValue != 0 {
+							result += child.treeSize
+						}
+					}
+				} else {
+					result += child.sizeBetween(prefix, min, max, mincmp, maxcmp, use)
+				}
+			}
 		}
 	}
 	return
