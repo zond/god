@@ -9,16 +9,24 @@ import (
 	"time"
 )
 
+const (
+	address = "address"
+)
+
 var ip = flag.String("ip", "127.0.0.1", "IP address to listen to.")
 var port = flag.Int("port", 9191, "Port to listen to for net/rpc connections. The next port will be used for the HTTP service.")
 var joinIp = flag.String("joinIp", "", "IP address to join.")
 var joinPort = flag.Int("joinPort", 9191, "Port to join.")
 var verbose = flag.Bool("verbose", false, "Whether the server should be log verbosely to the console.")
+var dir = flag.String("dir", address, "Where to store logfiles and snapshots. Defaults to a directory named after the listening ip/port.")
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
-	s := dhash.NewNode(fmt.Sprintf("%v:%v", *ip, *port))
+	if *dir == address {
+		*dir = fmt.Sprintf("%v:%v", *ip, *port)
+	}
+	s := dhash.NewNodeDir(fmt.Sprintf("%v:%v", *ip, *port), *dir)
 	if *verbose {
 		s.AddChangeListener(func(ring *common.Ring) bool {
 			fmt.Println(s.Describe())

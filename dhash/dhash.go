@@ -76,8 +76,12 @@ type Node struct {
 	tree             *radix.Tree
 }
 
+func NewNode(addr string) *Node {
+	return NewNodeDir(addr, addr)
+}
+
 // NewNode will return a dhash.Node publishing itself on the given address.
-func NewNode(addr string) (result *Node) {
+func NewNodeDir(addr, dir string) (result *Node) {
 	result = &Node{
 		node:          discord.NewNode(addr),
 		lock:          new(sync.RWMutex),
@@ -101,7 +105,7 @@ func NewNode(addr string) (result *Node) {
 		return true
 	})
 	result.timer = timenet.NewTimer((*dhashPeerProducer)(result))
-	result.tree = radix.NewTreeTimer(result.timer).Log(addr).Restore()
+	result.tree = radix.NewTreeTimer(result.timer).Log(dir).Restore()
 	result.node.Export("Timenet", (*timerServer)(result.timer))
 	result.node.Export("DHash", (*dhashServer)(result))
 	result.node.Export("HashTree", (*hashTreeServer)(result))
