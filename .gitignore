@@ -31,7 +31,7 @@ radix/profile/memprofile
 radix/profile/cpuprofile
 radix/profile/profile
 .*.swp
-cli/cli
+god_cli/god_cli
 persistence/test*
 radix/benchmarklogs
 127.0.0.1:*

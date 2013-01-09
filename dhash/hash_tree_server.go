@@ -19,10 +19,12 @@ type HashTreeItem struct {
 type hashTreeServer Node
 
 func (self *hashTreeServer) Configure(conf common.Conf, x *int) error {
+	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
 	(*Node)(self).tree.Configure(conf.Data, conf.Timestamp)
 	return nil
 }
 func (self *hashTreeServer) SubConfigure(conf common.Conf, x *int) error {
+	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
 	(*Node)(self).tree.SubConfigure(conf.TreeKey, conf.Data, conf.Timestamp)
 	return nil
 }
@@ -35,6 +37,7 @@ func (self *hashTreeServer) Finger(key []radix.Nibble, result *radix.Print) erro
 	return nil
 }
 func (self *hashTreeServer) GetTimestamp(key []radix.Nibble, result *HashTreeItem) error {
+	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
 	*result = HashTreeItem{Key: key}
 	result.Value, result.Timestamp, result.Exists = (*Node)(self).tree.GetTimestamp(key)
 	return nil
@@ -54,6 +57,7 @@ func (self *hashTreeServer) SubFinger(data HashTreeItem, result *radix.Print) er
 	return nil
 }
 func (self *hashTreeServer) SubGetTimestamp(data HashTreeItem, result *HashTreeItem) error {
+	atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
 	*result = data
 	result.Value, result.Timestamp, result.Exists = (*Node)(self).tree.SubGetTimestamp(data.Key, data.SubKey)
 	return nil

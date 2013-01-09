@@ -3,8 +3,6 @@ package dhash
 import (
 	"github.com/zond/god/common"
 	"github.com/zond/god/radix"
-	"sync/atomic"
-	"time"
 )
 
 type remoteHashTree struct {
@@ -62,7 +60,6 @@ func (self remoteHashTree) GetTimestamp(key []radix.Nibble) (value []byte, times
 	return
 }
 func (self remoteHashTree) PutTimestamp(key []radix.Nibble, value []byte, present bool, expected, timestamp int64) (changed bool) {
-	atomic.StoreInt64(&self.node.lastSync, time.Now().UnixNano())
 	data := HashTreeItem{
 		Key:       key,
 		Value:     value,
@@ -83,7 +80,6 @@ func (self remoteHashTree) PutTimestamp(key []radix.Nibble, value []byte, presen
 	return
 }
 func (self remoteHashTree) DelTimestamp(key []radix.Nibble, expected int64) (changed bool) {
-	atomic.StoreInt64(&self.node.lastSync, time.Now().UnixNano())
 	data := HashTreeItem{
 		Key:      key,
 		Expected: expected,
@@ -119,7 +115,6 @@ func (self remoteHashTree) SubGetTimestamp(key, subKey []radix.Nibble) (value []
 	return
 }
 func (self remoteHashTree) SubPutTimestamp(key, subKey []radix.Nibble, value []byte, present bool, subExpected, subTimestamp int64) (changed bool) {
-	atomic.StoreInt64(&self.node.lastSync, time.Now().UnixNano())
 	data := HashTreeItem{
 		Key:       key,
 		SubKey:    subKey,
@@ -142,7 +137,6 @@ func (self remoteHashTree) SubPutTimestamp(key, subKey []radix.Nibble, value []b
 	return
 }
 func (self remoteHashTree) SubDelTimestamp(key, subKey []radix.Nibble, subExpected int64) (changed bool) {
-	atomic.StoreInt64(&self.node.lastSync, time.Now().UnixNano())
 	data := HashTreeItem{
 		Key:      key,
 		SubKey:   subKey,
