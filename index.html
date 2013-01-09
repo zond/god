@@ -119,7 +119,7 @@ if bytes, err := json.Marshal(user); err != nil {
 }
 				</pre>
 				<p>
-				And here is a bit of JavaScript doing the same thing against the JSON API:
+				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
 				<pre class="prettyprint">
 $.ajax('/rpc/DHash.Put', {
@@ -146,10 +146,23 @@ $.ajax('/rpc/DHash.Put', {
         </p>
 				<h2 id="followers">Followers</h2>
 				<p>
-				The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the friends of a user:
+				The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the followers of a user:
 				</p>
 				<pre class="prettyprint">
-				... bla bla
+conn := client.MustConn("localhost:9191")
+key := murmur.HashString(fmt.Sprintf("%v_followers"))
+conn.SubPut([]byte(key, murmur.HashString(friend1.Email), common.EncodeInt64(time.Now().UnixNano()))
+conn.SubPut([]byte(key, murmur.HashString(friend2.Email), common.EncodeInt64(time.Now().UnixNano()))
+conn.SubPut([]byte(key, murmur.HashString(friend3.Email), common.EncodeInt64(time.Now().UnixNano()))
+fmt.Println("my oldest friend is", conn.SliceLen(key, nil, true, 1)[0])
+fmt.Println("my newest 2 friends are", conn.ReverseSliceLen(key, nil, true, 2))
+				</pre>
+				<p>
+				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API.
+				</p>
+				<pre class="prettyprint">
+var key = $.base64.encode(email + "_email");
+... blabla
 				</pre>
 				<h2 id="friends">Friends</h2>
 				<p>
