@@ -317,7 +317,7 @@
 				When data is read from the HTTP/JSON API, the receiving node will first check its routing table to see if it is the successor of the key. If it is not, it will synchronously forward the command to the proper successor and return with the response.
 				</p>
 				<p>
-				If the native Go client reads data, it will (in most cases) contact all nodes responsible for having the data in their trees, and return the value with the newest timestamp. This is somewhat more costly than just returning the first value, but more resilient to node churn or failures.
+				If the native Go client reads data, it will (for most commands) contact all nodes responsible for having the data in their trees, and return the value with the newest timestamp. This is somewhat more costly than just returning the first value, but more resilient to node churn or failures.
 				</p>
 				<h3>Node joins</h3>
 				<object class="illustration" data="node-join.svg" type="image/svg+xml"></object>
