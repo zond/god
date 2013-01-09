@@ -52,11 +52,20 @@ func getMerger(m SetOpMerge) mergeFunc {
 		return bigIntSub
 	case BigIntXor:
 		return bigIntXor
+	case First:
+		return first
+	case Last:
+		return last
 	}
 	panic(fmt.Errorf("Unknown SetOpType %v", int(m)))
-
 }
 
+func last(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
+	return [][]byte{newValues[len(newValues)-1]}
+}
+func first(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
+	return [][]byte{oldValues[0]}
+}
 func _append(oldValues [][]byte, newValues [][]byte) (result [][]byte) {
 	return append(oldValues, newValues...)
 }

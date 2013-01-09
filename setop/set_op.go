@@ -53,6 +53,10 @@ const (
 	BigIntSub
 	// BigIntXor decodes all values as big.Ints using common.DecodeBigInt and logical XORs them with each other.
 	BigIntXor
+	// First will simply return the first slice from the inputs.
+	First
+	// Last will simply return the last slice from the inputs.
+	Last
 )
 
 // SetOpMerge defines how a SetOp merges the values in the input sets.
@@ -100,8 +104,12 @@ func ParseSetOpMerge(s string) (result SetOpMerge, err error) {
 		result = BigIntSub
 	case "BigIntXor":
 		result = BigIntXor
+	case "First":
+		result = First
+	case "Last":
+		result = Last
 	default:
-		err = fmt.Errorf("Unknown SetOpType %v. Legal values: Append, ConCat, IntegerSum, IntegerSub, IntegerDiv, IntegerMul, FloatSum, FloatSub, FloatDiv, FloatMul, BigIntAdd, BigIntAnd, BigIntAndNot, BigIntDiv, BigIntMod, BigIntMul, BigIntOr, BigIntRem, BigIntSub, BigIntXor.", s)
+		err = fmt.Errorf("Unknown SetOpType %v. Legal values: Append, ConCat, IntegerSum, IntegerSub, IntegerDiv, IntegerMul, FloatSum, FloatSub, FloatDiv, FloatMul, BigIntAdd, BigIntAnd, BigIntAndNot, BigIntDiv, BigIntMod, BigIntMul, BigIntOr, BigIntRem, BigIntSub, BigIntXor, First, Last.", s)
 	}
 	return
 }
@@ -148,6 +156,10 @@ func (self SetOpMerge) String() string {
 		return "BigIntSub"
 	case BigIntXor:
 		return "BigIntXor"
+	case First:
+		return "First"
+	case Last:
+		return "Last"
 	}
 	panic(fmt.Errorf("Unknown SetOpType %v", int(self)))
 }
