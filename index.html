@@ -11,6 +11,9 @@
 			.illustration {
 				float: right;
 			}
+			.prettyprint {
+			  font-size: x-small;
+			}
 		</style>
 		<title>Go Database! Docs</title>
 	</head>
@@ -50,7 +53,7 @@
 				while from the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a> projects it inherits scalability, redundancy and transparent failover behaviour.
 				</p>
 				<p>
-				This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore.
+				This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore. Since no easy way to automatically test all code snippets in here was found, viewing them as pseudocode is recommended. Copy and paste at your own risk.
 				</p>
 				<p>
 				To try it out right now, <code>go get github.com/zond/god/god_server</code>, then run <code>god_server</code> and browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
@@ -123,15 +126,14 @@ if bytes, err := json.Marshal(user); err != nil {
 				</p>
 				<pre class="prettyprint">
 $.ajax('/rpc/DHash.Put', {
-  type: 'POST',
-  contentType: 'application/json; charset=UTF-8',
-  data: JSON.stringify({
-    Key: $.base64.encode(email),
-    Sync: false,
-    Value: $.base64.encode(JSON.stringify({Email: email, Password: crypt(password), Name: name})),
-  }),
-  success: callback,
-  dataType: 'json',
+ type: 'POST',
+ contentType: 'application/json; charset=UTF-8',
+ data: JSON.stringify({
+  Key: $.base64.encode(email),
+  Value: $.base64.encode(JSON.stringify({Email: email, Password: crypt(password), Name: name})),
+ }),
+ success: callback,
+ dataType: 'json',
 });
 				</pre>
 				<h2 id="structstorage">Storing structures</h2>
@@ -151,18 +153,63 @@ $.ajax('/rpc/DHash.Put', {
 				<pre class="prettyprint">
 conn := client.MustConn("localhost:9191")
 key := murmur.HashString(fmt.Sprintf("%v_followers"))
-conn.SubPut([]byte(key, murmur.HashString(friend1.Email), common.EncodeInt64(time.Now().UnixNano()))
-conn.SubPut([]byte(key, murmur.HashString(friend2.Email), common.EncodeInt64(time.Now().UnixNano()))
-conn.SubPut([]byte(key, murmur.HashString(friend3.Email), common.EncodeInt64(time.Now().UnixNano()))
-fmt.Println("my oldest friend is", conn.SliceLen(key, nil, true, 1)[0])
-fmt.Println("my newest 2 friends are", conn.ReverseSliceLen(key, nil, true, 2))
+conn.SubPut([]byte(key), []byte(friend1.Email), friend1.Bytes())
+conn.SubPut([]byte(key), []byte(friend2.Email), friend2.Bytes())
+conn.SubPut([]byte(key), []byte(friend3.Email), friend3.Bytes())
+fmt.Println("my first friend is", string(conn.SliceLen(key, nil, true, 1)[0].Key))
+last := conn.SliceLen(key, nil, true, 2)
+fmt.Println("my last 2 friends are", string(last[0].Key), string(last[1].Key))
 				</pre>
 				<p>
 				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API.
 				</p>
 				<pre class="prettyprint">
 var key = $.base64.encode(email + "_email");
-... blabla
+var collector = new function() {
+ this.count = friends.length;
+ this.collect = function() {
+  this.count--;
+  if (this.count == 0) {
+   $.ajax('/rpc/DHash.SliceLen', {
+    type: 'POST',
+    contentType: 'application/json; charset=UTF-8',
+    data: JSON.stringify({
+     Key: key,
+     Len: 1,
+    }),
+    success: function(data) {
+     console.log('my oldest friend is', $.base64.decode(data[0].Key));
+    },
+    dataType: 'json',
+   });	 
+   $.ajax('/rpc/DHash.ReverseSliceLen', {
+    type: 'POST',
+    contentType: 'application/json; charset=UTF-8',
+    data: JSON.stringify({
+     Key: key,
+     Len: 2,
+    }),
+    success: function(data) {
+     console.log('my newest 2 friends are', $.base64.decode(data[0].Key), $.base64.decode(data[1].Key))
+    },
+    dataType: 'json',
+   });	 
+  }
+ }
+};
+for (var i = 0; i < friends.length; i++) {
+ $.ajax('/rpc/DHash.Put', {
+  type: 'POST',
+  contentType: 'application/json; charset=UTF-8',
+  data: JSON.stringify({
+   Key: key,
+   SubKey: $.base64.encode(friend1.mail),
+   Value: $.base64.encode(JSON.stringify(friend1)),
+  }),
+  success: collector.collect,
+  dataType: 'json',
+ });
+}
 				</pre>
 				<h2 id="friends">Friends</h2>
 				<p>
