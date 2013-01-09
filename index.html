@@ -94,6 +94,9 @@
 				<p>
 				Since the HTTP/JSON API is designed to be as simple as possible to interact with from any type of client system, there isn't really much to say about how to use it. Examples for the different commands found in the web monitor at <a href="http://localhost:9192">http://localhost:9192</a> (if the server is started via <code>god_server</code> with default options) along with the generated documentation at <a href="http://godoc.org/github.com/zond/god/client">http://godoc.org/github.com/zond/god/client</a> are likely the best way to learn and explore.
 				</p>
+				<p>
+				The HTTP/JSON API is slightly less efficient than the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> API, mainly due to the receiving node having to figure out who is responsible for the operation in the request, something that the native Go client does on its own.
+				</p>
 				<h2 id="bytestorage">Storing bytes</h2>
 				<p>
 				The simplest and most obvious way to use <i>god</i> is to store bytes in it. Like all content in <i>god</i> nodes, the bytes you put in the system will be stored in RAM in one or more (if you have a cluster, which is really recommended) servers. To store byte arrays in the database, use the <b>put</b> command, either via <code>client.Conn#Put</code> or <code>POST /rpc/DHash.Put</code>.

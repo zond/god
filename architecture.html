@@ -223,7 +223,7 @@
 				</p>
 				<h3>Redundancy</h3>
 				<p>
-				To allow for a transparent failover, where the new owner of a set of data already has it available, <i>god</i> lets each node keep a backup of the data of a number of its predecessors.
+				To allow for a transparent failover, where the new owner of a set of data already has it available, <i>god</i> lets each node keep a backup of the data of a number of its predecessors. To ensure this, all nodes receiving a modifying command will forward it to its N successors.
 				</p>
 				<p>
 				If a node disappears, this will allow the cluster to stay in a valid state, since the new owner already has the backup (now master) copy of the data in its local storage.
@@ -300,6 +300,25 @@
 				The last synchronization in this cleanup operation will also remove, without leaving tombstones, the data from the cleaning node.
 				</p>
 				<h2 id="consequences">Consequences</h2>
+				<h3>Data is written</h3>
+				<object class="illustration" data="data-write.svg" type="image/svg+xml"></object>
+				<p>
+				When data is written from the native Go client, the client will look up the successor of the key in its routing table. Then it will contact the successor and ask it to write the data via a <code>Put</code> command.
+				</p>
+				<p>
+				If data is written from the HTTP/JSON API, the receiving node will first check its routing table to see if it is the successor of the key. If it is not, it will synchronously forward the command to the proper successor.
+				</p>
+				<p>
+				When the right node receives a modifying command, it will forward the command to its N successors. If the command is marked to be synchronous, this forward will wait until all successors have responded. If not, the node will simply modify its own tree and respond to the client.
+				</p>
+				<h3>Data is read</h3>
+				<object class="illustration" data="data-read.svg" type="image/svg+xml"></object>
+				<p>
+				When data is read from the HTTP/JSON API, the receiving node will first check its routing table to see if it is the successor of the key. If it is not, it will synchronously forward the command to the proper successor and return with the response.
+				</p>
+				<p>
+				If the native Go client reads data, it will (in most cases) contact all nodes responsible for having the data in their trees, and return the value with the newest timestamp. This is somewhat more costly than just returning the first value, but more resilient to node churn or failures.
+				</p>
 				<h3>Node joins</h3>
 				<object class="illustration" data="node-join.svg" type="image/svg+xml"></object>
 				<p>
