@@ -109,58 +109,13 @@
 				A trivial example would be to store application users in <i>god</i>. Here is a bit of example Go code that would store and fetch a user object:
 				</p>
 				<pre class="prettyprint">
-package main
-
-import (
-	"encoding/json"
-	"fmt"
-	"github.com/zond/god/client"
-	"github.com/zond/god/murmur"
-)
-
-type User struct {
-	Email    string
-	Password string
-	Name     string
-}
-
-func main() {
-	conn := client.MustConn("localhost:9191")
-	user := User{
-		Email:    "mail@domain.tld",
-		Password: "so secret",
-		Name:     "john doe",
-	}
-	if bytes, err := json.Marshal(user); err != nil {
-		panic(err)
-	} else {
-		conn.Put(murmur.HashString(user.Email), bytes)
-	}
-	data, _ := conn.Get(murmur.HashString(user.Email))
-	var found User
-	if err := json.Unmarshal(data, &found); err != nil {
-		panic(err)
-	}
-	fmt.Printf("stored and found %+v\n", found)
-}
-
+{{.E "put_get.go"}}
 				</pre>
 				<p>
 				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
 				<pre class="prettyprint">
-$.ajax('/rpc/DHash.Put', {
- type: 'POST',
- contentType: 'application/json; charset=UTF-8',
- data: JSON.stringify({
-  Key: $.base64.encode(email),
-  Value: $.base64.encode(JSON.stringify({Email: email, Password: crypt(password), Name: name})),
- }),
- success: callback,
- dataType: 'json',
-});
-
-
+{{.E "put_get.js"}}
 				</pre>
 				<h2 id="structstorage">Storing structures</h2>
 				<p>
