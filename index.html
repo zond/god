@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
-		<script src="http://code.jquery.com/jquery-latest.js"></script>
+		<script src="js/jquery-latest.js"></script>
 		<script src="js/bootstrap.min.js"></script>
 		<style type="text/css">
 			img.illustration {
@@ -15,12 +15,22 @@
 			  font-size: x-small;
 			}
 		</style>
+		<script type="text/javascript">
+		$(document).ready(function() {
+		  $(".external").each(function(index, el) {
+				el = $(el);
+				$.get(el.attr('data-src'), function(data) {
+				  el.text(data);
+				});
+		  });
+		});
+		</script>
 		<title>Go Database! Docs</title>
 	</head>
 	<body data-spy="scroll" data-target="#sidebar">
 		<div class="row">
 			<div class="span12">
-				<ul class="nav nav-tabs">
+			<ul class="nav nav-tabs">
 					<li class="active"><a href="index.html">Usage</a></li>
 					<li><a href="architecture.html">Architecture</a></li>
 				</ul>
@@ -106,20 +116,9 @@
 				</p>
 				<h2 id="users">Users</h2>
 				<p>
-				A trivial example would be to store application users in <i>god</i>. Here is a bit of example Go code that would store a user object:
+				A trivial example would be to store application users in <i>god</i>. Here is a bit of example Go code that would store and fetch a user object:
 				</p>
-				<pre class="prettyprint">
-conn := client.MustConn("localhost:9191")
-user := User{
- Email: email,
- Password: crypt(password),
- Name: name,
-}
-if bytes, err := json.Marshal(user); err != nil {
- panic(err)
-} else {
- conn.Put(murmur.HashString(user.Email), bytes)
-}
+				<pre class="prettyprint external" data-src="https://raw.github.com/zond/god/master/doc_examples/put_get.go">
 				</pre>
 				<p>
 				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
@@ -213,7 +212,7 @@ for (var i = 0; i < friends.length; i++) {
 				</pre>
 				<h2 id="friends">Friends</h2>
 				<p>
-				An example of more advanced usage 
+				One simple way to use the set operation support in god would be to intersect followers and followees 
 				</p>
 				<h2 id="relevance">Relevance</h2>
 				<p>
