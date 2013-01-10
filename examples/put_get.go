@@ -32,3 +32,5 @@ func main() {
 	}
 	fmt.Printf("stored and found %+v\n", found)
 }
+
+// output: stored and found {Email:mail@domain.tld Password:so secret Name:john doe}

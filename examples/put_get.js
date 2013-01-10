@@ -45,4 +45,6 @@ rpc('Put', {
 	  console.log('stored and found', JSON.parse(new Buffer(data.Value, 'base64').toString('utf-8')));
 	});
 });
-
+// output: stored and found { email: 'mail@domain.tld',
+// output: password: 'so secret',
+// output: name: 'john doe' }

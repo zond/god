@@ -15,3 +15,6 @@ func main() {
 	last2 := conn.ReverseSliceLen(key, nil, true, 2)
 	fmt.Printf("my last two followers are %+v and %+v\n", string(last2[1].Key), string(last2[0].Key))
 }
+
+// output: my first follower is follower1@domain.tld
+// output: my last two followers are user2@domain.tld and user3@domain.tld

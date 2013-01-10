@@ -66,3 +66,4 @@ followees.map(function(followee) {
 		SubKey: new Buffer(followee).toString('base64'),
 	}, cb);
 });
+// output: user3@domain.tld

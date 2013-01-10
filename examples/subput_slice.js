@@ -63,3 +63,5 @@ followers.map(function(follower) {
 		SubKey: new Buffer(follower).toString('base64'),
 	}, cb);
 });
+// output: my first follower is follower1@domain.tld
+// output: my last two followers are user2@domain.tld and user3@domain.tld

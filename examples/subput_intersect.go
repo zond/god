@@ -21,3 +21,5 @@ func main() {
 		fmt.Println(string(friend.Key))
 	}
 }
+
+// output: user3@domain.tld
