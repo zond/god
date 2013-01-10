@@ -149,15 +149,52 @@ func main() {
 				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
 				<pre class="prettyprint">
-$.ajax('/rpc/DHash.Put', {
- type: 'POST',
- contentType: 'application/json; charset=UTF-8',
- data: JSON.stringify({
-  Key: $.base64.encode(email),
-  Value: $.base64.encode(JSON.stringify({Email: email, Password: crypt(password), Name: name})),
- }),
- success: callback,
- dataType: 'json',
+var http = require('http');
+
+function rpc(endpoint, params, callback) {
+  var data = '';
+	var content = JSON.stringify(params);
+  var req = http.request({
+	  hostname: 'localhost',
+		port: 9192,
+		headers: {
+		  'Content-Length': content.length,
+		  'Accept': 'application/json',
+		},
+		path: '/rpc/DHash.' + endpoint,
+		method: 'POST',
+	}, function(res) {
+	  res.setEncoding('utf8');
+		res.on('data', function(d) {
+		  data += d;
+		});
+		res.on('end', function() {
+			callback(JSON.parse(data));
+		});
+		res.on('close', function() {
+ 		  callback(JSON.parse(data));
+		});
+	});
+	req.on('error', function(e) {
+		console.log('problem with request: ' + e.message);
+	});
+	req.write(content);
+	req.end();
+};
+
+var user = {
+  email: 'mail@domain.tld',
+	password: 'so secret',
+	name: 'john doe',
+};
+
+rpc('Put', { 
+	Key: new Buffer(user.email).toString('base64'),
+	Value: new Buffer(JSON.stringify(user)).toString('base64'),
+}, function() {
+  rpc('Get', { Key: new Buffer(user.email).toString('base64') }, function(data) {
+	  console.log('stored and found', JSON.parse(new Buffer(data.Value, 'base64').toString('utf-8')));
+	});
 });
 
 
@@ -177,65 +214,11 @@ $.ajax('/rpc/DHash.Put', {
 				The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the followers of a user:
 				</p>
 				<pre class="prettyprint">
-conn := client.MustConn("localhost:9191")
-key := murmur.HashString(fmt.Sprintf("%v_followers"))
-conn.SubPut([]byte(key), []byte(friend1.Email), friend1.Bytes())
-conn.SubPut([]byte(key), []byte(friend2.Email), friend2.Bytes())
-conn.SubPut([]byte(key), []byte(friend3.Email), friend3.Bytes())
-fmt.Println("my first friend is", string(conn.SliceLen(key, nil, true, 1)[0].Key))
-last := conn.SliceLen(key, nil, true, 2)
-fmt.Println("my last 2 friends are", string(last[0].Key), string(last[1].Key))
 				</pre>
 				<p>
 				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
 				<pre class="prettyprint">
-var key = $.base64.encode(email + "_email");
-var collector = new function() {
- this.count = friends.length;
- this.collect = function() {
-  this.count--;
-  if (this.count == 0) {
-   $.ajax('/rpc/DHash.SliceLen', {
-    type: 'POST',
-    contentType: 'application/json; charset=UTF-8',
-    data: JSON.stringify({
-     Key: key,
-     Len: 1,
-    }),
-    success: function(data) {
-     console.log('my oldest friend is', $.base64.decode(data[0].Key));
-    },
-    dataType: 'json',
-   });	 
-   $.ajax('/rpc/DHash.ReverseSliceLen', {
-    type: 'POST',
-    contentType: 'application/json; charset=UTF-8',
-    data: JSON.stringify({
-     Key: key,
-     Len: 2,
-    }),
-    success: function(data) {
-     console.log('my newest 2 friends are', $.base64.decode(data[0].Key), $.base64.decode(data[1].Key))
-    },
-    dataType: 'json',
-   });	 
-  }
- }
-};
-for (var i = 0; i < friends.length; i++) {
- $.ajax('/rpc/DHash.Put', {
-  type: 'POST',
-  contentType: 'application/json; charset=UTF-8',
-  data: JSON.stringify({
-   Key: key,
-   SubKey: $.base64.encode(friend1.mail),
-   Value: $.base64.encode(JSON.stringify(friend1)),
-  }),
-  success: collector.collect,
-  dataType: 'json',
- });
-}
 				</pre>
 				<h2 id="friends">Friends</h2>
 				<p>
