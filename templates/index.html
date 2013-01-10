@@ -53,7 +53,7 @@
 				while from the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a> projects it inherits scalability, redundancy and transparent failover behaviour.
 				</p>
 				<p>
-				This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore. Since no easy way to automatically test all code snippets in here was found, viewing them as pseudocode is recommended. Copy and paste at your own risk.
+				This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore. The example code snippets below are tested against somewhat current versions of Go and node, and should run as is if you provide them their dependencies and run a local <i>god</i> server.
 				</p>
 				<p>
 				To try it out right now, <code>go get github.com/zond/god/god_server</code>, then run <code>god_server</code> and browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
@@ -112,7 +112,7 @@
 {{.E "put_get.go"}}
 				</pre>
 				<p>
-				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
+				And here is a bit of node compatible JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
 				<pre class="prettyprint">
 {{.E "put_get.js"}}
@@ -132,11 +132,13 @@
 				The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the followers of a user:
 				</p>
 				<pre class="prettyprint">
+{{.E "subput_slice.go"}}
 				</pre>
 				<p>
-				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
+				And here is a bit of nody JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
 				<pre class="prettyprint">
+{{.E "subput_slice.js"}}
 				</pre>
 				<h2 id="friends">Friends</h2>
 				<p>

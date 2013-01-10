@@ -53,7 +53,7 @@
 				while from the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a> projects it inherits scalability, redundancy and transparent failover behaviour.
 				</p>
 				<p>
-				This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore. Since no easy way to automatically test all code snippets in here was found, viewing them as pseudocode is recommended. Copy and paste at your own risk.
+				This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore. The example code snippets below are tested against somewhat current versions of Go and node, and should run as is if you provide them their dependencies and run a local <i>god</i> server.
 				</p>
 				<p>
 				To try it out right now, <code>go get github.com/zond/god/god_server</code>, then run <code>god_server</code> and browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
@@ -146,7 +146,7 @@ func main() {
 
 				</pre>
 				<p>
-				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
+				And here is a bit of node compatible JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
 				<pre class="prettyprint">
 var http = require('http');
@@ -214,11 +214,95 @@ rpc('Put', {
 				The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the followers of a user:
 				</p>
 				<pre class="prettyprint">
+package main
+
+import (
+	"fmt"
+	"github.com/zond/god/client"
+)
+
+func main() {
+	conn := client.MustConn("localhost:9191")
+	key := []byte("mail@domain.tld/followers")
+	conn.SubPut(key, []byte("follower1@domain.tld"), nil)
+	conn.SubPut(key, []byte("follower2@domain.tld"), nil)
+	conn.SubPut(key, []byte("follower3@domain.tld"), nil)
+	fmt.Printf("my first follower is %+v\n", string(conn.SliceLen(key, nil, true, 1)[0].Key))
+	last2 := conn.ReverseSliceLen(key, nil, true, 2)
+	fmt.Printf("my last two followers are %+v and %+v\n", string(last2[1].Key), string(last2[0].Key))
+}
+
 				</pre>
 				<p>
-				And here is a bit of JavaScript doing the same thing against the HTTP/JSON API:
+				And here is a bit of nody JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
 				<pre class="prettyprint">
+var http = require('http');
+
+function rpc(endpoint, params, callback) {
+  var data = '';
+	var content = JSON.stringify(params);
+  var req = http.request({
+	  hostname: 'localhost',
+		port: 9192,
+		headers: {
+		  'Content-Length': content.length,
+		  'Accept': 'application/json',
+		},
+		path: '/rpc/DHash.' + endpoint,
+		method: 'POST',
+	}, function(res) {
+	  res.setEncoding('utf8');
+		res.on('data', function(d) {
+		  data += d;
+		});
+		res.on('end', function() {
+			callback(JSON.parse(data));
+		});
+		res.on('close', function() {
+ 		  callback(JSON.parse(data));
+		});
+	});
+	req.on('error', function(e) {
+		console.log('problem with request: ' + e.message);
+	});
+	req.write(content);
+	req.end();
+};
+
+function after(n, callback) {
+  var count = n;
+	return function() {
+	  count--;
+		if (count == 0) {
+		  callback();
+		}
+	}
+}
+
+var key = new Buffer("mail@domain.tld/follower").toString('base64')
+var followers = ["follower1@domain.tld", "follower2@domain.tld", "follower3@domain.tld"];
+var cb = after(followers.length, function() {
+  rpc('SliceLen', {
+		Key: key,
+		Len: 1,
+	}, function(data) {
+		console.log('my first follower is', new Buffer(data[0].Key, 'base64').toString('utf-8'));
+	});
+  rpc('ReverseSliceLen', {
+		Key: key,
+		Len: 2,
+	}, function(data) {
+		console.log('my last two followers are', new Buffer(data[1].Key, 'base64').toString('utf-8'), 'and', new Buffer(data[0].Key, 'base64').toString('utf-8'));
+	});
+});
+followers.map(function(follower) {
+  rpc('SubPut', {
+	  Key: key,
+		SubKey: new Buffer(follower).toString('base64'),
+	}, cb);
+});
+
 				</pre>
 				<h2 id="friends">Friends</h2>
 				<p>
