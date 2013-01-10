@@ -17,12 +17,11 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
 # TODO
 
-* Create a set of simple examples that are run by go test, for example in the client package. Include these as iframes or something in the usage documentation.
 * Docs
  * Add a user centric document describing a couple of typical uses and how to perform them with the go/json clients
- * Add examples of how the routing and synchronization make data persist between node parts/joins
 * Benchmark
  * Consecutively start 1-20 ec2 small instances and benchmark against eachs ize
+ * Add benchmark results to docs
 * Example app
  * Implementation
  * Documentation
