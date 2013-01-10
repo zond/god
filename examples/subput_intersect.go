@@ -16,7 +16,7 @@ func main() {
 	conn.SubPut(followeesKey, []byte("user3@domain.tld"), nil)
 	conn.SubPut(followeesKey, []byte("user4@domain.tld"), nil)
 	for _, friend := range conn.SetExpression(setop.SetExpression{
-		Code: fmt.Sprintf("(I:First %v %v)", string(followersKey), string(followeesKey)),
+		Code: fmt.Sprintf("(I %v %v)", string(followersKey), string(followeesKey)),
 	}) {
 		fmt.Println(string(friend.Key))
 	}

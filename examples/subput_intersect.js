@@ -41,25 +41,28 @@ function after(n, callback) {
 	}
 }
 
-var key = new Buffer("mail@domain.tld/followers").toString('base64')
-var followers = ["follower1@domain.tld", "follower2@domain.tld", "follower3@domain.tld"];
-var cb = after(followers.length, function() {
-  rpc('SliceLen', {
-		Key: key,
-		Len: 1,
+var followers_key = new Buffer("mail@domain.tld/followers").toString('base64')
+var followees_key = new Buffer("mail@domain.tld/followees").toString('base64')
+var followers = ["user1@domain.tld", "user2@domain.tld", "user3@domain.tld"];
+var followees = ["user3@domain.tld", "user4@domain.tld"];
+var cb = after(followers.length + followees.length, function() {
+  rpc('SetExpression', {
+		Code: '(I ' + new Buffer(followers_key, 'base64').toString('utf-8') + ' ' + new Buffer(followees_key, 'base64').toString('utf-8') + ')',
 	}, function(data) {
-		console.log('my first follower is', new Buffer(data[0].Key, 'base64').toString('utf-8'));
-	});
-  rpc('ReverseSliceLen', {
-		Key: key,
-		Len: 2,
-	}, function(data) {
-		console.log('my last two followers are', new Buffer(data[1].Key, 'base64').toString('utf-8'), 'and', new Buffer(data[0].Key, 'base64').toString('utf-8'));
+	  data.map(function(friend) {
+			console.log(new Buffer(friend.Key, 'base64').toString('utf-8'));
+		});
 	});
 });
 followers.map(function(follower) {
   rpc('SubPut', {
-	  Key: key,
+	  Key: followers_key,
 		SubKey: new Buffer(follower).toString('base64'),
+	}, cb);
+});
+followees.map(function(followee) {
+  rpc('SubPut', {
+	  Key: followees_key,
+		SubKey: new Buffer(followee).toString('base64'),
 	}, cb);
 });

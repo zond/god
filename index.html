@@ -280,7 +280,7 @@ function after(n, callback) {
 	}
 }
 
-var key = new Buffer("mail@domain.tld/follower").toString('base64')
+var key = new Buffer("mail@domain.tld/followers").toString('base64')
 var followers = ["follower1@domain.tld", "follower2@domain.tld", "follower3@domain.tld"];
 var cb = after(followers.length, function() {
   rpc('SliceLen', {
@@ -306,8 +306,108 @@ followers.map(function(follower) {
 				</pre>
 				<h2 id="friends">Friends</h2>
 				<p>
-				One simple way to use the set operation support in god would be to intersect followers and followees 
+				One simple way to use the set operation support in god would be to intersect followers and followees to produce the users who are both. Below follows a bit of Go code that would produce these users, let us call them friends:
 				</p>
+				<pre class="prettyprint">
+package main
+
+import (
+	"fmt"
+	"github.com/zond/god/client"
+	"github.com/zond/god/setop"
+)
+
+func main() {
+	conn := client.MustConn("localhost:9191")
+	followersKey := []byte("mail@domain.tld/followers")
+	followeesKey := []byte("mail@domain.tld/followees")
+	conn.SubPut(followersKey, []byte("user1@domain.tld"), nil)
+	conn.SubPut(followersKey, []byte("user2@domain.tld"), nil)
+	conn.SubPut(followersKey, []byte("user3@domain.tld"), nil)
+	conn.SubPut(followeesKey, []byte("user3@domain.tld"), nil)
+	conn.SubPut(followeesKey, []byte("user4@domain.tld"), nil)
+	for _, friend := range conn.SetExpression(setop.SetExpression{
+		Code: fmt.Sprintf("(I %v %v)", string(followersKey), string(followeesKey)),
+	}) {
+		fmt.Println(string(friend.Key))
+	}
+}
+
+				</pre>
+				<p>
+				To do the same thing using node, you can run:
+				</p>
+				<pre class="prettyprint">
+var http = require('http');
+
+function rpc(endpoint, params, callback) {
+  var data = '';
+	var content = JSON.stringify(params);
+  var req = http.request({
+	  hostname: 'localhost',
+		port: 9192,
+		headers: {
+		  'Content-Length': content.length,
+		  'Accept': 'application/json',
+		},
+		path: '/rpc/DHash.' + endpoint,
+		method: 'POST',
+	}, function(res) {
+	  res.setEncoding('utf8');
+		res.on('data', function(d) {
+		  data += d;
+		});
+		res.on('end', function() {
+			callback(JSON.parse(data));
+		});
+		res.on('close', function() {
+ 		  callback(JSON.parse(data));
+		});
+	});
+	req.on('error', function(e) {
+		console.log('problem with request: ' + e.message);
+	});
+	req.write(content);
+	req.end();
+};
+
+function after(n, callback) {
+  var count = n;
+	return function() {
+	  count--;
+		if (count == 0) {
+		  callback();
+		}
+	}
+}
+
+var followers_key = new Buffer("mail@domain.tld/followers").toString('base64')
+var followees_key = new Buffer("mail@domain.tld/followees").toString('base64')
+var followers = ["user1@domain.tld", "user2@domain.tld", "user3@domain.tld"];
+var followees = ["user3@domain.tld", "user4@domain.tld"];
+var cb = after(followers.length + followees.length, function() {
+  rpc('SetExpression', {
+		Code: '(I ' + new Buffer(followers_key, 'base64').toString('utf-8') + ' ' + new Buffer(followees_key, 'base64').toString('utf-8') + ')',
+	}, function(data) {
+	  data.map(function(friend) {
+			console.log(new Buffer(friend.Key, 'base64').toString('utf-8'));
+		});
+	});
+});
+followers.map(function(follower) {
+  rpc('SubPut', {
+	  Key: followers_key,
+		SubKey: new Buffer(follower).toString('base64'),
+	}, cb);
+});
+followees.map(function(followee) {
+  rpc('SubPut', {
+	  Key: followees_key,
+		SubKey: new Buffer(followee).toString('base64'),
+	}, cb);
+});
+
+				</pre>
 				<h2 id="relevance">Relevance</h2>
 				<p>
 				Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
