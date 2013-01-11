@@ -199,7 +199,6 @@ func (self *interOp) Skip(min []byte, inc bool) (result *SetOpResult, err error)
 			} else {
 				result.Values = self.merger(result.Values, results[index].Values)
 				if bytes.Compare(results[index].Key, maxKey) > 0 {
-					result = nil
 					maxKey = results[index].Key
 				}
 			}
