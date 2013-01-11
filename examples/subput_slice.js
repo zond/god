@@ -49,12 +49,12 @@ var cb = after(followers.length, function() {
     Len: 1,
   }, function(data) {
     console.log('my first follower is', new Buffer(data[0].Key, 'base64').toString('utf-8'));
-  });
-  rpc('ReverseSliceLen', {
-    Key: key,
-    Len: 2,
-  }, function(data) {
-    console.log('my last two followers are', new Buffer(data[1].Key, 'base64').toString('utf-8'), 'and', new Buffer(data[0].Key, 'base64').toString('utf-8'));
+    rpc('ReverseSliceLen', {
+      Key: key,
+      Len: 2,
+    }, function(data) {
+      console.log('my last two followers are', new Buffer(data[1].Key, 'base64').toString('utf-8'), 'and', new Buffer(data[0].Key, 'base64').toString('utf-8'));
+    });
   });
 });
 followers.map(function(follower) {
