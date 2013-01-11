@@ -112,36 +112,36 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/zond/god/client"
-	"github.com/zond/god/murmur"
+  "encoding/json"
+  "fmt"
+  "github.com/zond/god/client"
+  "github.com/zond/god/murmur"
 )
 
 type User struct {
-	Email    string
-	Password string
-	Name     string
+  Email    string
+  Password string
+  Name     string
 }
 
 func main() {
-	conn := client.MustConn("localhost:9191")
-	user := User{
-		Email:    "mail@domain.tld",
-		Password: "so secret",
-		Name:     "john doe",
-	}
-	if bytes, err := json.Marshal(user); err != nil {
-		panic(err)
-	} else {
-		conn.Put(murmur.HashString(user.Email), bytes)
-	}
-	data, _ := conn.Get(murmur.HashString(user.Email))
-	var found User
-	if err := json.Unmarshal(data, &found); err != nil {
-		panic(err)
-	}
-	fmt.Printf("stored and found %+v\n", found)
+  conn := client.MustConn("localhost:9191")
+  user := User{
+    Email:    "mail@domain.tld",
+    Password: "so secret",
+    Name:     "john doe",
+  }
+  if bytes, err := json.Marshal(user); err != nil {
+    panic(err)
+  } else {
+    conn.Put(murmur.HashString(user.Email), bytes)
+  }
+  data, _ := conn.Get(murmur.HashString(user.Email))
+  var found User
+  if err := json.Unmarshal(data, &found); err != nil {
+    panic(err)
+  }
+  fmt.Printf("stored and found %+v\n", found)
 }
 
 // output: stored and found {Email:mail@domain.tld Password:so secret Name:john doe}
@@ -155,48 +155,48 @@ var http = require('http');
 
 function rpc(endpoint, params, callback) {
   var data = '';
-	var content = JSON.stringify(params);
+  var content = JSON.stringify(params);
   var req = http.request({
-	  hostname: 'localhost',
-		port: 9192,
-		headers: {
-		  'Content-Length': content.length,
-		  'Accept': 'application/json',
-		},
-		path: '/rpc/DHash.' + endpoint,
-		method: 'POST',
-	}, function(res) {
-	  res.setEncoding('utf8');
-		res.on('data', function(d) {
-		  data += d;
-		});
-		res.on('end', function() {
-			callback(JSON.parse(data));
-		});
-		res.on('close', function() {
- 		  callback(JSON.parse(data));
-		});
-	});
-	req.on('error', function(e) {
-		console.log('problem with request: ' + e.message);
-	});
-	req.write(content);
-	req.end();
+    hostname: 'localhost',
+    port: 9192,
+    headers: {
+      'Content-Length': content.length,
+      'Accept': 'application/json',
+    },
+    path: '/rpc/DHash.' + endpoint,
+    method: 'POST',
+  }, function(res) {
+    res.setEncoding('utf8');
+    res.on('data', function(d) {
+      data += d;
+    });
+    res.on('end', function() {
+      callback(JSON.parse(data));
+    });
+    res.on('close', function() {
+      callback(JSON.parse(data));
+    });
+  });
+  req.on('error', function(e) {
+    console.log('problem with request: ' + e.message);
+  });
+  req.write(content);
+  req.end();
 };
 
 var user = {
   email: 'mail@domain.tld',
-	password: 'so secret',
-	name: 'john doe',
+  password: 'so secret',
+  name: 'john doe',
 };
 
 rpc('Put', { 
-	Key: new Buffer(user.email).toString('base64'),
-	Value: new Buffer(JSON.stringify(user)).toString('base64'),
+  Key: new Buffer(user.email).toString('base64'),
+  Value: new Buffer(JSON.stringify(user)).toString('base64'),
 }, function() {
   rpc('Get', { Key: new Buffer(user.email).toString('base64') }, function(data) {
-	  console.log('stored and found', JSON.parse(new Buffer(data.Value, 'base64').toString('utf-8')));
-	});
+    console.log('stored and found', JSON.parse(new Buffer(data.Value, 'base64').toString('utf-8')));
+  });
 });
 // output: stored and found { email: 'mail@domain.tld',
 // output: password: 'so secret',
@@ -221,19 +221,19 @@ rpc('Put', {
 package main
 
 import (
-	"fmt"
-	"github.com/zond/god/client"
+  "fmt"
+  "github.com/zond/god/client"
 )
 
 func main() {
-	conn := client.MustConn("localhost:9191")
-	key := []byte("mail@domain.tld/followers")
-	conn.SubPut(key, []byte("follower1@domain.tld"), nil)
-	conn.SubPut(key, []byte("follower2@domain.tld"), nil)
-	conn.SubPut(key, []byte("follower3@domain.tld"), nil)
-	fmt.Printf("my first follower is %+v\n", string(conn.SliceLen(key, nil, true, 1)[0].Key))
-	last2 := conn.ReverseSliceLen(key, nil, true, 2)
-	fmt.Printf("my last two followers are %+v and %+v\n", string(last2[1].Key), string(last2[0].Key))
+  conn := client.MustConn("localhost:9191")
+  key := []byte("mail@domain.tld/followers")
+  conn.SubPut(key, []byte("follower1@domain.tld"), nil)
+  conn.SubPut(key, []byte("follower2@domain.tld"), nil)
+  conn.SubPut(key, []byte("follower3@domain.tld"), nil)
+  fmt.Printf("my first follower is %+v\n", string(conn.SliceLen(key, nil, true, 1)[0].Key))
+  last2 := conn.ReverseSliceLen(key, nil, true, 2)
+  fmt.Printf("my last two followers are %+v and %+v\n", string(last2[1].Key), string(last2[0].Key))
 }
 
 // output: my first follower is follower1@domain.tld
@@ -248,66 +248,66 @@ var http = require('http');
 
 function rpc(endpoint, params, callback) {
   var data = '';
-	var content = JSON.stringify(params);
+  var content = JSON.stringify(params);
   var req = http.request({
-	  hostname: 'localhost',
-		port: 9192,
-		headers: {
-		  'Content-Length': content.length,
-		  'Accept': 'application/json',
-		},
-		path: '/rpc/DHash.' + endpoint,
-		method: 'POST',
-	}, function(res) {
-	  res.setEncoding('utf8');
-		res.on('data', function(d) {
-		  data += d;
-		});
-		res.on('end', function() {
-			callback(JSON.parse(data));
-		});
-		res.on('close', function() {
- 		  callback(JSON.parse(data));
-		});
-	});
-	req.on('error', function(e) {
-		console.log('problem with request: ' + e.message);
-	});
-	req.write(content);
-	req.end();
+    hostname: 'localhost',
+    port: 9192,
+    headers: {
+      'Content-Length': content.length,
+      'Accept': 'application/json',
+    },
+    path: '/rpc/DHash.' + endpoint,
+    method: 'POST',
+  }, function(res) {
+    res.setEncoding('utf8');
+    res.on('data', function(d) {
+      data += d;
+    });
+    res.on('end', function() {
+      callback(JSON.parse(data));
+    });
+    res.on('close', function() {
+      callback(JSON.parse(data));
+    });
+  });
+  req.on('error', function(e) {
+    console.log('problem with request: ' + e.message);
+  });
+  req.write(content);
+  req.end();
 };
 
 function after(n, callback) {
   var count = n;
-	return function() {
-	  count--;
-		if (count == 0) {
-		  callback();
-		}
-	}
+  return function() {
+    count--;
+    if (count == 0) {
+      callback();
+    }
+  }
 }
 
 var key = new Buffer("mail@domain.tld/followers").toString('base64')
 var followers = ["follower1@domain.tld", "follower2@domain.tld", "follower3@domain.tld"];
 var cb = after(followers.length, function() {
   rpc('SliceLen', {
-		Key: key,
-		Len: 1,
-	}, function(data) {
-		console.log('my first follower is', new Buffer(data[0].Key, 'base64').toString('utf-8'));
-	});
+    Key: key,
+    Len: 1,
+  }, function(data) {
+    console.log('my first follower is', new Buffer(data[0].Key, 'base64').toString('utf-8'));
+  });
   rpc('ReverseSliceLen', {
-		Key: key,
-		Len: 2,
-	}, function(data) {
-		console.log('my last two followers are', new Buffer(data[1].Key, 'base64').toString('utf-8'), 'and', new Buffer(data[0].Key, 'base64').toString('utf-8'));
-	});
+    Key: key,
+    Len: 2,
+  }, function(data) {
+    console.log('my last two followers are', new Buffer(data[1].Key, 'base64').toString('utf-8'), 'and', new Buffer(data[0].Key, 'base64').toString('utf-8'));
+  });
 });
 followers.map(function(follower) {
   rpc('SubPut', {
-	  Key: key,
-		SubKey: new Buffer(follower).toString('base64'),
-	}, cb);
+    Key: key,
+    SubKey: new Buffer(follower).toString('base64'),
+  }, cb);
 });
 // output: my first follower is follower1@domain.tld
 // output: my last two followers are user2@domain.tld and user3@domain.tld
@@ -321,25 +321,25 @@ followers.map(function(follower) {
 package main
 
 import (
-	"fmt"
-	"github.com/zond/god/client"
-	"github.com/zond/god/setop"
+  "fmt"
+  "github.com/zond/god/client"
+  "github.com/zond/god/setop"
 )
 
 func main() {
-	conn := client.MustConn("localhost:9191")
-	followersKey := []byte("mail@domain.tld/followers")
-	followeesKey := []byte("mail@domain.tld/followees")
-	conn.SubPut(followersKey, []byte("user1@domain.tld"), nil)
-	conn.SubPut(followersKey, []byte("user2@domain.tld"), nil)
-	conn.SubPut(followersKey, []byte("user3@domain.tld"), nil)
-	conn.SubPut(followeesKey, []byte("user3@domain.tld"), nil)
-	conn.SubPut(followeesKey, []byte("user4@domain.tld"), nil)
-	for _, friend := range conn.SetExpression(setop.SetExpression{
-		Code: fmt.Sprintf("(I %v %v)", string(followersKey), string(followeesKey)),
-	}) {
-		fmt.Println(string(friend.Key))
-	}
+  conn := client.MustConn("localhost:9191")
+  followersKey := []byte("mail@domain.tld/followers")
+  followeesKey := []byte("mail@domain.tld/followees")
+  conn.SubPut(followersKey, []byte("user1@domain.tld"), nil)
+  conn.SubPut(followersKey, []byte("user2@domain.tld"), nil)
+  conn.SubPut(followersKey, []byte("user3@domain.tld"), nil)
+  conn.SubPut(followeesKey, []byte("user3@domain.tld"), nil)
+  conn.SubPut(followeesKey, []byte("user4@domain.tld"), nil)
+  for _, friend := range conn.SetExpression(setop.SetExpression{
+    Code: fmt.Sprintf("(I %v %v)", string(followersKey), string(followeesKey)),
+  }) {
+    fmt.Println(string(friend.Key))
+  }
 }
 
 // output: user3@domain.tld
@@ -353,43 +353,43 @@ var http = require('http');
 
 function rpc(endpoint, params, callback) {
   var data = '';
-	var content = JSON.stringify(params);
+  var content = JSON.stringify(params);
   var req = http.request({
-	  hostname: 'localhost',
-		port: 9192,
-		headers: {
-		  'Content-Length': content.length,
-		  'Accept': 'application/json',
-		},
-		path: '/rpc/DHash.' + endpoint,
-		method: 'POST',
-	}, function(res) {
-	  res.setEncoding('utf8');
-		res.on('data', function(d) {
-		  data += d;
-		});
-		res.on('end', function() {
-			callback(JSON.parse(data));
-		});
-		res.on('close', function() {
- 		  callback(JSON.parse(data));
-		});
-	});
-	req.on('error', function(e) {
-		console.log('problem with request: ' + e.message);
-	});
-	req.write(content);
-	req.end();
+    hostname: 'localhost',
+    port: 9192,
+    headers: {
+      'Content-Length': content.length,
+      'Accept': 'application/json',
+    },
+    path: '/rpc/DHash.' + endpoint,
+    method: 'POST',
+  }, function(res) {
+    res.setEncoding('utf8');
+    res.on('data', function(d) {
+      data += d;
+    });
+    res.on('end', function() {
+      callback(JSON.parse(data));
+    });
+    res.on('close', function() {
+      callback(JSON.parse(data));
+    });
+  });
+  req.on('error', function(e) {
+    console.log('problem with request: ' + e.message);
+  });
+  req.write(content);
+  req.end();
 };
 
 function after(n, callback) {
   var count = n;
-	return function() {
-	  count--;
-		if (count == 0) {
-		  callback();
-		}
-	}
+  return function() {
+    count--;
+    if (count == 0) {
+      callback();
+    }
+  }
 }
 
 var followers_key = new Buffer("mail@domain.tld/followers").toString('base64')
@@ -398,24 +398,24 @@ var followers = ["user1@domain.tld", "user2@domain.tld", "user3@domain.tld"];
 var followees = ["user3@domain.tld", "user4@domain.tld"];
 var cb = after(followers.length + followees.length, function() {
   rpc('SetExpression', {
-		Code: '(I ' + new Buffer(followers_key, 'base64').toString('utf-8') + ' ' + new Buffer(followees_key, 'base64').toString('utf-8') + ')',
-	}, function(data) {
-	  data.map(function(friend) {
-			console.log(new Buffer(friend.Key, 'base64').toString('utf-8'));
-		});
-	});
+    Code: '(I ' + new Buffer(followers_key, 'base64').toString('utf-8') + ' ' + new Buffer(followees_key, 'base64').toString('utf-8') + ')',
+  }, function(data) {
+    data.map(function(friend) {
+      console.log(new Buffer(friend.Key, 'base64').toString('utf-8'));
+    });
+  });
 });
 followers.map(function(follower) {
   rpc('SubPut', {
-	  Key: followers_key,
-		SubKey: new Buffer(follower).toString('base64'),
-	}, cb);
+    Key: followers_key,
+    SubKey: new Buffer(follower).toString('base64'),
+  }, cb);
 });
 followees.map(function(followee) {
   rpc('SubPut', {
-	  Key: followees_key,
-		SubKey: new Buffer(followee).toString('base64'),
-	}, cb);
+    Key: followees_key,
+    SubKey: new Buffer(followee).toString('base64'),
+  }, cb);
 });
 // output: user3@domain.tld
 
