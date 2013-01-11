@@ -124,6 +124,7 @@ God = function() {
 				$("#node_pos").text(that.node.hexpos);
 				$("#node_owned_keys").text(that.node.data.OwnedEntries);
 				$("#node_held_keys").text(that.node.data.HeldEntries);
+				$("#node_load").text(that.node.data.Load);
 			}
 			that.last_meta_redraw = new Date().getTime();
 		}
@@ -172,14 +173,12 @@ God = function() {
 							}
 						});
 						var newNode = new Node(that, e.data.description);
-						var oldNode = that.node_by_addr[newNode.json_addr];
-						if (oldNode == null || JSON.stringify(newNode) != JSON.stringify(oldNode)) {
-							that.last_route_update = new Date().getTime();
-							that.node_by_addr[newNode.json_addr] = newNode;
+						that.node_by_addr[newNode.json_addr] = newNode;
+						if (that.node != null && that.node.json_addr == newNode.json_addr) {
+							that.node = newNode;
 						}
-						if (that.node == null) {
-							that.last_meta_update = new Date().getTime();
-						}
+						that.last_route_update = new Date().getTime();
+						that.last_meta_update = new Date().getTime();
 					},
 					Comm: function(e) {
 						var item = {
