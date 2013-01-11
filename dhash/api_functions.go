@@ -21,6 +21,7 @@ func (self *Node) Description() common.DHashDescription {
 		Timer:        self.timer.ActualTime(),
 		OwnedEntries: self.Owned(),
 		HeldEntries:  self.tree.RealSize(),
+		Load:         self.tree.Load(),
 		Nodes:        self.node.GetNodes(),
 	}
 }
