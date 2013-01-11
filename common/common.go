@@ -206,6 +206,7 @@ type DHashDescription struct {
 	Timer        time.Time
 	OwnedEntries int
 	HeldEntries  int
+	Load         float64
 	Nodes        Remotes
 }
 
@@ -220,6 +221,7 @@ func (self DHashDescription) Describe() string {
 		Timer        time.Time
 		OwnedEntries int
 		HeldEntries  int
+		Load         float64
 		Nodes        string
 	}{
 		Addr:         self.Addr,
@@ -230,6 +232,7 @@ func (self DHashDescription) Describe() string {
 		Timer:        self.Timer,
 		OwnedEntries: self.OwnedEntries,
 		HeldEntries:  self.HeldEntries,
+		Load:         self.Load,
 		Nodes:        fmt.Sprintf("\n%v", self.Nodes.Describe()),
 	})
 }
