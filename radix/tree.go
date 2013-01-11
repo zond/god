@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/zond/god/common"
 	"github.com/zond/god/murmur"
 	"github.com/zond/god/persistence"
 	"math/big"
-	"sync"
 	"sync/atomic"
 )
 
@@ -98,7 +98,7 @@ func newNodeIndexIterator(f TreeIndexIterator) nodeIndexIterator {
 //
 // A Tree is configured to be mirrored or not by using AddConfiguration or SubAddConfiguration (for a sub tree) setting 'mirrored' to 'yes'.
 type Tree struct {
-	lock                   *sync.RWMutex
+	lock                   *common.TimeLock
 	timer                  Timer
 	logger                 *persistence.Logger
 	root                   *node
@@ -112,13 +112,17 @@ func NewTree() *Tree {
 }
 func NewTreeTimer(timer Timer) (result *Tree) {
 	result = &Tree{
-		lock:          new(sync.RWMutex),
+		lock:          common.NewTimeLock(),
 		timer:         timer,
 		configuration: make(map[string]string),
 	}
 	result.root, _, _, _, _ = result.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), result.timer.ContinuousTime())
 	return
 }
+func (self *Tree) Load() float64 {
+	return self.lock.Load()
+}
+
 func (self *Tree) conf() (result map[string]string, ts int64) {
 	result = make(map[string]string)
 	for k, v := range self.configuration {
