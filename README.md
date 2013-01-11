@@ -19,6 +19,8 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
 * Docs
  * Add a user centric document describing a couple of typical uses and how to perform them with the go/json clients
+ * Thoroughly comment the code examples
+ * Add asimilarity example before the relevance example
 * Benchmark
  * Consecutively start 1-20 ec2 small instances and benchmark against eachs ize
  * Add benchmark results to docs
