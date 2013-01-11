@@ -2,8 +2,13 @@
 <html>
 	<head>
 		<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+		<link href="css/shCore.css" rel="stylesheet" media="screen">
+		<link href="css/shThemeDefault.css" rel="stylesheet" media="screen">
 		<script src="js/jquery-latest.js"></script>
 		<script src="js/bootstrap.min.js"></script>
+		<script src="js/shCore.js"></script>
+		<script type="text/javascript" src="js/shBrushJScript.js"></script>
+		<script type="text/javascript" src="js/shBrushGo.js"></script>
 		<style type="text/css">
 		  img.illustration {
 		    width: 50%;
@@ -11,10 +16,12 @@
 		  .illustration {
 		    float: right;
 		  }
-		  .prettyprint {
-		    font-size: xx-small;
-		  }
 		</style>
+		<script>
+		$(document).ready(function() {
+		  SyntaxHighlighter.all();
+		});
+		</script>
 		<title>Go Database! Docs</title>
 	</head>
 	<body data-spy="scroll" data-target="#sidebar">
@@ -108,13 +115,13 @@
 				<p>
 				A trivial example would be to store application users in <i>god</i>. Here is a bit of example Go code that would store and fetch a user object:
 				</p>
-				<pre class="prettyprint">
+				<pre class="prettyprint brush: go">
 {{.E "put_get.go"}}
 				</pre>
 				<p>
 				And here is a bit of node compatible JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
-				<pre class="prettyprint">
+				<pre class="prettyprint brush: js">
 {{.E "put_get.js"}}
 				</pre>
 				<h2 id="structstorage">Storing structures</h2>
@@ -131,39 +138,39 @@
 				<p>
 				The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the followers of a user:
 				</p>
-				<pre class="prettyprint">
+				<pre class="prettyprint brush: go">
 {{.E "subput_slice.go"}}
 				</pre>
 				<p>
 				And here is a bit of nody JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
-				<pre class="prettyprint">
+				<pre class="prettyprint brush: js">
 {{.E "subput_slice.js"}}
 				</pre>
 				<h2 id="friends">Friends</h2>
 				<p>
 				One simple way to use the set operation support in god would be to intersect followers and followees to produce the users who are both. Below follows a bit of Go code that would produce these users, let us call them friends:
 				</p>
-				<pre class="prettyprint">
+				<pre class="prettyprint brush: go">
 {{.E "subput_intersect.go"}}
 				</pre>
 				<p>
 				To do the same thing using node, you can run:
 				</p>
-				<pre class="prettyprint">
+				<pre class="prettyprint brush: js">
 {{.E "subput_intersect.js"}}
 				</pre>
 				<h2 id="toplists">Top lists</h2>
 				<p>
 				The tree mirroring capabilities of <i>god</i> lets you sort a mapping on both key and value, by keeping a <i>mirrored</i> version of the main tree, with key and value reversed. This is quite costly, as it has to update the mirrored tree for each update of the main tree, but it lets you do things like keeping a running top list of the highest scoring players of your fancy multi player game. Here is some Go code to do that:
 				</p>
-				<pre class="prettyprint">
+				<pre class="prettyprint brush: go">
 {{.E "subput_mirror.go"}}
 				</pre>
 				<p>
 				And the corresponding node code:
 				</p>
-				<pre class="prettyprint">
+				<pre class="prettyprint brush: js">
 {{.E "subput_mirror.js"}}
 				</pre>
 				<h2 id="relevance">Relevance</h2>
