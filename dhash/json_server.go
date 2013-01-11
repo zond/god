@@ -15,6 +15,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+)
+
+const (
+	updateInterval = time.Second
 )
 
 type socketMessage struct {
@@ -124,6 +129,20 @@ func (self jsonRpcServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	self.server.ServeRequest(context)
 }
 
+func (self *Node) jsonDescription() string {
+	b, err := json.Marshal(socketMessage{
+		Type: "RingChange",
+		Data: map[string]interface{}{
+			"description": self.Description(),
+			"routes":      self.node.Nodes(),
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
 func (self *Node) startJson() {
 	var nodeAddr *net.TCPAddr
 	var err error
@@ -138,17 +157,15 @@ func (self *Node) startJson() {
 	router := mux.NewRouter()
 	router.Methods("POST").Path("/rpc/{method}").MatcherFunc(wantsJSON).Handler(jsonServer)
 	web.Route(func(ws *websocket.Conn) {
-		b, err := json.Marshal(socketMessage{
-			Type: "RingChange",
-			Data: map[string]interface{}{
-				"description": self.Description(),
-				"routes":      self.node.Nodes(),
-			},
-		})
-		if err != nil {
-			panic(err)
-		}
-		if websocket.Message.Send(ws, string(b)) == nil {
+		if websocket.Message.Send(ws, self.jsonDescription()) == nil {
+			go func() {
+				for {
+					time.Sleep(updateInterval)
+					if websocket.Message.Send(ws, self.jsonDescription()) != nil {
+						break
+					}
+				}
+			}()
 			self.AddCommListener(func(comm Comm) bool {
 				b, err := json.Marshal(socketMessage{
 					Type: "Comm",
