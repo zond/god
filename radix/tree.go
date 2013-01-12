@@ -122,6 +122,9 @@ func NewTreeTimer(timer Timer) (result *Tree) {
 func (self *Tree) Load() float64 {
   return self.lock.Load()
 }
+func (self *Tree) deepEqual(o *Tree) bool {
+  return self.Describe() == o.Describe()
+}
 
 func (self *Tree) conf() (result map[string]string, ts int64) {
   result = make(map[string]string)

@@ -48,13 +48,13 @@ func TestSyncVersions(t *testing.T) {
   if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should not be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
   }
-  if reflect.DeepEqual(tree1, tree2) {
+  if tree1.deepEqual(tree2) {
     t.Errorf("%v and %v are equal", tree1, tree2)
   }
   if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree3, tree2) {
+  if !tree3.deepEqual(tree2) {
     t.Errorf("%v and %v are unequal", tree3, tree2)
   }
   tree1.Put([]byte{2}, []byte("yet another timestamp"), 3)
@@ -62,13 +62,13 @@ func TestSyncVersions(t *testing.T) {
   if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should not be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
   }
-  if reflect.DeepEqual(tree3, tree2) {
+  if tree3.deepEqual(tree2) {
     t.Errorf("%v and %v are equal", tree3, tree2)
   }
   if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree1, tree2) {
+  if !tree1.deepEqual(tree2) {
     t.Errorf("%v and %v are unequal", tree1, tree2)
   }
 }
@@ -97,7 +97,7 @@ func TestSyncLimits(t *testing.T) {
   if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree3, tree2) {
+  if !tree3.deepEqual(tree2) {
     t.Errorf("%v and %v are unequal", tree3, tree2)
   }
 }
@@ -141,13 +141,13 @@ func TestSyncSubTreeDestructive(t *testing.T) {
   if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree1, tree2) {
+  if !tree1.deepEqual(tree2) {
     t.Errorf("\n%v and \n%v are unequal", tree1.Describe(), tree2.Describe())
   }
   if tree3.Size() != 0 {
     t.Errorf("%v should be empty", tree3.Describe())
   }
-  if !reflect.DeepEqual(tree3, NewTree()) {
+  if !tree3.deepEqual(NewTree()) {
     t.Errorf("%v and %v should be equal", tree3.Describe(), NewTree().Describe())
   }
 }
@@ -235,13 +235,13 @@ func TestSyncSubTreeVersions(t *testing.T) {
   if bytes.Compare(tree1.Hash(), tree2.Hash()) == 0 {
     t.Errorf("should not be equal")
   }
-  if reflect.DeepEqual(tree1, tree2) {
+  if tree1.deepEqual(tree2) {
     t.Errorf("should not be equal")
   }
   if bytes.Compare(tree3.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree3, tree2) {
+  if !tree3.deepEqual(tree2) {
     t.Errorf("\n%v and \n%v are unequal", tree3.Describe(), tree2.Describe())
   }
   tree1.SubPut([]byte(murmur.HashString(fmt.Sprint(1))), []byte(fmt.Sprint(3)), []byte("another value again"), 3)
@@ -249,13 +249,13 @@ func TestSyncSubTreeVersions(t *testing.T) {
   if bytes.Compare(tree3.Hash(), tree2.Hash()) == 0 {
     t.Errorf("should not be equal")
   }
-  if reflect.DeepEqual(tree3, tree2) {
+  if tree3.deepEqual(tree2) {
     t.Errorf("should not be equal")
   }
   if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree1, tree2) {
+  if !tree1.deepEqual(tree2) {
     t.Errorf("\n%v and \n%v are unequal", tree1.Describe(), tree2.Describe())
   }
 }
@@ -282,7 +282,7 @@ func TestSyncSubTree(t *testing.T) {
   if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree1, tree2) {
+  if !tree1.deepEqual(tree2) {
     t.Errorf("\n%v and \n%v are unequal", tree1.Describe(), tree2.Describe())
   }
 }
@@ -305,13 +305,13 @@ func TestSyncDestructive(t *testing.T) {
   if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree1, tree2) {
+  if !tree1.deepEqual(tree2) {
     t.Errorf("%v and %v are unequal", tree1, tree2)
   }
   if tree3.Size() != 0 {
     t.Errorf("%v should be size 0, is size %v", tree3, tree3.Size())
   }
-  if !reflect.DeepEqual(tree3, NewTree()) {
+  if !tree3.deepEqual(NewTree()) {
     t.Errorf("should be equal")
   }
 }
@@ -331,14 +331,14 @@ func TestSyncDestructiveMatching(t *testing.T) {
     tree3.Put(k, v, 1)
   }
   NewSync(tree1, tree2).Destroy().Run()
-  if !reflect.DeepEqual(tree2, tree3) {
+  if !tree2.deepEqual(tree3) {
     t.Errorf("should be equal")
   }
   if tree1.Size() != 0 {
     t.Errorf("should be empty!")
   }
   tree4 := NewTree()
-  if !reflect.DeepEqual(tree1, tree4) {
+  if !tree1.deepEqual(tree4) {
     t.Errorf("should be equal!")
   }
 }
@@ -359,7 +359,7 @@ func TestSyncComplete(t *testing.T) {
   if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree1, tree2) {
+  if !tree1.deepEqual(tree2) {
     t.Errorf("%v and %v are unequal", tree1, tree2)
   }
 }
@@ -400,7 +400,7 @@ func TestSyncRandomLimits(t *testing.T) {
           tree3 = NewTree()
           s = NewSync(tree1, tree3).From(fromKey).To(toKey)
           s.Run()
-          if !reflect.DeepEqual(tree3, tree2) {
+          if !tree3.deepEqual(tree2) {
             t.Errorf("when syncing from %v to %v, %v and %v have hashes\n%v\n%v\nand they should be equal!", common.HexEncode(fromKey), common.HexEncode(toKey), tree3.Describe(), tree2.Describe(), tree3.Hash(), tree2.Hash())
           }
         }
@@ -429,7 +429,7 @@ func TestSyncPartial(t *testing.T) {
   if bytes.Compare(tree1.Hash(), tree2.Hash()) != 0 {
     t.Errorf("%v and %v have hashes\n%v\n%v\nand they should be equal!", tree1.Describe(), tree2.Describe(), tree1.Hash(), tree2.Hash())
   }
-  if !reflect.DeepEqual(tree1, tree2) {
+  if !tree1.deepEqual(tree2) {
     t.Errorf("%v and %v are unequal", tree1, tree2)
   }
 }
