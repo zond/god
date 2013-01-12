@@ -17,7 +17,6 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 
 # TODO
 
-* Remove the mirror tree completely in Clear
 * Docs
  * Add asimilarity example before the relevance example
 * Benchmark
