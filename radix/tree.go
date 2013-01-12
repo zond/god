@@ -142,7 +142,7 @@ func (self *Tree) Configuration() (map[string]string, int64) {
 }
 func (self *Tree) mirrorClear(timestamp int64) {
   if self.mirror != nil {
-    self.mirror.Clear(timestamp)
+    self.mirror = NewTreeTimer(self.timer)
   }
 }
 func (self *Tree) mirrorPut(key, value []byte, timestamp int64) {
