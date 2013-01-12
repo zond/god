@@ -9,6 +9,7 @@ import (
 func main() {
   conn := client.MustConn("localhost:9191")
   key := []byte("score_by_email")
+  // make the sub set mirrored
   conn.SubAddConfiguration(key, "mirrored", "yes")
   conn.SubPut(key, []byte("mail1@domain.tld"), common.EncodeInt64(414))
   conn.SubPut(key, []byte("mail2@domain.tld"), common.EncodeInt64(12))
@@ -19,6 +20,7 @@ func main() {
   conn.SubPut(key, []byte("mail7@domain.tld"), common.EncodeInt64(1023))
   conn.SubPut(key, []byte("mail8@domain.tld"), common.EncodeInt64(121))
   fmt.Println("top three scores:")
+  // fetch a slice of len 3 in reverse from the mirror tree
   for index, user := range conn.MirrorReverseSliceLen(key, nil, true, 3) {
     fmt.Println(index, string(user.Value), common.MustDecodeInt64(user.Key))
   }

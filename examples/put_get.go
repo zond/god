@@ -7,6 +7,7 @@ import (
   "github.com/zond/god/murmur"
 )
 
+// a make believe user data structure
 type User struct {
   Email    string
   Password string
@@ -14,19 +15,25 @@ type User struct {
 }
 
 func main() {
+  // connect to the default local server
   conn := client.MustConn("localhost:9191")
+  // create a user
   user := User{
     Email:    "mail@domain.tld",
     Password: "so secret",
     Name:     "john doe",
   }
+  // serialize the user
   if bytes, err := json.Marshal(user); err != nil {
     panic(err)
   } else {
+    // and put it in the database
     conn.Put(murmur.HashString(user.Email), bytes)
   }
+  // try to fetch the user again
   data, _ := conn.Get(murmur.HashString(user.Email))
   var found User
+  // try to unserialize it
   if err := json.Unmarshal(data, &found); err != nil {
     panic(err)
   }

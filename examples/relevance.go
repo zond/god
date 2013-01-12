@@ -19,13 +19,13 @@ func abs(i int64) int64 {
 var conn = client.MustConn("localhost:9191")
 
 type recommendation struct {
-  name  flavour
+  name  string
   score float64
 }
 
 type user string
 
-func (self user) rate(f flavour, score int) {
+func (self user) rate(f string, score int) {
   // store our rating of this flavour under our key
   conn.SubPut([]byte(self), []byte(f), common.EncodeInt64(int64(score)))
   // store that we have rated this flavour under the flavour key
@@ -89,11 +89,9 @@ func (self user) recommended() recommendation {
     }
   }
   // return the highest rated recommendation
-  best := conn.SliceLen(dumpkey, nil, true, 1)[0]
-  return recommendation{name: flavour(best.Key), score: common.MustDecodeFloat64(best.Value)}
+  best := conn.MirrorReverseSliceLen(dumpkey, nil, true, 1)[0]
+  return recommendation{name: string(best.Value), score: common.MustDecodeFloat64(best.Key)}
 }
-
-type flavour string
 
 func main() {
   adam := user("adam")
@@ -126,6 +124,6 @@ func main() {
 // output: this gives them an average similarity of 5, and a weight of 3.4657359027997265
 // output: charlie has tried chocolate, which adam has not, and rated it 3, which gives it a recommendation value influence of 10.39720770839918, adding up to 43.35557636844246
 // output: charlie has tried pumpkin, which adam has not, and rated it 10, which gives it a recommendation value influence of 34.657359027997266
-// output: denise has 3 ratings in common with adam, and they are 6 similar
-// output: this gives them an average similarity of 2, and a weight of 2.772588722239781
+// output: denise has 4 ratings in common with adam, and they are 16 similar
+// output: this gives them an average similarity of 4, and a weight of 6.437751649736401
 // output: with the data we have, we recommend that adam tries chocolate

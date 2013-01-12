@@ -41,9 +41,13 @@ function after(n, callback) {
   }
 }
 
+// make up a key
 var key = new Buffer("mail@domain.tld/followers").toString('base64')
+// and some sub keys
 var followers = ["follower1@domain.tld", "follower2@domain.tld", "follower3@domain.tld"];
+// define a callback that
 var cb = after(followers.length, function() {
+  // fetches bits and pieces of the sub set
   rpc('SliceLen', {
     Key: key,
     Len: 1,
@@ -57,6 +61,7 @@ var cb = after(followers.length, function() {
     });
   });
 });
+// dump the sub keys into the sub set
 followers.map(function(follower) {
   rpc('SubPut', {
     Key: key,

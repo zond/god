@@ -45,6 +45,7 @@
 					<li><a href="#followers">Followers</a></li>
 					<li><a href="#friends">Friends</a></li>
 					<li><a href="#toplists">Top lists</a></li>
+					<li><a href="#similarity">Similarity</a></li>
 					<li><a href="#relevance">Relevance</a></li>
 				</ul>
 			</div>
@@ -115,7 +116,7 @@
 				<p>
 				A trivial example would be to store application users in <i>god</i>. Here is a bit of example Go code that would store and fetch a user object:
 				</p>
-				<pre class="prettyprint brush: go">
+				<pre class="brush: go">
 package main
 
 import (
@@ -125,6 +126,7 @@ import (
   "github.com/zond/god/murmur"
 )
 
+// a make believe user data structure
 type User struct {
   Email    string
   Password string
@@ -132,19 +134,25 @@ type User struct {
 }
 
 func main() {
+  // connect to the default local server
   conn := client.MustConn("localhost:9191")
+  // create a user
   user := User{
     Email:    "mail@domain.tld",
     Password: "so secret",
     Name:     "john doe",
   }
+  // serialize the user
   if bytes, err := json.Marshal(user); err != nil {
     panic(err)
   } else {
+    // and put it in the database
     conn.Put(murmur.HashString(user.Email), bytes)
   }
+  // try to fetch the user again
   data, _ := conn.Get(murmur.HashString(user.Email))
   var found User
+  // try to unserialize it
   if err := json.Unmarshal(data, &found); err != nil {
     panic(err)
   }
@@ -157,9 +165,10 @@ func main() {
 				<p>
 				And here is a bit of node compatible JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
-				<pre class="prettyprint brush: js">
+				<pre class="brush: js">
 var http = require('http');
 
+// call endpoint with params and run callback when finished
 function rpc(endpoint, params, callback) {
   var data = '';
   var content = JSON.stringify(params);
@@ -191,16 +200,19 @@ function rpc(endpoint, params, callback) {
   req.end();
 };
 
+// a fake user
 var user = {
   email: 'mail@domain.tld',
   password: 'so secret',
   name: 'john doe',
 };
 
+// insert it into the database
 rpc('Put', { 
   Key: new Buffer(user.email).toString('base64'),
   Value: new Buffer(JSON.stringify(user)).toString('base64'),
 }, function() {
+  // and fetch it again
   rpc('Get', { Key: new Buffer(user.email).toString('base64') }, function(data) {
     console.log('stored and found', JSON.parse(new Buffer(data.Value, 'base64').toString('utf-8')));
   });
@@ -224,7 +236,7 @@ rpc('Put', {
 				<p>
 				The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the followers of a user:
 				</p>
-				<pre class="prettyprint brush: go">
+				<pre class="brush: go">
 package main
 
 import (
@@ -234,10 +246,13 @@ import (
 
 func main() {
   conn := client.MustConn("localhost:9191")
+  // make up a key
   key := []byte("mail@domain.tld/followers")
+  // dump sub keys into it
   conn.SubPut(key, []byte("follower1@domain.tld"), nil)
   conn.SubPut(key, []byte("follower2@domain.tld"), nil)
   conn.SubPut(key, []byte("follower3@domain.tld"), nil)
+  // and fetch bits and pieces of it
   fmt.Printf("my first follower is %+v\n", string(conn.SliceLen(key, nil, true, 1)[0].Key))
   last2 := conn.ReverseSliceLen(key, nil, true, 2)
   fmt.Printf("my last two followers are %+v and %+v\n", string(last2[1].Key), string(last2[0].Key))
@@ -250,7 +265,7 @@ func main() {
 				<p>
 				And here is a bit of nody JavaScript doing the same thing against the HTTP/JSON API:
 				</p>
-				<pre class="prettyprint brush: js">
+				<pre class="brush: js">
 var http = require('http');
 
 function rpc(endpoint, params, callback) {
@@ -294,9 +309,13 @@ function after(n, callback) {
   }
 }
 
+// make up a key
 var key = new Buffer("mail@domain.tld/followers").toString('base64')
+// and some sub keys
 var followers = ["follower1@domain.tld", "follower2@domain.tld", "follower3@domain.tld"];
+// define a callback that
 var cb = after(followers.length, function() {
+  // fetches bits and pieces of the sub set
   rpc('SliceLen', {
     Key: key,
     Len: 1,
@@ -310,6 +329,7 @@ var cb = after(followers.length, function() {
     });
   });
 });
+// dump the sub keys into the sub set
 followers.map(function(follower) {
   rpc('SubPut', {
     Key: key,
@@ -324,7 +344,7 @@ followers.map(function(follower) {
 				<p>
 				One simple way to use the set operation support in god would be to intersect followers and followees to produce the users who are both. Below follows a bit of Go code that would produce these users, let us call them friends:
 				</p>
-				<pre class="prettyprint brush: go">
+				<pre class="brush: go">
 package main
 
 import (
@@ -335,13 +355,17 @@ import (
 
 func main() {
   conn := client.MustConn("localhost:9191")
+  // lets store followers here
   followersKey := []byte("mail@domain.tld/followers")
+  // and followees here
   followeesKey := []byte("mail@domain.tld/followees")
+  // create a few of each
   conn.SubPut(followersKey, []byte("user1@domain.tld"), nil)
   conn.SubPut(followersKey, []byte("user2@domain.tld"), nil)
   conn.SubPut(followersKey, []byte("user3@domain.tld"), nil)
   conn.SubPut(followeesKey, []byte("user3@domain.tld"), nil)
   conn.SubPut(followeesKey, []byte("user4@domain.tld"), nil)
+  // and fetch the intersection!
   for _, friend := range conn.SetExpression(setop.SetExpression{
     Code: fmt.Sprintf("(I %v %v)", string(followersKey), string(followeesKey)),
   }) {
@@ -355,40 +379,41 @@ func main() {
 				<p>
 				To do the same thing using node, you can run:
 				</p>
-				<pre class="prettyprint brush: js">
-var http = require('http');
+				<pre class="brush: js">
+var http = require("http");
 
 function rpc(endpoint, params, callback) {
-  var data = '';
+  var data = "";
   var content = JSON.stringify(params);
   var req = http.request({
-    hostname: 'localhost',
+    hostname: "localhost",
     port: 9192,
     headers: {
-      'Content-Length': content.length,
-      'Accept': 'application/json',
+      "Content-Length": content.length,
+      "Accept": "application/json",
     },
-    path: '/rpc/DHash.' + endpoint,
-    method: 'POST',
+    path: "/rpc/DHash." + endpoint,
+    method: "POST",
   }, function(res) {
-    res.setEncoding('utf8');
-    res.on('data', function(d) {
+    res.setEncoding("utf8");
+    res.on("data", function(d) {
       data += d;
     });
-    res.on('end', function() {
+    res.on("end", function() {
       callback(JSON.parse(data));
     });
-    res.on('close', function() {
+    res.on("close", function() {
       callback(JSON.parse(data));
     });
   });
-  req.on('error', function(e) {
-    console.log('problem with request: ' + e.message);
+  req.on("error", function(e) {
+    console.log("problem with request: " + e.message);
   });
   req.write(content);
   req.end();
 };
 
+// run the callback the n'th time the return value is executed
 function after(n, callback) {
   var count = n;
   return function() {
@@ -399,29 +424,37 @@ function after(n, callback) {
   }
 }
 
-var followers_key = new Buffer("mail@domain.tld/followers").toString('base64')
-var followees_key = new Buffer("mail@domain.tld/followees").toString('base64')
+// lets store followers here
+var followers_key = new Buffer("mail@domain.tld/followers").toString("base64")
+// and followees here
+var followees_key = new Buffer("mail@domain.tld/followees").toString("base64")
+// define a few of each
 var followers = ["user1@domain.tld", "user2@domain.tld", "user3@domain.tld"];
 var followees = ["user3@domain.tld", "user4@domain.tld"];
+// define a callback that...
 var cb = after(followers.length + followees.length, function() {
-  rpc('SetExpression', {
-    Code: '(I ' + new Buffer(followers_key, 'base64').toString('utf-8') + ' ' + new Buffer(followees_key, 'base64').toString('utf-8') + ')',
+  // runs an intersection of the followers and followees
+  rpc("SetExpression", {
+    Code: "(I " + new Buffer(followers_key, "base64").toString("utf-8") + " " + new Buffer(followees_key, "base64").toString("utf-8") + ")",
   }, function(data) {
+    // and just prints them
     data.map(function(friend) {
-      console.log(new Buffer(friend.Key, 'base64').toString('utf-8'));
+      console.log(new Buffer(friend.Key, "base64").toString("utf-8"));
     });
   });
 });
+// insert the followers
 followers.map(function(follower) {
-  rpc('SubPut', {
+  rpc("SubPut", {
     Key: followers_key,
-    SubKey: new Buffer(follower).toString('base64'),
+    SubKey: new Buffer(follower).toString("base64"),
   }, cb);
 });
+// insert the followees
 followees.map(function(followee) {
-  rpc('SubPut', {
+  rpc("SubPut", {
     Key: followees_key,
-    SubKey: new Buffer(followee).toString('base64'),
+    SubKey: new Buffer(followee).toString("base64"),
   }, cb);
 });
 // output: user3@domain.tld
@@ -431,7 +464,7 @@ followees.map(function(followee) {
 				<p>
 				The tree mirroring capabilities of <i>god</i> lets you sort a mapping on both key and value, by keeping a <i>mirrored</i> version of the main tree, with key and value reversed. This is quite costly, as it has to update the mirrored tree for each update of the main tree, but it lets you do things like keeping a running top list of the highest scoring players of your fancy multi player game. Here is some Go code to do that:
 				</p>
-				<pre class="prettyprint brush: go">
+				<pre class="brush: go">
 package main
 
 import (
@@ -443,6 +476,7 @@ import (
 func main() {
   conn := client.MustConn("localhost:9191")
   key := []byte("score_by_email")
+  // make the sub set mirrored
   conn.SubAddConfiguration(key, "mirrored", "yes")
   conn.SubPut(key, []byte("mail1@domain.tld"), common.EncodeInt64(414))
   conn.SubPut(key, []byte("mail2@domain.tld"), common.EncodeInt64(12))
@@ -453,6 +487,7 @@ func main() {
   conn.SubPut(key, []byte("mail7@domain.tld"), common.EncodeInt64(1023))
   conn.SubPut(key, []byte("mail8@domain.tld"), common.EncodeInt64(121))
   fmt.Println("top three scores:")
+  // fetch a slice of len 3 in reverse from the mirror tree
   for index, user := range conn.MirrorReverseSliceLen(key, nil, true, 3) {
     fmt.Println(index, string(user.Value), common.MustDecodeInt64(user.Key))
   }
@@ -467,7 +502,7 @@ func main() {
 				<p>
 				And the corresponding node code:
 				</p>
-				<pre class="prettyprint brush: js">
+				<pre class="brush: js">
 var http = require('http');
 
 function rpc(endpoint, params, callback) {
@@ -511,17 +546,20 @@ function after(n, callback) {
   }
 };
 
+// convert integer to base64 encoded bytes
 function i2b(i) {
   var b = new Buffer(4);
   b.writeInt32BE(i, 0);
   return b.toString('base64');
 };
 
+// convert base64 encoded bytes to an integer
 function b2i(b) {
   var b = new Buffer(b, 'base64');
   return b.readInt32BE(0);
 };
 
+// dump a bunch of scores
 var key = new Buffer("score_by_email").toString('base64')
 var scores = {
   "mail1@domain.tld": i2b(1234),
@@ -533,21 +571,26 @@ var scores = {
   "mail7@domain.tld": i2b(44),
   "mail8@domain.tld": i2b(6),
 };
+// define a callback that
 var cb = after(9, function() {
+  // fetches a slice of len 3 in reverse from the mirror tree
   rpc('MirrorReverseSliceLen', {
     Key: key,
     Len: 3,
   }, function(data) {
+    // and prints it
     console.log("top three scores");
     data.map(function(score) {
       console.log(new Buffer(score.Value, 'base64').toString('utf-8'), b2i(score.Key));
     });
   });
 });
+// make the score tree mirrored
 rpc('SubAddConfiguration', {
   Key: 'mirrored',
   Value: 'yes',
 }, cb);
+// and insert the scores
 for (var email in scores) {
   rpc('SubPut', {
     Key: key,
@@ -561,8 +604,88 @@ for (var email in scores) {
 // output: mail1@domain.tld 1234
 
 				</pre>
+				<h2 id="similarity">Similarity</h2>
+				<pre class="brush: go">
+package main
+
+import (
+  "fmt"
+  "github.com/zond/god/client"
+  "github.com/zond/god/common"
+  "github.com/zond/god/setop"
+  "math/rand"
+)
+
+var conn = client.MustConn("localhost:9191")
+
+type user string
+
+func (self user) like(flavour string) {
+  // remember that we have liked this flavour by putting it in our sub tree with nil value, and in the sub tree of the flavour with value 1
+  conn.SubPut([]byte(self), []byte(flavour), nil)
+  conn.SubPut([]byte(flavour), []byte(self), common.EncodeInt64(1))
+}
+
+func (self user) similar() user {
+  // create a set operation that returns the union of the tasters of all flavors we have rated, summing the values
+  op := &setop.SetOp{
+    Merge: setop.IntegerSum,
+    Type:  setop.Union,
+  }
+  // for each flavor we have tried, add the raters of that flavor as a source
+  for _, flavour := range conn.Slice([]byte(self), nil, nil, true, true) {
+    op.Sources = append(op.Sources, setop.SetOpSource{Key: flavour.Key})
+  }
+  // designate a dump subset
+  dumpkey := []byte(fmt.Sprintf("%v_similar_%v", self, rand.Int63()))
+  // make it mirrored
+  conn.SubAddConfiguration(dumpkey, "mirrored", "yes")
+  // make sure we clean up after ourselves
+  defer conn.SubClear(dumpkey)
+  // run the set operation dumping the values in the dump tree
+  conn.SetExpression(setop.SetExpression{
+    Op:   op,
+    Dest: dumpkey,
+  })
+  for _, user := range conn.Slice(dumpkey, nil, nil, true, true) {
+    fmt.Printf("%v has liked %v flavours in common with %v\n", string(user.Key), common.MustDecodeInt64(user.Value), self)
+  }
+  // fetch the second best match (the best is likely us...)
+  best := conn.MirrorReverseSliceLen(dumpkey, nil, true, 2)[1]
+  return user(best.Value)
+}
+
+func main() {
+  adam := user("adam")
+  beatrice := user("beatrice")
+  charlie := user("charlie")
+  denise := user("denise")
+  eddard := user("eddard")
+  adam.like("vanilla")
+  adam.like("licorice")
+  adam.like("mulberry")
+  adam.like("wood shavings")
+  beatrice.like("licorice")
+  beatrice.like("chocolate")
+  charlie.like("strawberry")
+  charlie.like("pumpkin")
+  denise.like("vanilla")
+  denise.like("mulberry")
+  denise.like("strawberry")
+  eddard.like("steel")
+  eddard.like("snow")
+  fmt.Println("adam should get to know", adam.similar())
+}
+
+// output: adam has liked 4 flavours in common with adam
+// output: beatrice has liked 1 flavours in common with adam
+// output: charlie has liked 1 flavours in common with adam
+// output: denise has liked 3 flavours in common with adam
+// output: adam should get to know denise
+
+				</pre>
 				<h2 id="relevance">Relevance</h2>
-				<pre class="prettyprint brush: go">
+				<pre class="brush: go">
 package main
 
 import (
@@ -584,13 +707,13 @@ func abs(i int64) int64 {
 var conn = client.MustConn("localhost:9191")
 
 type recommendation struct {
-  name  flavour
+  name  string
   score float64
 }
 
 type user string
 
-func (self user) rate(f flavour, score int) {
+func (self user) rate(f string, score int) {
   // store our rating of this flavour under our key
   conn.SubPut([]byte(self), []byte(f), common.EncodeInt64(int64(score)))
   // store that we have rated this flavour under the flavour key
@@ -654,11 +777,9 @@ func (self user) recommended() recommendation {
     }
   }
   // return the highest rated recommendation
-  best := conn.SliceLen(dumpkey, nil, true, 1)[0]
-  return recommendation{name: flavour(best.Key), score: common.MustDecodeFloat64(best.Value)}
+  best := conn.MirrorReverseSliceLen(dumpkey, nil, true, 1)[0]
+  return recommendation{name: string(best.Value), score: common.MustDecodeFloat64(best.Key)}
 }
-
-type flavour string
 
 func main() {
   adam := user("adam")
@@ -691,8 +812,8 @@ func main() {
 // output: this gives them an average similarity of 5, and a weight of 3.4657359027997265
 // output: charlie has tried chocolate, which adam has not, and rated it 3, which gives it a recommendation value influence of 10.39720770839918, adding up to 43.35557636844246
 // output: charlie has tried pumpkin, which adam has not, and rated it 10, which gives it a recommendation value influence of 34.657359027997266
-// output: denise has 3 ratings in common with adam, and they are 6 similar
-// output: this gives them an average similarity of 2, and a weight of 2.772588722239781
+// output: denise has 4 ratings in common with adam, and they are 16 similar
+// output: this gives them an average similarity of 4, and a weight of 6.437751649736401
 // output: with the data we have, we recommend that adam tries chocolate
 
 				</pre>

@@ -41,17 +41,20 @@ function after(n, callback) {
   }
 };
 
+// convert integer to base64 encoded bytes
 function i2b(i) {
   var b = new Buffer(4);
   b.writeInt32BE(i, 0);
   return b.toString('base64');
 };
 
+// convert base64 encoded bytes to an integer
 function b2i(b) {
   var b = new Buffer(b, 'base64');
   return b.readInt32BE(0);
 };
 
+// dump a bunch of scores
 var key = new Buffer("score_by_email").toString('base64')
 var scores = {
   "mail1@domain.tld": i2b(1234),
@@ -63,21 +66,26 @@ var scores = {
   "mail7@domain.tld": i2b(44),
   "mail8@domain.tld": i2b(6),
 };
+// define a callback that
 var cb = after(9, function() {
+  // fetches a slice of len 3 in reverse from the mirror tree
   rpc('MirrorReverseSliceLen', {
     Key: key,
     Len: 3,
   }, function(data) {
+    // and prints it
     console.log("top three scores");
     data.map(function(score) {
       console.log(new Buffer(score.Value, 'base64').toString('utf-8'), b2i(score.Key));
     });
   });
 });
+// make the score tree mirrored
 rpc('SubAddConfiguration', {
   Key: 'mirrored',
   Value: 'yes',
 }, cb);
+// and insert the scores
 for (var email in scores) {
   rpc('SubPut', {
     Key: key,
