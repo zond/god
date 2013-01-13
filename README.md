@@ -18,10 +18,7 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 # TODO
 
 * Docs
- * Add asimilarity example before the relevance example
+ * Add illustrations to the usage manual
 * Benchmark
  * Consecutively start 1-20 ec2 small instances and benchmark against eachs ize
  * Add benchmark results to docs
-* Example app
- * Implementation
- * Documentation
