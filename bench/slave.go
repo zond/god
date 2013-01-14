@@ -68,9 +68,13 @@ func (self *Slave) spinner() {
 
 func (self *Slave) run() {
   var currRps float64
+  freebies := 2
   for self.hasState(started) {
     currRps = float64(atomic.LoadInt64(&self.req)) / (float64(time.Now().UnixNano()-self.start.UnixNano()) / float64(time.Second))
-    if self.maxRps == 0 || currRps > self.maxRps {
+    if self.maxRps == 0 || freebies > 0 || currRps > self.maxRps {
+      if currRps < self.maxRps {
+        freebies--
+      }
       fmt.Println("Spinning up one more loader, ", currRps, ">", self.maxRps)
       self.maxRps = currRps
       self.req = 0
