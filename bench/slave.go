@@ -40,8 +40,8 @@ type SpinCommand struct {
 type Nothing struct{}
 
 type Slave struct {
-  maxRps  float64
-  currRps float64
+  maxRps  int64
+  currRps int64
   maxKey  int64
   req     int64
   start   time.Time
@@ -69,20 +69,24 @@ func (self *Slave) spinner() {
 
 func (self *Slave) run() {
   freebies := 2
+  peaked := false
+  var curr int64
   for self.hasState(started) {
-    self.currRps = float64(atomic.LoadInt64(&self.req)) / (float64(time.Now().UnixNano()-self.start.UnixNano()) / float64(time.Second))
-    if self.maxRps == 0 || freebies > 0 || self.currRps > self.maxRps {
-      fmt.Println("Spinning up one more loader, ", self.currRps, "cmp", self.maxRps)
+    curr = atomic.LoadInt64(&self.req) / ((time.Now().UnixNano() - self.start.UnixNano()) / int64(time.Second))
+    atomic.StoreInt64(&self.currRps, curr)
+    if self.maxRps == 0 || freebies > 0 || curr > self.maxRps {
+      fmt.Println("Spinning up one more loader, curr:", curr, "max:", self.maxRps)
       go self.spinner()
-      if self.currRps < self.maxRps {
+      if curr < self.maxRps {
         freebies--
       }
-      if self.maxRps == 0 || self.currRps > self.maxRps {
-        self.maxRps = self.currRps
+      if self.maxRps == 0 || curr > self.maxRps {
+        self.maxRps = curr
       }
-    } else {
+    } else if !peaked {
       fmt.Println("Peaked at", self.maxRps)
       self.wg.Done()
+      peaked = true
     }
     self.req = 0
     self.start = time.Now()
@@ -107,11 +111,11 @@ func (self *Slave) Prepare(command PrepareCommand, x *Nothing) error {
   return nil
 }
 
-func (self *Slave) Current(x Nothing, rps *float64) error {
+func (self *Slave) Current(x Nothing, rps *int64) error {
   if self.hasState(started) {
     self.wg.Wait()
     self.switchState(started, stopped)
-    *rps = self.maxRps
+    *rps = atomic.LoadInt64(&self.currRps)
     return nil
   }
   return fmt.Errorf("%v is not started", self)

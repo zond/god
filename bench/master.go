@@ -19,7 +19,7 @@ func RunMaster() {
   flag.Parse()
   slavehosts := strings.Split(*slaves, ",")
   clients := make([]*rpc.Client, len(slavehosts))
-  rps := make([]float64, len(slavehosts))
+  rps := make([]int64, len(slavehosts))
   var err error
   for index, addr := range slavehosts {
     if clients[index], err = rpc.Dial("tcp", addr); err != nil {
@@ -80,7 +80,7 @@ func RunMaster() {
       panic(err)
     }
   }
-  sum := float64(0)
+  sum := int64(0)
   for _, r := range rps {
     sum += r
   }
