@@ -20,5 +20,5 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
 * Docs
  * Add illustrations to the usage manual
 * Benchmark
- * Consecutively start 1-20 ec2 small instances and benchmark against eachs ize
+ * Consecutively start 1-20 ec2 small instances and benchmark against each size
  * Add benchmark results to docs
