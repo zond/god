@@ -6,19 +6,22 @@ import (
   "net/rpc"
   "regexp"
   "strconv"
+  "strings"
 )
 
 func RunMaster() {
   ip := flag.String("ip", "127.0.0.1", "IP address to find a node at")
+  slaves := flag.String("slaves", "", "Comma separated list of slave host:ip pairs")
   port := flag.Int("port", 9191, "Port to find a node at")
   maxKey := flag.Int64("maxKey", 10000, "Biggest key as int64 converted to []byte using common.EncodeInt64")
   prepare := flag.String("prepare", "0-0", "The key range (as int64's) to make sure exists before starging")
   keyRangePattern := regexp.MustCompile("^(\\d+)-(\\d+)$")
   flag.Parse()
-  clients := make([]*rpc.Client, len(flag.Args()))
-  rps := make([]float64, len(flag.Args()))
+  slavehosts := strings.Split(*slaves, ",")
+  clients := make([]*rpc.Client, len(slavehosts))
+  rps := make([]float64, len(slavehosts))
   var err error
-  for index, addr := range flag.Args() {
+  for index, addr := range slavehosts {
     if clients[index], err = rpc.Dial("tcp", addr); err != nil {
       panic(err)
     }

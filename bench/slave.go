@@ -75,7 +75,7 @@ func (self *Slave) run() {
       if currRps < self.maxRps {
         freebies--
       }
-      fmt.Println("Spinning up one more loader, ", currRps, ">", self.maxRps)
+      fmt.Println("Spinning up one more loader, ", currRps, "cmp", self.maxRps)
       self.maxRps = currRps
       self.req = 0
       self.start = time.Now()
