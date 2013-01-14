@@ -40,14 +40,15 @@ type SpinCommand struct {
 type Nothing struct{}
 
 type Slave struct {
-  maxRps float64
-  maxKey int64
-  req    int64
-  start  time.Time
-  addr   string
-  state  int32
-  client *client.Conn
-  wg     *sync.WaitGroup
+  maxRps  float64
+  currRps float64
+  maxKey  int64
+  req     int64
+  start   time.Time
+  addr    string
+  state   int32
+  client  *client.Conn
+  wg      *sync.WaitGroup
 }
 
 func (self *Slave) switchState(expected, wanted int32) bool {
@@ -67,27 +68,25 @@ func (self *Slave) spinner() {
 }
 
 func (self *Slave) run() {
-  var currRps float64
   freebies := 2
   for self.hasState(started) {
-    currRps = float64(atomic.LoadInt64(&self.req)) / (float64(time.Now().UnixNano()-self.start.UnixNano()) / float64(time.Second))
-    if self.maxRps == 0 || freebies > 0 || currRps > self.maxRps {
-      fmt.Println("Spinning up one more loader, ", currRps, "cmp", self.maxRps)
-      if currRps < self.maxRps {
+    self.currRps = float64(atomic.LoadInt64(&self.req)) / (float64(time.Now().UnixNano()-self.start.UnixNano()) / float64(time.Second))
+    if self.maxRps == 0 || freebies > 0 || self.currRps > self.maxRps {
+      fmt.Println("Spinning up one more loader, ", self.currRps, "cmp", self.maxRps)
+      go self.spinner()
+      if self.currRps < self.maxRps {
         freebies--
       }
-      if self.maxRps == 0 || currRps > self.maxRps {
-        self.maxRps = currRps
+      if self.maxRps == 0 || self.currRps > self.maxRps {
+        self.maxRps = self.currRps
       }
-      self.req = 0
-      self.start = time.Now()
-      go self.spinner()
-      time.Sleep(time.Second)
     } else {
       fmt.Println("Peaked at", self.maxRps)
       self.wg.Done()
-      return
     }
+    self.req = 0
+    self.start = time.Now()
+    time.Sleep(time.Second)
   }
 }
 
@@ -108,11 +107,19 @@ func (self *Slave) Prepare(command PrepareCommand, x *Nothing) error {
   return nil
 }
 
-func (self *Slave) Wait(x Nothing, rps *float64) error {
+func (self *Slave) Current(x Nothing, rps *float64) error {
   if self.hasState(started) {
     self.wg.Wait()
     self.switchState(started, stopped)
     *rps = self.maxRps
+    return nil
+  }
+  return fmt.Errorf("%v is not started", self)
+}
+
+func (self *Slave) Wait(x Nothing, y *Nothing) error {
+  if self.hasState(started) {
+    self.wg.Wait()
     return nil
   }
   return fmt.Errorf("%v is not started", self)

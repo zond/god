@@ -70,8 +70,13 @@ func RunMaster() {
       }
     }
   }
+  for _, client := range clients {
+    if err = client.Call("Slave.Wait", Nothing{}, &Nothing{}); err != nil {
+      panic(err)
+    }
+  }
   for index, client := range clients {
-    if err = client.Call("Slave.Wait", Nothing{}, &(rps[index])); err != nil {
+    if err = client.Call("Slave.Current", Nothing{}, &(rps[index])); err != nil {
       panic(err)
     }
   }
