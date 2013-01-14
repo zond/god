@@ -4,13 +4,16 @@ import (
   "flag"
   "fmt"
   "net/rpc"
+  "regexp"
+  "strconv"
 )
 
 func RunMaster() {
-  var ip = flag.String("ip", "127.0.0.1", "IP address to find a node at")
-  var port = flag.Int("port", 9191, "Port to find a node at")
-  var maxKey = flag.Int64("maxKey", 10000, "Biggest key as int64 converted to []byte using common.EncodeInt64")
-  var prepare = flag.Bool("prepare", false, "Whether to make sure that all keys within the maxKey range are set before starting")
+  ip := flag.String("ip", "127.0.0.1", "IP address to find a node at")
+  port := flag.Int("port", 9191, "Port to find a node at")
+  maxKey := flag.Int64("maxKey", 10000, "Biggest key as int64 converted to []byte using common.EncodeInt64")
+  prepare := flag.String("prepare", "0-0", "The key range (as int64's) to make sure exists before starging")
+  keyRangePattern := regexp.MustCompile("^(\\d+)-(\\d+)$")
   flag.Parse()
   clients := make([]*rpc.Client, len(flag.Args()))
   rps := make([]float64, len(flag.Args()))
@@ -24,12 +27,23 @@ func RunMaster() {
     Addr:   fmt.Sprintf("%v:%v", *ip, *port),
     MaxKey: *maxKey,
   }
-  if *prepare {
+  if match := keyRangePattern.FindStringSubmatch(*prepare); match != nil && match[1] != match[2] {
+    from, err := strconv.ParseInt(match[1], 10, 64)
+    if err != nil {
+      panic(err)
+    }
+    to, err := strconv.ParseInt(match[2], 10, 64)
+    if err != nil {
+      panic(err)
+    }
     calls := make([]*rpc.Call, len(clients))
     for index, client := range clients {
       calls[index] = client.Go("Slave.Prepare", PrepareCommand{
-        Addr:  command.Addr,
-        Range: [2]int64{int64(index) * (*maxKey / int64(len(clients))), (int64(index) + 1) * (*maxKey / int64(len(clients)))},
+        Addr: command.Addr,
+        Range: [2]int64{
+          from + (int64(index) * ((to - from) / int64(len(clients)))),
+          from + ((int64(index) + 1) * ((to - from) / int64(len(clients)))),
+        },
       }, &Nothing{}, nil)
     }
     for _, call := range calls {

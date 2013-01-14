@@ -87,7 +87,7 @@ func (self *Slave) run() {
 
 func (self *Slave) Prepare(command PrepareCommand, x *Nothing) error {
   if self.hasState(stopped) {
-    fmt.Println("Preparing on ", command.Addr)
+    fmt.Printf("Preparing %+v\n", command)
     self.client = client.MustConn(command.Addr)
     var kv []byte
     for i := command.Range[0]; i < command.Range[1]; i++ {
