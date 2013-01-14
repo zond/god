@@ -80,6 +80,11 @@ func RunMaster() {
       panic(err)
     }
   }
+  for _, client := range clients {
+    if err = client.Call("Slave.Stop", Nothing{}, &Nothing{}); err != nil {
+      panic(err)
+    }
+  }
   sum := int64(0)
   for _, r := range rps {
     sum += r

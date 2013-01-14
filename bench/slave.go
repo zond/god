@@ -114,11 +114,18 @@ func (self *Slave) Prepare(command PrepareCommand, x *Nothing) error {
 func (self *Slave) Current(x Nothing, rps *int64) error {
   if self.hasState(started) {
     self.wg.Wait()
-    self.switchState(started, stopped)
     *rps = atomic.LoadInt64(&self.currRps)
     return nil
   }
   return fmt.Errorf("%v is not started", self)
+}
+
+func (self *Slave) Stop(x Nothing, y *Nothing) error {
+  if self.hasState(started) {
+    self.wg.Wait()
+    self.switchState(started, stopped)
+  }
+  return nil
 }
 
 func (self *Slave) Wait(x Nothing, y *Nothing) error {
