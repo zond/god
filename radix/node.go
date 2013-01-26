@@ -29,6 +29,7 @@ type nodeIterator func(key, byteValue []byte, treeValue *Tree, use int, timestam
 // node.use & byteValue == byteValue => node contains a byte value
 // node.use & treeValue == treeValue => node contains a tree value
 // node.use != 0 && node.empty => node is invalid?
+// node.empty && node.timestamp == 0 => node is invalid?
 type node struct {
   segment   []Nibble // the bit of the key for this node that separates it from its parent
   byteValue []byte
@@ -89,11 +90,13 @@ func (self *node) rehash(key []Nibble, now int64) {
   h := murmur.NewBytes(toBytes(key))
   h.Write(self.byteHash)
   h.Write(self.treeValue.Hash())
-  for index, child := range self.children {
+
+  var child *node
+  for index := 0; index < len(self.children); index++ {
+    self.children[index] = self.children[index].gc(key, now)
+
+    child = self.children[index]
     if child != nil {
-      if !child.empty && child.use == 0 && child.timestamp < now-zombieLifetime {
-        self.children[index], _, _, _, _ = child.del(key, child.segment, 0, now)
-      }
       self.treeSize += child.treeSize
       self.byteSize += child.byteSize
       self.realSize += child.realSize
@@ -101,6 +104,20 @@ func (self *node) rehash(key []Nibble, now int64) {
     }
   }
   h.Extrude(&self.hash)
+}
+func (self *node) gc(prefix []Nibble, now int64) (result *node) {
+  if self == nil {
+    return self
+  }
+  if !self.empty && self.use == 0 && self.timestamp < now-zombieLifetime {
+    result, _, _, _, _ = self.del(prefix, self.segment, 0, now)
+  } else {
+    result = self
+    if !self.empty && self.use&treeValue == treeValue && self.treeValue.clearTimestamp != 0 && self.treeValue.clearTimestamp < now-zombieLifetime {
+      self.treeValue, self.use = nil, self.use&^treeValue
+    }
+  }
+  return
 }
 func (self *node) describe(indent int, buffer *bytes.Buffer) {
   if self == nil {

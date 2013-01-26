@@ -105,6 +105,7 @@ type Tree struct {
   mirror                 *Tree
   configuration          map[string]string
   configurationTimestamp int64
+  clearTimestamp         int64
 }
 
 func NewTree() *Tree {
@@ -140,7 +141,7 @@ func (self *Tree) Configuration() (map[string]string, int64) {
   defer self.lock.RUnlock()
   return self.conf()
 }
-func (self *Tree) mirrorClear(timestamp int64) {
+func (self *Tree) mirrorClear() {
   if self.mirror != nil {
     self.mirror = NewTreeTimer(self.timer)
   }
@@ -569,6 +570,7 @@ func (self *Tree) FakeDel(key []byte, timestamp int64) (oldBytes []byte, oldTree
   return
 }
 func (self *Tree) put(key []Nibble, byteValue []byte, treeValue *Tree, use int, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
+  self.clearTimestamp = 0
   self.root, oldBytes, oldTree, _, existed = self.root.insert(nil, newNode(key, byteValue, treeValue, timestamp, false, use), self.timer.ContinuousTime())
   return
 }
@@ -819,7 +821,7 @@ func (self *Tree) ReverseIndex(n int) (key []byte, byteValue []byte, timestamp i
 func (self *Tree) Kill() {
   self.lock.Lock()
   defer self.lock.Unlock()
-  self.root = nil
+  self.clearTimestamp, self.root = 0, nil
   self.root, _, _, _, _ = self.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), self.timer.ContinuousTime())
   if self.mirror != nil {
     self.mirror.Kill()
@@ -833,8 +835,9 @@ func (self *Tree) Kill() {
 func (self *Tree) Clear(timestamp int64) (result int) {
   self.lock.Lock()
   defer self.lock.Unlock()
+  self.clearTimestamp = timestamp
   result = self.root.fakeClear(nil, byteValue, timestamp, self.timer.ContinuousTime())
-  self.mirrorClear(timestamp)
+  self.mirrorClear()
   self.log(persistence.Op{
     Clear:     true,
     Timestamp: timestamp,
@@ -1165,7 +1168,7 @@ func (self *Tree) GetTimestamp(key []Nibble) (bValue []byte, timestamp int64, pr
 }
 func (self *Tree) putTimestamp(key []Nibble, bValue []byte, treeValue *Tree, nodeUse, insertUse int, expected, timestamp int64) (result bool, oldBytes []byte) {
   if _, _, current, _ := self.root.get(key); current == expected {
-    result = true
+    self.clearTimestamp, result = 0, true
     self.root, oldBytes, _, _, _ = self.root.insertHelp(nil, newNode(key, bValue, treeValue, timestamp, false, nodeUse), insertUse, self.timer.ContinuousTime())
   }
   return
