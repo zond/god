@@ -203,14 +203,16 @@ func (self *Tree) Configure(conf map[string]string, ts int64) {
 
 // AddConfiguration will set the key and value in the configuration of this tree, and set the provided timestamp as the
 // new configuration timestamp.
-func (self *Tree) AddConfiguration(ts int64, key, value string) {
+func (self *Tree) AddConfiguration(ts int64, key, value string) bool {
   self.lock.Lock()
   defer self.lock.Unlock()
   oldConf, _ := self.conf()
   if oldConf[key] != value {
     oldConf[key] = value
     self.configure(oldConf, ts)
+    return true
   }
+  return false
 }
 
 // Log will make this Tree start logging using a new persistence.Logger.
@@ -1237,20 +1239,22 @@ func (self *Tree) subConfigure(key []byte, conf map[string]string, timestamp int
     Configuration: conf,
     Timestamp:     timestamp,
   })
-  return
 }
 func (self *Tree) SubConfigure(key []byte, conf map[string]string, timestamp int64) {
   self.lock.Lock()
   defer self.lock.Unlock()
   self.subConfigure(key, conf, timestamp)
 }
-func (self *Tree) SubAddConfiguration(treeKey []byte, ts int64, key, value string) {
+func (self *Tree) SubAddConfiguration(treeKey []byte, ts int64, key, value string) bool {
   self.lock.Lock()
   defer self.lock.Unlock()
   oldConf, _ := self.subConfiguration(treeKey)
-  oldConf[key] = value
-  self.subConfigure(treeKey, oldConf, ts)
-  return
+  if oldConf[key] != value {
+    oldConf[key] = value
+    self.subConfigure(treeKey, oldConf, ts)
+    return true
+  }
+  return false
 }
 func (self *Tree) SubFinger(key, subKey []Nibble) (result *Print) {
   self.lock.RLock()
