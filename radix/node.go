@@ -24,6 +24,11 @@ type nodeIterator func(key, byteValue []byte, treeValue *Tree, use int, timestam
 
 // node is the generic implementation of a combined radix/merkle tree with size for each subtree (both regarding bytes and inner trees) cached.
 // it also contains both byte slices and inner trees in each node.
+// node.use == 0 && !node.empty => node is a tombstone
+// node.use == 0 && node.empty => node is only structural (a branch in the keyspace)
+// node.use & byteValue == byteValue => node contains a byte value
+// node.use & treeValue == treeValue => node contains a tree value
+// node.use != 0 && node.empty => node is invalid?
 type node struct {
   segment   []Nibble // the bit of the key for this node that separates it from its parent
   byteValue []byte
@@ -33,10 +38,10 @@ type node struct {
   hash      []byte // cached hash of the entire node
   children  []*node
   empty     bool // this node only serves a structural purpose (ie remove it if it is no longer useful for that)
-  use       int  // the values in this node that are to be considered 'present'. even if this is a zero, do not remove the node if empty is false - it is still a delete marker.
+  use       int  // the values in this node that are to be considered 'present'. even if this is a zero, do not remove the node if empty is false - it is still a tombstone.
   treeSize  int  // size of the tree in this node and those of all of its children
   byteSize  int  // number of byte values in this node and all of its children
-  realSize  int  // number of actual values, including delete markers
+  realSize  int  // number of actual values, including tombstones
 }
 
 func newNode(segment []Nibble, byteValue []byte, treeValue *Tree, timestamp int64, empty bool, use int) *node {
