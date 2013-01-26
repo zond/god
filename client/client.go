@@ -925,7 +925,6 @@ func (self *Conn) DescribeAllTrees() string {
   buf := new(bytes.Buffer)
   for _, rem := range self.ring.Nodes() {
     if res, err := self.DescribeTree(rem.Pos); err == nil {
-      fmt.Println(res)
       fmt.Fprintln(buf, res)
     }
   }
