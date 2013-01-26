@@ -21,4 +21,5 @@ godoc documentation: http://go.pkgdoc.org/github.com/zond/god
  * Add illustrations to the usage manual
 * Benchmark
  * Consecutively start 1-20 ec2 small instances and benchmark against each size
+  * Need 20 machines of equal and constant performance. Is anyone willing to lend me this for few days of benchmarking?
  * Add benchmark results to docs
