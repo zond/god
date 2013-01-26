@@ -207,8 +207,10 @@ func (self *Tree) AddConfiguration(ts int64, key, value string) {
   self.lock.Lock()
   defer self.lock.Unlock()
   oldConf, _ := self.conf()
-  oldConf[key] = value
-  self.configure(oldConf, ts)
+  if oldConf[key] != value {
+    oldConf[key] = value
+    self.configure(oldConf, ts)
+  }
 }
 
 // Log will make this Tree start logging using a new persistence.Logger.
