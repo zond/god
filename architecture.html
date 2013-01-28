@@ -268,6 +268,15 @@
 	<p>
 	To avoid these values being reanimated and haunt you as zombie data, each delete or clear (except the <code>kill</code> command, ironically) will result in tombstones replacing the data you remove. These tombstones are timestamped just like any other piece of data, and will disperse through the cluster just like a put.
 	</p>
+	<p>
+	A potential problem with tombstones to protect against zombies is removing them when the zombie fright is over. <i>god</i> will keep tombstones for at least 24 hours to give users time to fix net splits or ensure that crashed servers are cleaned before being put online again.
+	</p>
+	<p>
+	To avoid a big performance hit every 24 hours after a spike in deletions/second, <i>god</i> currently only removes tombstones in a lazy fashion. This means that whenever a tree is updated, every node touched by the update will remove siblings that are tombstones older than 24 hours. Sub trees marked as cleared more than 24 hours ago will also be removed completely.
+	</p>
+	<p>
+	This will with great likelihood keep collecting tombstones from a database that is continuously modified with the same access pattern, but will likely cause many tombstones to remain if the access patterns change a lot over time so that the same area of the database is never touched again.
+	</p>
 	<h3>Time network</h3>
 	<p>
 	To make sure that the timestamps as far as possible reflect the actual sequence of events in the cluster, and avoid putting additional burdens on the operations part of things, <i>god</i> contains its own time network.
