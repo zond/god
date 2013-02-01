@@ -206,6 +206,13 @@
 	<p>
 	The predecessor will then clean its routing table by removing all nodes between its confirmed (being a notifier) predecessor and itself, so that nodes having been removed after a failed ping will not get reintroduced by a successor.
 	</p>
+	<h3>Route changes</h3>
+	<p>
+	If a node notices that a neighbour is missing, the missing node will be removed from its routing table and the new table will propagate through the ring in a counter clockwise diretion, from successor to predecessor.
+	</p>
+	<p>
+	Since the responsibility for keys rest with the successor of the key, and the successor will be one of the first nodes to notice a failure, this helps preserve the integrity of the responsibility in the cluster.
+	</p>
 	<h2 id="connection">Connection</h2>
 	<h3>net/rpc client</h3>
 	<p>
