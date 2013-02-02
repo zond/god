@@ -6,7 +6,9 @@ import (
 )
 
 func TestSetOpParser(t *testing.T) {
-  op, err := NewSetOpParser("(U (I ccc aa (D ffff gg)) (I:ConCat c23 b_ff) (X dbla e&44))").Parse()
+  var x2 float64 = 2
+  var x3 float64 = 3
+  op, err := NewSetOpParser("(U (I ccc aa (D ffff*2 gg)*3) (I:ConCat c23 b_ff) (X dbla e&44))").Parse()
   if err != nil {
     t.Error(err)
   }
@@ -23,10 +25,11 @@ func TestSetOpParser(t *testing.T) {
               SetOp: &SetOp{
                 Type: Difference,
                 Sources: []SetOpSource{
-                  SetOpSource{Key: []byte("ffff")},
+                  SetOpSource{Key: []byte("ffff"), Weight: &x2},
                   SetOpSource{Key: []byte("gg")},
                 },
               },
+              Weight: &x3,
             },
           },
         },

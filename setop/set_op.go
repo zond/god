@@ -19,16 +19,12 @@ const (
   ConCat
   // IntegerSum decodes all values as int64 using common.DecodeInt64 and sums them.
   IntegerSum
-  // IntegerSub decodes all values as int64 using common.DecodeInt64 and subtracts all values from the first one in the input lists.
-  IntegerSub
   // IntegerDiv decodes all values as int64 using common.DecodeInt64 and divides the first value in the input lists by all other values in turn.
   IntegerDiv
   // IntegerMul decodes all values as int64 using common.DecodeInt64 and multiplies them with each other.
   IntegerMul
   // FloatSum decodes all values as float64 using common.DecodeFloat64 and sums them.
   FloatSum
-  // FloatSub decodes all values as float64 using common.DecodeFloat64 and subtracts all values from the first one in the input lists.
-  FloatSub
   // FloatDiv decodes all values as float64 using common.DecodeFloat64 and divides the first value in the input lists by all other values in turn.
   FloatDiv
   // FloatMul decodes all values as float64 using common.DecodeFloat64 and multiplies them with each other.
@@ -49,8 +45,6 @@ const (
   BigIntOr
   // BigIntRem decodes all values as big.Ints using common.DecodeBigInt and does a remainder operation on each one in turn, with the first one as source value.
   BigIntRem
-  // BigIntSub decodes all values as big.Ints using common.DecodeBigInt and subtracts all values from the first one in the input lists.
-  BigIntSub
   // BigIntXor decodes all values as big.Ints using common.DecodeBigInt and logical XORs them with each other.
   BigIntXor
   // First will simply return the first slice from the inputs.
@@ -70,16 +64,12 @@ func ParseSetOpMerge(s string) (result SetOpMerge, err error) {
     result = ConCat
   case "IntegerSum":
     result = IntegerSum
-  case "IntegerSub":
-    result = IntegerSub
   case "IntegerDiv":
     result = IntegerDiv
   case "IntegerMul":
     result = IntegerMul
   case "FloatSum":
     result = FloatSum
-  case "FloatSub":
-    result = FloatSub
   case "FloatDiv":
     result = FloatDiv
   case "FloatMul":
@@ -100,8 +90,6 @@ func ParseSetOpMerge(s string) (result SetOpMerge, err error) {
     result = BigIntOr
   case "BigIntRem":
     result = BigIntRem
-  case "BigIntSub":
-    result = BigIntSub
   case "BigIntXor":
     result = BigIntXor
   case "First":
@@ -109,7 +97,7 @@ func ParseSetOpMerge(s string) (result SetOpMerge, err error) {
   case "Last":
     result = Last
   default:
-    err = fmt.Errorf("Unknown SetOpType %v. Legal values: Append, ConCat, IntegerSum, IntegerSub, IntegerDiv, IntegerMul, FloatSum, FloatSub, FloatDiv, FloatMul, BigIntAdd, BigIntAnd, BigIntAndNot, BigIntDiv, BigIntMod, BigIntMul, BigIntOr, BigIntRem, BigIntSub, BigIntXor, First, Last.", s)
+    err = fmt.Errorf("Unknown SetOpType %v. Legal values: Append, ConCat, IntegerSum, IntegerDiv, IntegerMul, FloatSum, FloatDiv, FloatMul, BigIntAdd, BigIntAnd, BigIntAndNot, BigIntDiv, BigIntMod, BigIntMul, BigIntOr, BigIntRem, BigIntXor, First, Last.", s)
   }
   return
 }
@@ -122,16 +110,12 @@ func (self SetOpMerge) String() string {
     return "ConCat"
   case IntegerSum:
     return "IntegerSum"
-  case IntegerSub:
-    return "IntegerSub"
   case IntegerDiv:
     return "IntegerDiv"
   case IntegerMul:
     return "IntegerMul"
   case FloatSum:
     return "FloatSum"
-  case FloatSub:
-    return "FloatSub"
   case FloatDiv:
     return "FloatDiv"
   case FloatMul:
@@ -152,8 +136,6 @@ func (self SetOpMerge) String() string {
     return "BigIntOr"
   case BigIntRem:
     return "BigIntRem"
-  case BigIntSub:
-    return "BigIntSub"
   case BigIntXor:
     return "BigIntXor"
   case First:
@@ -190,9 +172,11 @@ func (self SetOpType) String() string {
 }
 
 // SetOpSource is either a key to a raw source producing input data, or another SetOp that calculates input data.
+// Weight is the weight of this source in the chosen Merge for the parent SetOp, if any.
 type SetOpSource struct {
-  Key   []byte
-  SetOp *SetOp
+  Key    []byte
+  SetOp  *SetOp
+  Weight *float64
 }
 
 // SetOp is a set operation to perform on a slice of SetOpSources, using a SetOpMerge function to merge the calculated values.
@@ -209,6 +193,9 @@ func (self *SetOp) String() string {
       sources[index] = string(source.Key)
     } else {
       sources[index] = fmt.Sprint(source.SetOp)
+    }
+    if source.Weight != nil {
+      sources[index] = fmt.Sprintf("%v*%v", sources[index], *source.Weight)
     }
   }
   return fmt.Sprintf("(%v %v)", self.Type, strings.Join(sources, " "))

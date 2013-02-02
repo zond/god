@@ -11,38 +11,49 @@ type Skipper interface {
   Skip(min []byte, inc bool) (result *SetOpResult, err error)
 }
 
-func createSkippers(r RawSourceCreator, sources []SetOpSource) (result []Skipper) {
-  result = make([]Skipper, len(sources))
+func createSkippersAndWeights(r RawSourceCreator, sources []SetOpSource) (skippers []Skipper, weights []float64) {
+  skippers = make([]Skipper, len(sources))
+  weights = make([]float64, len(sources))
   for index, source := range sources {
     if source.Key != nil {
-      result[index] = r(source.Key)
+      skippers[index] = r(source.Key)
     } else {
-      result[index] = createSkipper(r, source.SetOp)
+      skippers[index] = createSkipper(r, source.SetOp)
+    }
+    if source.Weight != nil {
+      weights[index] = *source.Weight
+    } else {
+      weights[index] = 1
     }
   }
   return
 }
 
 func createSkipper(r RawSourceCreator, op *SetOp) (result Skipper) {
+  skippers, weights := createSkippersAndWeights(r, op.Sources)
   switch op.Type {
   case Union:
     result = &unionOp{
-      skippers: createSkippers(r, op.Sources),
+      skippers: skippers,
+      weights:  weights,
       merger:   getMerger(op.Merge),
     }
   case Intersection:
     result = &interOp{
-      skippers: createSkippers(r, op.Sources),
+      skippers: skippers,
+      weights:  weights,
       merger:   getMerger(op.Merge),
     }
   case Difference:
     result = &diffOp{
-      skippers: createSkippers(r, op.Sources),
+      skippers: skippers,
+      weights:  weights,
       merger:   getMerger(op.Merge),
     }
   case Xor:
     result = &xorOp{
-      skippers: createSkippers(r, op.Sources),
+      skippers: skippers,
+      weights:  weights,
       merger:   getMerger(op.Merge),
     }
   default:
@@ -53,6 +64,7 @@ func createSkipper(r RawSourceCreator, op *SetOp) (result Skipper) {
 
 type xorOp struct {
   skippers []Skipper
+  weights  []float64
   curr     *SetOpResult
   merger   mergeFunc
 }
@@ -72,8 +84,10 @@ func (self *xorOp) Skip(min []byte, inc bool) (result *SetOpResult, err error) {
 
   var res *SetOpResult
   var cmp int
+  var multi bool
+
   for result == nil {
-    for _, thisSkipper := range self.skippers {
+    for index, thisSkipper := range self.skippers {
       if res, err = thisSkipper.Skip(min, inc); err != nil {
         result = nil
         self.curr = nil
@@ -83,12 +97,16 @@ func (self *xorOp) Skip(min []byte, inc bool) (result *SetOpResult, err error) {
         newSkippers = append(newSkippers, thisSkipper)
         if result == nil {
           result = res.ShallowCopy()
+          result.Values = self.merger(nil, result.Values, self.weights[index])
+          multi = false
         } else {
           cmp = bytes.Compare(res.Key, result.Key)
           if cmp < 0 {
+            multi = false
             result = res.ShallowCopy()
+            result.Values = self.merger(nil, result.Values, self.weights[index])
           } else if cmp == 0 {
-            result.Values = self.merger(result.Values, res.Values)
+            multi = true
           }
         }
       }
@@ -100,7 +118,7 @@ func (self *xorOp) Skip(min []byte, inc bool) (result *SetOpResult, err error) {
       return
     }
 
-    if result != nil && len(result.Values) != 1 {
+    if result != nil && multi {
       min = result.Key
       inc = false
       result = nil
@@ -118,6 +136,7 @@ func (self *xorOp) Skip(min []byte, inc bool) (result *SetOpResult, err error) {
 
 type unionOp struct {
   skippers []Skipper
+  weights  []float64
   curr     *SetOpResult
   merger   mergeFunc
 }
@@ -137,7 +156,8 @@ func (self *unionOp) Skip(min []byte, inc bool) (result *SetOpResult, err error)
 
   var cmp int
   var res *SetOpResult
-  for _, thisSkipper := range self.skippers {
+
+  for index, thisSkipper := range self.skippers {
     if res, err = thisSkipper.Skip(min, inc); err != nil {
       result = nil
       self.curr = nil
@@ -147,12 +167,14 @@ func (self *unionOp) Skip(min []byte, inc bool) (result *SetOpResult, err error)
       newSkippers = append(newSkippers, thisSkipper)
       if result == nil {
         result = res.ShallowCopy()
+        result.Values = self.merger(nil, result.Values, self.weights[index])
       } else {
         cmp = bytes.Compare(res.Key, result.Key)
         if cmp < 0 {
           result = res.ShallowCopy()
+          result.Values = self.merger(nil, result.Values, self.weights[index])
         } else if cmp == 0 {
-          result.Values = self.merger(result.Values, res.Values)
+          result.Values = self.merger(result.Values, res.Values, self.weights[index])
         }
       }
     }
@@ -167,6 +189,7 @@ func (self *unionOp) Skip(min []byte, inc bool) (result *SetOpResult, err error)
 
 type interOp struct {
   skippers []Skipper
+  weights  []float64
   curr     *SetOpResult
   merger   mergeFunc
 }
@@ -183,31 +206,30 @@ func (self *interOp) Skip(min []byte, inc bool) (result *SetOpResult, err error)
   }
 
   var maxKey []byte
-  var results = make([]*SetOpResult, len(self.skippers))
+  var res *SetOpResult
+  var cmp int
 
   for result == nil {
     maxKey = nil
     for index, thisSkipper := range self.skippers {
-      if results[index], err = thisSkipper.Skip(min, inc); results[index] == nil || err != nil {
+      if res, err = thisSkipper.Skip(min, inc); res == nil || err != nil {
         result = nil
         self.curr = nil
         return
       }
       if maxKey == nil {
-        maxKey = results[index].Key
-        result = results[index].ShallowCopy()
+        maxKey = res.Key
+        result = res.ShallowCopy()
+        result.Values = self.merger(nil, result.Values, self.weights[index])
       } else {
-        result.Values = self.merger(result.Values, results[index].Values)
-        if bytes.Compare(results[index].Key, maxKey) > 0 {
-          maxKey = results[index].Key
-        }
-      }
-    }
-
-    if result != nil {
-      for index, _ := range self.skippers {
-        if bytes.Compare(maxKey, results[index].Key) != 0 {
+        cmp = bytes.Compare(res.Key, maxKey)
+        if cmp != 0 {
+          if cmp > 0 {
+            maxKey = res.Key
+          }
           result = nil
+        } else {
+          result.Values = self.merger(result.Values, res.Values, self.weights[index])
         }
       }
     }
@@ -223,6 +245,7 @@ func (self *interOp) Skip(min []byte, inc bool) (result *SetOpResult, err error)
 
 type diffOp struct {
   skippers []Skipper
+  weights  []float64
   curr     *SetOpResult
   merger   mergeFunc
 }
@@ -254,7 +277,8 @@ func (self *diffOp) Skip(min []byte, inc bool) (result *SetOpResult, err error) 
           self.curr = nil
           return
         }
-        result = res
+        result = res.ShallowCopy()
+        result.Values = self.merger(nil, result.Values, self.weights[0])
         newSkippers = append(newSkippers, thisSkipper)
         min = res.Key
         inc = true
@@ -268,9 +292,11 @@ func (self *diffOp) Skip(min []byte, inc bool) (result *SetOpResult, err error) 
         }
       }
     }
+
     self.skippers = newSkippers
     newSkippers = newSkippers[:0]
     inc = false
+
   }
 
   self.curr = result

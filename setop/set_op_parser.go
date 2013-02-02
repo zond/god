@@ -4,6 +4,7 @@ import (
   "bytes"
   "fmt"
   "regexp"
+  "strconv"
 )
 
 var operationPattern = regexp.MustCompile("^(\\w)(:(\\w+))?$")
@@ -14,6 +15,7 @@ const (
   name
   params
   param
+  weight
   finished
 )
 
@@ -34,16 +36,18 @@ const (
 //
 // (I:IntegerSum s1 s2) will return the integer sum of all elements present in both s1 and s2.
 type SetOpParser struct {
-  in       string
-  nextName *bytes.Buffer
-  start    int
-  pos      int
+  in         string
+  nextName   *bytes.Buffer
+  nextWeight *bytes.Buffer
+  start      int
+  pos        int
 }
 
 func NewSetOpParser(in string) *SetOpParser {
   return &SetOpParser{
-    in:       in,
-    nextName: new(bytes.Buffer),
+    in:         in,
+    nextName:   new(bytes.Buffer),
+    nextWeight: new(bytes.Buffer),
   }
 }
 
@@ -131,18 +135,61 @@ func (self *SetOpParser) parse() (result *SetOp, err error) {
         }
         state = finished
       case '(':
+        if self.nextName.Len() > 0 {
+          err = fmt.Errorf("Unexpected ( at %v in %v.", self.pos, self.in)
+          return
+        }
         var nested *SetOp
         if nested, err = self.parse(); err != nil {
           return
         }
         self.pos--
         result.Sources = append(result.Sources, SetOpSource{SetOp: nested})
+      case '*':
+        self.nextWeight = new(bytes.Buffer)
+        state = weight
       default:
         state = param
         self.nextName.WriteByte(self.in[self.pos])
       }
+    case weight:
+      switch self.in[self.pos] {
+      case '*':
+        err = fmt.Errorf("Unexpected * at %v in %v.", self.pos, self.in)
+        return
+      case '(':
+        err = fmt.Errorf("Unexpected ( at %v in %v.", self.pos, self.in)
+        return
+      case ')':
+        var w float64
+        if w, err = strconv.ParseFloat(string(self.nextWeight.Bytes()), 64); err != nil {
+          err = fmt.Errorf("Unparseable float64 at %v in %v.", self.pos, self.in)
+          return
+        }
+        result.Sources[len(result.Sources)-1].Weight = &w
+        self.nextWeight = new(bytes.Buffer)
+        state = finished
+      case ' ':
+        var w float64
+        if w, err = strconv.ParseFloat(string(self.nextWeight.Bytes()), 64); err != nil {
+          err = fmt.Errorf("Unparseable float64 at %v in %v.", self.pos, self.in)
+          return
+        }
+        result.Sources[len(result.Sources)-1].Weight = &w
+        self.nextWeight = new(bytes.Buffer)
+        state = params
+      default:
+        self.nextWeight.WriteByte(self.in[self.pos])
+      }
     case param:
       switch self.in[self.pos] {
+      case '*':
+        if self.nextName.Len() > 0 {
+          result.Sources = append(result.Sources, SetOpSource{Key: self.nextName.Bytes()})
+          self.nextName = new(bytes.Buffer)
+        }
+        self.nextWeight = new(bytes.Buffer)
+        state = weight
       case ' ':
         if self.nextName.Len() > 0 {
           result.Sources = append(result.Sources, SetOpSource{Key: self.nextName.Bytes()})
