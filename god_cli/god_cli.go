@@ -24,11 +24,13 @@ const (
   bigFormat    = "big"
 )
 
+var formats = []string{stringFormat, floatFormat, intFormat, bigFormat}
+
 type action func(conn *client.Conn, args []string)
 
 var ip = flag.String("ip", "127.0.0.1", "IP address to connect to")
 var port = flag.Int("port", 9191, "Port to connect to")
-var enc = flag.String("enc", stringFormat, "What format to assume when encoding and decoding byte slices")
+var enc = flag.String("enc", stringFormat, fmt.Sprintf("What format to assume when encoding and decoding byte slices: %v", formats))
 
 func encode(s string) []byte {
   switch *enc {
