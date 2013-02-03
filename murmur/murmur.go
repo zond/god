@@ -94,6 +94,14 @@ func (self *Hash) Sum(p []byte) []byte {
   return self.Get()
 }
 
+func (self *Hash) MustWriteInt64(i int64) {
+  b := new(bytes.Buffer)
+  if err := binary.Write(b, binary.BigEndian, i); err != nil {
+    panic(err)
+  }
+  self.MustWrite(b.Bytes())
+}
+
 // MustWrite will consume the provided bytes.
 func (self *Hash) MustWrite(p []byte) {
   if i, err := (*bytes.Buffer)(self).Write(p); i != len(p) || err != nil {
