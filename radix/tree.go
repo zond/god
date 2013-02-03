@@ -105,7 +105,7 @@ type Tree struct {
   mirror                 *Tree
   configuration          map[string]string
   configurationTimestamp int64
-  clearTimestamp         int64
+  dataTimestamp          int64
 }
 
 func NewTree() *Tree {
@@ -118,6 +118,7 @@ func NewTreeTimer(timer Timer) (result *Tree) {
     configuration: make(map[string]string),
   }
   result.root, _, _, _, _ = result.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), result.timer.ContinuousTime())
+  result.dataTimestamp = timer.ContinuousTime()
   return
 }
 func (self *Tree) Load() float64 {
@@ -141,9 +142,9 @@ func (self *Tree) Configuration() (map[string]string, int64) {
   defer self.lock.RUnlock()
   return self.conf()
 }
-func (self *Tree) mirrorClear() {
+func (self *Tree) mirrorClear(timestamp int64) {
   if self.mirror != nil {
-    self.mirror = NewTreeTimer(self.timer)
+    self.mirror.Clear(timestamp)
   }
 }
 func (self *Tree) mirrorPut(key, value []byte, timestamp int64) {
@@ -243,10 +244,10 @@ func (self *Tree) Restore() *Tree {
     } else {
       if op.SubKey == nil {
         if op.Clear {
-          if op.Key == nil {
-            self.Clear(op.Timestamp)
+          if op.Timestamp > 0 {
+            self.SubClear(op.Key, op.Timestamp)
           } else {
-            self.root, _, _, _, _ = self.root.del(nil, Rip(op.Key), treeValue, self.timer.ContinuousTime())
+            self.SubKill(op.Key)
           }
         } else {
           self.Del(op.Key)
@@ -438,6 +439,15 @@ func (self *Tree) ReverseEachBetweenIndex(min, max *int, f TreeIndexIterator) {
   self.root.reverseEachBetweenIndex(nil, 0, min, max, byteValue, newNodeIndexIterator(f))
 }
 
+func (self *Tree) DataTimestamp() int64 {
+  if self == nil {
+    return 0
+  }
+  self.lock.RLock()
+  defer self.lock.RUnlock()
+  return self.dataTimestamp
+}
+
 // Hash returns the merkle hash of this Tree.
 func (self *Tree) Hash() []byte {
   if self == nil {
@@ -570,7 +580,7 @@ func (self *Tree) FakeDel(key []byte, timestamp int64) (oldBytes []byte, oldTree
   return
 }
 func (self *Tree) put(key []Nibble, byteValue []byte, treeValue *Tree, use int, timestamp int64) (oldBytes []byte, oldTree *Tree, existed int) {
-  self.clearTimestamp = 0
+  self.dataTimestamp = timestamp
   self.root, oldBytes, oldTree, _, existed = self.root.insert(nil, newNode(key, byteValue, treeValue, timestamp, false, use), self.timer.ContinuousTime())
   return
 }
@@ -817,36 +827,20 @@ func (self *Tree) ReverseIndex(n int) (key []byte, byteValue []byte, timestamp i
   return
 }
 
-// Kill will remove all content of this Tree (including tombstones and sub trees) and any mirror Tree without keeping tombstones, and clear any persistence.Logger assigned to this Tree.
-func (self *Tree) Kill() {
+// Clear will remove all content of this Tree (including tombstones and sub trees) and any mirror Tree and replace the all with one giant tombstone, and clear any persistence.Logger assigned to this Tree.
+func (self *Tree) Clear(timestamp int64) {
   self.lock.Lock()
   defer self.lock.Unlock()
-  self.clearTimestamp, self.root = 0, nil
+  self.dataTimestamp, self.root = timestamp, nil
   self.root, _, _, _, _ = self.root.insert(nil, newNode(nil, nil, nil, 0, true, 0), self.timer.ContinuousTime())
-  if self.mirror != nil {
-    self.mirror.Kill()
-  }
+  self.mirrorClear(timestamp)
   if self.logger != nil {
     self.logger.Clear()
   }
 }
-
-// Clear will replace all content of this Tree (but not any sub trees) and any mirror Tree with tombstones.
-func (self *Tree) Clear(timestamp int64) (result int) {
-  self.lock.Lock()
-  defer self.lock.Unlock()
-  self.clearTimestamp = timestamp
-  result = self.root.fakeClear(nil, byteValue, timestamp, self.timer.ContinuousTime())
-  self.mirrorClear()
-  self.log(persistence.Op{
-    Clear:     true,
-    Timestamp: timestamp,
-  })
-  return
-}
-func (self *Tree) del(key []Nibble) (oldBytes []byte, existed bool) {
+func (self *Tree) del(key []Nibble, use int) (oldBytes []byte, existed bool) {
   var ex int
-  self.root, oldBytes, _, _, ex = self.root.del(nil, key, byteValue, self.timer.ContinuousTime())
+  self.root, oldBytes, _, _, ex = self.root.del(nil, key, use, self.timer.ContinuousTime())
   existed = ex&byteValue != 0
   return
 }
@@ -855,7 +849,7 @@ func (self *Tree) del(key []Nibble) (oldBytes []byte, existed bool) {
 func (self *Tree) Del(key []byte) (oldBytes []byte, existed bool) {
   self.lock.Lock()
   defer self.lock.Unlock()
-  oldBytes, existed = self.del(Rip(key))
+  oldBytes, existed = self.del(Rip(key), byteValue)
   if existed {
     self.mirrorDel(key, oldBytes)
     self.log(persistence.Op{
@@ -1108,7 +1102,7 @@ func (self *Tree) SubDel(key, subKey []byte) (oldBytes []byte, existed bool) {
   if _, subTree, subTreeTimestamp, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
     oldBytes, existed = subTree.Del(subKey)
     if subTree.RealSize() == 0 {
-      self.del(ripped)
+      self.del(ripped, treeValue)
     } else {
       self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
     }
@@ -1137,15 +1131,33 @@ func (self *Tree) SubFakeDel(key, subKey []byte, timestamp int64) (oldBytes []by
   }
   return
 }
-func (self *Tree) SubClear(key []byte, timestamp int64) (removed int) {
+func (self *Tree) SubClear(key []byte, timestamp int64) (deleted int) {
   self.lock.Lock()
   defer self.lock.Unlock()
   ripped := Rip(key)
   if _, subTree, subTreeTimestamp, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
-    removed = subTree.Clear(timestamp)
+    deleted = subTree.Size()
+    subTree.Clear(timestamp)
     self.put(ripped, nil, subTree, treeValue, subTreeTimestamp)
   }
-  if removed > 0 {
+  if deleted > 0 {
+    self.log(persistence.Op{
+      Key:       key,
+      Clear:     true,
+      Timestamp: timestamp,
+    })
+  }
+  return
+}
+func (self *Tree) SubKill(key []byte) (deleted int) {
+  self.lock.Lock()
+  defer self.lock.Unlock()
+  ripped := Rip(key)
+  if _, subTree, _, ex := self.root.get(ripped); ex&treeValue != 0 && subTree != nil {
+    deleted = subTree.Size()
+    self.del(ripped, treeValue)
+  }
+  if deleted > 0 {
     self.log(persistence.Op{
       Key:   key,
       Clear: true,
@@ -1153,7 +1165,6 @@ func (self *Tree) SubClear(key []byte, timestamp int64) (removed int) {
   }
   return
 }
-
 func (self *Tree) Finger(key []Nibble) *Print {
   self.lock.RLock()
   defer self.lock.RUnlock()
@@ -1168,7 +1179,7 @@ func (self *Tree) GetTimestamp(key []Nibble) (bValue []byte, timestamp int64, pr
 }
 func (self *Tree) putTimestamp(key []Nibble, bValue []byte, treeValue *Tree, nodeUse, insertUse int, expected, timestamp int64) (result bool, oldBytes []byte) {
   if _, _, current, _ := self.root.get(key); current == expected {
-    self.clearTimestamp, result = 0, true
+    self.dataTimestamp, result = timestamp, true
     self.root, oldBytes, _, _, _ = self.root.insertHelp(nil, newNode(key, bValue, treeValue, timestamp, false, nodeUse), insertUse, self.timer.ContinuousTime())
   }
   return
@@ -1314,6 +1325,38 @@ func (self *Tree) SubDelTimestamp(key, subKey []Nibble, subExpected int64) (resu
     self.log(persistence.Op{
       Key:    Stitch(key),
       SubKey: Stitch(subKey),
+    })
+  }
+  return
+}
+func (self *Tree) SubClearTimestamp(key []Nibble, expected, timestamp int64) (deleted int) {
+  self.lock.Lock()
+  defer self.lock.Unlock()
+  if _, subTree, subTreeTimestamp, ex := self.root.get(key); ex&treeValue != 0 && subTree != nil && subTree.DataTimestamp() == expected {
+    deleted = subTree.Size()
+    subTree.Clear(timestamp)
+    self.putTimestamp(key, nil, subTree, treeValue, treeValue, subTreeTimestamp, subTreeTimestamp)
+  }
+  if deleted > 0 {
+    self.log(persistence.Op{
+      Key:       Stitch(key),
+      Clear:     true,
+      Timestamp: timestamp,
+    })
+  }
+  return
+}
+func (self *Tree) SubKillTimestamp(key []Nibble, expected int64) (deleted int) {
+  self.lock.Lock()
+  defer self.lock.Unlock()
+  if _, subTree, subTreeTimestamp, ex := self.root.get(key); ex&treeValue != 0 && subTree != nil && subTree.DataTimestamp() == expected {
+    deleted = subTree.Size()
+    self.delTimestamp(key, treeValue, subTreeTimestamp)
+  }
+  if deleted > 0 {
+    self.log(persistence.Op{
+      Key:   Stitch(key),
+      Clear: true,
     })
   }
   return

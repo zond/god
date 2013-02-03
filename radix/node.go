@@ -109,13 +109,13 @@ func (self *node) gc(prefix []Nibble, now int64) (result *node) {
   if self == nil {
     return self
   }
+  if !self.empty && self.use&treeValue == treeValue && self.treeValue.Size() == 0 && self.treeValue.dataTimestamp < now-zombieLifetime {
+    self.treeValue, self.use = nil, self.use&^treeValue
+  }
   if !self.empty && self.use == 0 && self.timestamp < now-zombieLifetime {
     result, _, _, _, _ = self.del(prefix, self.segment, 0, now)
   } else {
     result = self
-    if !self.empty && self.use&treeValue == treeValue && self.treeValue.clearTimestamp != 0 && self.treeValue.clearTimestamp < now-zombieLifetime {
-      self.treeValue, self.use = nil, self.use&^treeValue
-    }
   }
   return
 }
@@ -340,32 +340,6 @@ func (self *node) del(prefix, segment []Nibble, use int, now int64) (result *nod
     }
   }
   panic("Shouldn't happen")
-}
-func (self *node) fakeClear(prefix []Nibble, use int, timestamp, now int64) (removed int) {
-  if self == nil {
-    return
-  }
-  newPrefix := make([]Nibble, len(prefix)+len(self.segment))
-  copy(newPrefix, prefix)
-  copy(newPrefix[len(prefix):], self.segment)
-  for _, child := range self.children {
-    removed += child.fakeClear(newPrefix, use, timestamp, now)
-  }
-  if !self.empty {
-    if self.use&use&byteValue != 0 {
-      removed++
-      self.byteValue, self.byteHash = nil, murmur.HashBytes(nil)
-      self.use &^= byteValue
-    }
-    if self.use&use&treeValue != 0 {
-      removed += self.treeValue.Size()
-      self.treeValue = nil
-      self.use &^= treeValue
-    }
-    self.timestamp = timestamp
-  }
-  self.rehash(newPrefix, now)
-  return
 }
 func (self *node) fakeDel(prefix, segment []Nibble, use int, timestamp, now int64) (result *node, oldBytes []byte, oldTree *Tree, oldTimestamp int64, existed int) {
   return self.insertHelp(prefix, newNode(segment, nil, nil, timestamp, false, 0), use, now)

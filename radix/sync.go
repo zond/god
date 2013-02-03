@@ -28,6 +28,8 @@ type HashTree interface {
   SubGetTimestamp(key, subKey []Nibble) (byteValue []byte, timestamp int64, present bool)
   SubPutTimestamp(key, subKey []Nibble, byteValue []byte, present bool, subExpected, subTimestamp int64) bool
   SubDelTimestamp(key, subKey []Nibble, subExpected int64) bool
+  SubClearTimestamp(key []Nibble, expected, timestamp int64) (deleted int)
+  SubKillTimestamp(key []Nibble, expected int64) (deleted int)
 }
 
 // Sync synchronizes HashTrees using their fingerprints and mutators.
@@ -117,20 +119,27 @@ func (self *Sync) withinLimits(key []Nibble) bool {
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
   if sourcePrint.Exists {
     if !sourcePrint.Empty && self.withinLimits(sourcePrint.Key) {
-      if sourcePrint.SubTree && (self.destructive || bytes.Compare(sourcePrint.TreeHash, destinationPrint.TreeHash) != 0) {
-        subSync := NewSync(&subTreeWrapper{
-          self.source,
-          sourcePrint.Key,
-        }, &subTreeWrapper{
-          self.destination,
-          sourcePrint.Key,
-        })
-        if self.destructive {
-          subSync.Destroy()
+      if sourcePrint.SubTree {
+        if bytes.Compare(sourcePrint.TreeHash, destinationPrint.TreeHash) != 0 {
+          if sourcePrint.TreeSize == 0 && destinationPrint.TreeSize > 0 && sourcePrint.TreeDataTimestamp > destinationPrint.TreeDataTimestamp {
+            self.putCount += self.destination.SubClearTimestamp(sourcePrint.Key, destinationPrint.TreeDataTimestamp, sourcePrint.TreeDataTimestamp)
+          }
+          subSync := NewSync(&subTreeWrapper{
+            self.source,
+            sourcePrint.Key,
+          }, &subTreeWrapper{
+            self.destination,
+            sourcePrint.Key,
+          })
+          if self.destructive {
+            subSync.Destroy()
+          }
+          subSync.Run()
+          self.putCount += subSync.PutCount()
+          self.delCount += subSync.DelCount()
+        } else if self.destructive {
+          self.delCount += self.source.SubKillTimestamp(sourcePrint.Key, sourcePrint.TreeDataTimestamp)
         }
-        subSync.Run()
-        self.putCount += subSync.PutCount()
-        self.delCount += subSync.DelCount()
       }
       if sourcePrint.Timestamp > 0 {
         if !sourcePrint.coveredBy(destinationPrint) {

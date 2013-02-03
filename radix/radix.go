@@ -80,14 +80,16 @@ func (self SubPrint) equals(other SubPrint) bool {
 
 // Prints are used to record hashes for Nodes.
 type Print struct {
-  Exists    bool
-  Key       []Nibble
-  Empty     bool
-  Timestamp int64
-  SubTree   bool
-  SubPrints []SubPrint
-  ByteHash  []byte
-  TreeHash  []byte
+  Exists            bool
+  Key               []Nibble
+  Empty             bool
+  Timestamp         int64
+  SubTree           bool
+  SubPrints         []SubPrint
+  ByteHash          []byte
+  TreeHash          []byte
+  TreeDataTimestamp int64
+  TreeSize          int
 }
 
 func (self *Print) coveredBy(other *Print) bool {
@@ -103,6 +105,10 @@ func (self *Print) set(n *node) {
   self.Exists = true
   self.ByteHash = n.byteHash
   self.TreeHash = n.treeValue.Hash()
+  if n.treeValue != nil {
+    self.TreeDataTimestamp = n.treeValue.DataTimestamp()
+    self.TreeSize = n.treeValue.Size()
+  }
   self.Empty = n.empty
   self.Timestamp = n.timestamp
   self.SubPrints = make([]SubPrint, len(n.children))

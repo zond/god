@@ -47,6 +47,9 @@ func (self *subTreeWrapper) SubPutTimestamp(key, subKey []Nibble, byteValue []by
 func (self *subTreeWrapper) SubDelTimestamp(key, subKey []Nibble, subExpected int64) bool {
   panic(subTreeError)
 }
-func (self *subTreeWrapper) SubClearTimestamp(key []Nibble, expected int64) bool {
+func (self *subTreeWrapper) SubClearTimestamp(key []Nibble, expected, timestamp int64) int {
+  panic(subTreeError)
+}
+func (self *subTreeWrapper) SubKillTimestamp(key []Nibble, expected int64) int {
   panic(subTreeError)
 }
