@@ -110,7 +110,6 @@ var actions = map[*actionSpec]action{
   newActionSpec("setOp .+"):                               setOp,
   newActionSpec("dumpSetOp \\S+ .+"):                      dumpSetOp,
   newActionSpec("put \\S+ \\S+"):                          put,
-  newActionSpec("kill"):                                   kill,
   newActionSpec("clear"):                                  clear,
   newActionSpec("dump"):                                   dump,
   newActionSpec("subDump \\S+"):                           subDump,
@@ -450,10 +449,6 @@ func subGet(conn *client.Conn, args []string) {
   if value, existed := conn.SubGet([]byte(args[1]), []byte(args[2])); existed {
     fmt.Printf("%v\n", decode(value))
   }
-}
-
-func kill(conn *client.Conn, args []string) {
-  conn.Kill()
 }
 
 func clear(conn *client.Conn, args []string) {

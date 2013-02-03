@@ -308,19 +308,7 @@ func (self *Conn) subDump(key []byte, c chan [2][]byte, wait *sync.WaitGroup) {
   wait.Done()
 }
 
-// Kill will remove all content from all currently known database nodes.
-// It will NOT keep delete markers for the data, so any disconnected node later connected WILL reanimate all data it belives to be current.
-func (self *Conn) Kill() {
-  var x int
-  for _, node := range self.ring.Nodes() {
-    if err := node.Call("DHash.Kill", 0, &x); err != nil {
-      self.removeNode(node)
-    }
-  }
-}
-
-// Clear will remove all first level data (not sub trees) from all currently known database nodes.
-// It WILL keep delete markers for the data, so any disconnected node later connected will NOT reanimate the data it believes to be current.
+// Clear will remove all data from all currently known database nodes.
 func (self *Conn) Clear() {
   var x int
   for _, node := range self.ring.Nodes() {
