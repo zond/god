@@ -72,3 +72,13 @@ func (self *hashTreeServer) SubDelTimestamp(data HashTreeItem, changed *bool) er
   *changed = (*Node)(self).tree.SubDelTimestamp(data.Key, data.SubKey, data.Expected)
   return nil
 }
+func (self *hashTreeServer) SubClearTimestamp(data HashTreeItem, changed *int) error {
+  atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
+  *changed = (*Node)(self).tree.SubClearTimestamp(data.Key, data.Expected, data.Timestamp)
+  return nil
+}
+func (self *hashTreeServer) SubKillTimestamp(data HashTreeItem, changed *int) error {
+  atomic.StoreInt64(&(*Node)(self).lastSync, time.Now().UnixNano())
+  *changed = (*Node)(self).tree.SubKillTimestamp(data.Key, data.Expected)
+  return nil
+}

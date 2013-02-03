@@ -102,10 +102,6 @@ func (self *JSONApi) forwardUnlessMe(cmd string, key []byte, in, out interface{}
   return
 }
 
-func (self *JSONApi) Kill(x Nothing, y *Nothing) (err error) {
-  (*Node)(self).Kill()
-  return nil
-}
 func (self *JSONApi) Clear(x Nothing, y *Nothing) (err error) {
   (*Node)(self).Clear()
   return nil

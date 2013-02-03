@@ -155,3 +155,38 @@ func (self remoteHashTree) SubDelTimestamp(key, subKey []radix.Nibble, subExpect
   self.destination.Call(op, data, &changed)
   return
 }
+func (self remoteHashTree) SubClearTimestamp(key []radix.Nibble, expected, timestamp int64) (deleted int) {
+  data := HashTreeItem{
+    Key:       key,
+    Expected:  expected,
+    Timestamp: timestamp,
+  }
+  op := "HashTree.SubClearTimestamp"
+  if self.node.hasCommListeners() {
+    self.node.triggerCommListeners(Comm{
+      Key:         radix.Stitch(data.Key),
+      Source:      self.source,
+      Destination: self.destination,
+      Type:        op,
+    })
+  }
+  self.destination.Call(op, data, &deleted)
+  return
+}
+func (self remoteHashTree) SubKillTimestamp(key []radix.Nibble, expected int64) (deleted int) {
+  data := HashTreeItem{
+    Key:      key,
+    Expected: expected,
+  }
+  op := "HashTree.SubKillTimestamp"
+  if self.node.hasCommListeners() {
+    self.node.triggerCommListeners(Comm{
+      Key:         radix.Stitch(data.Key),
+      Source:      self.source,
+      Destination: self.destination,
+      Type:        op,
+    })
+  }
+  self.destination.Call(op, data, &deleted)
+  return
+}

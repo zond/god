@@ -342,9 +342,6 @@ func (self *Node) forwardOperation(data common.Item, operation string) {
     err = successor.Call(operation, data, &x)
   }
 }
-func (self *Node) Kill() {
-  self.tree.Kill()
-}
 func (self *Node) Clear() {
   self.tree.Clear(self.timer.ContinuousTime())
 }

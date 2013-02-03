@@ -7,10 +7,6 @@ import (
 
 type dhashServer Node
 
-func (self *dhashServer) Kill(x int, y *int) error {
-  (*Node)(self).Kill()
-  return nil
-}
 func (self *dhashServer) Clear(x int, y *int) error {
   (*Node)(self).Clear()
   return nil
