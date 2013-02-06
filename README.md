@@ -7,7 +7,7 @@ Its main inspirations are Redis and Chord/DHash. Like Redis it focuses on perfor
 
 # Try it out
 
-<code>go get github.com/zond/god/god_server</code>, run <code>god_server</code>, browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
+Install <a href="http://golang.org/doc/install">Go</a>, <a href="http://git-scm.com/downloads">git</a>, <a href="http://mercurial.selenic.com/wiki/Download">Mercurial</a> and <a href="http://gcc.gnu.org/install/">gcc</a>, <code>go get github.com/zond/god/god_server</code>, run <code>god_server</code>, browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
 
 # Documents
 
