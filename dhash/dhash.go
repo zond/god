@@ -171,8 +171,8 @@ func (self *Node) hasState(s int32) bool {
 func (self *Node) changeState(old, neu int32) bool {
   return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
-func (self *Node) GetAddr() string {
-  return self.node.GetAddr()
+func (self *Node) GetBroadcastAddr() string {
+  return self.node.GetBroadcastAddr()
 }
 func (self *Node) AddChangeListener(f common.RingChangeListener) {
   self.node.AddChangeListener(f)
@@ -334,12 +334,12 @@ func (self *Node) circularNext(key []byte) (nextKey []byte, existed bool) {
 }
 func (self *Node) owners(key []byte) (owners common.Remotes, isOwner bool) {
   owners = append(owners, self.node.GetSuccessorFor(key))
-  if owners[0].Addr == self.node.GetAddr() {
+  if owners[0].Addr == self.node.GetBroadcastAddr() {
     isOwner = true
   }
   for i := 1; i < self.node.Redundancy(); i++ {
     owners = append(owners, self.node.GetSuccessorForRemote(owners[i-1]))
-    if owners[i].Addr == self.node.GetAddr() {
+    if owners[i].Addr == self.node.GetBroadcastAddr() {
       isOwner = true
     }
   }

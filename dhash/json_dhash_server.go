@@ -96,7 +96,7 @@ func (self *JSONApi) convert(items []common.Item, result *[]ValueRes) {
 }
 func (self *JSONApi) forwardUnlessMe(cmd string, key []byte, in, out interface{}) (forwarded bool, err error) {
   succ := (*Node)(self).node.GetSuccessorFor(key)
-  if succ.Addr != (*Node)(self).node.GetAddr() {
+  if succ.Addr != (*Node)(self).node.GetBroadcastAddr() {
     forwarded, err = true, succ.Call(cmd, in, out)
   }
   return

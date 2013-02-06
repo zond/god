@@ -146,7 +146,7 @@ func (self *Node) jsonDescription() string {
 func (self *Node) startJson() {
   var nodeAddr *net.TCPAddr
   var err error
-  if nodeAddr, err = net.ResolveTCPAddr("tcp", self.node.GetAddr()); err != nil {
+  if nodeAddr, err = net.ResolveTCPAddr("tcp", self.node.GetListenAddr()); err != nil {
     return
   }
   rpcServer := rpc.NewServer()

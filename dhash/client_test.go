@@ -123,7 +123,7 @@ func clearAll(dhashes []*Node) {
 
 func testGOBClient(t *testing.T, dhashes []*Node) {
   clearAll(dhashes)
-  c := client.MustConn(dhashes[0].GetAddr())
+  c := client.MustConn(dhashes[0].GetBroadcastAddr())
   c.Start()
   testClientInterface(t, dhashes, c)
 }
@@ -131,7 +131,7 @@ func testGOBClient(t *testing.T, dhashes []*Node) {
 func testJSONClient(t *testing.T, dhashes []*Node) {
   for _, dhash := range dhashes {
     clearAll(dhashes)
-    addr, err := net.ResolveTCPAddr("tcp", dhash.node.GetAddr())
+    addr, err := net.ResolveTCPAddr("tcp", dhash.node.GetBroadcastAddr())
     if err != nil {
       panic(err)
     }

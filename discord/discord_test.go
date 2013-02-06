@@ -18,7 +18,7 @@ func TestStartup(t *testing.T) {
     nodes[i].MustStart()
   }
   for i := 1; i < n; i++ {
-    nodes[i].MustJoin(nodes[0].GetAddr())
+    nodes[i].MustJoin(nodes[0].GetBroadcastAddr())
   }
   common.AssertWithin(t, func() (string, bool) {
     routes := make(map[string]bool)

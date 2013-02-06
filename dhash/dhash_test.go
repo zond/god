@@ -106,7 +106,7 @@ func testMigrate(t *testing.T, dhashes []*Node) {
     ok := true
     for _, d := range ordered {
       sum += d.Owned()
-      fmt.Fprintf(status, "%v %v %v\n", d.node.GetAddr(), common.HexEncode(d.node.GetPosition()), d.Owned())
+      fmt.Fprintf(status, "%v %v %v\n", d.node.GetBroadcastAddr(), common.HexEncode(d.node.GetPosition()), d.Owned())
       if float64(lastOwned)/float64(d.Owned()) > migrateHysteresis {
         ok = false
       }

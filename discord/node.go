@@ -122,13 +122,18 @@ func (self *Node) GetPosition() (result []byte) {
   copy(result, self.position)
   return
 }
-func (self *Node) GetAddr() string {
+func (self *Node) GetListenAddr() string {
+  self.metaLock.RLock()
+  defer self.metaLock.RUnlock()
+  return self.listenAddr
+}
+func (self *Node) GetBroadcastAddr() string {
   self.metaLock.RLock()
   defer self.metaLock.RUnlock()
   return self.broadcastAddr
 }
 func (self *Node) String() string {
-  return fmt.Sprintf("<%v@%v>", common.HexEncode(self.GetPosition()), self.GetAddr())
+  return fmt.Sprintf("<%v@%v>", common.HexEncode(self.GetPosition()), self.GetBroadcastAddr())
 }
 
 // Describe returns a humanly readable string describing the broadcast address, position and ring of this Node.
@@ -159,7 +164,7 @@ func (self *Node) setListener(l *net.TCPListener) {
 
 // Remote returns a remote to this Node.
 func (self *Node) Remote() common.Remote {
-  return common.Remote{self.GetPosition(), self.GetAddr()}
+  return common.Remote{self.GetPosition(), self.GetBroadcastAddr()}
 }
 
 // Stop will shut down this Node permanently.
@@ -282,7 +287,7 @@ func (self *Node) notifySuccessor() {
   if err := succ.Call(op, selfRemote, &otherPred); err != nil {
     self.RemoveNode(succ)
   } else {
-    if otherPred.Addr != self.GetAddr() {
+    if otherPred.Addr != self.GetBroadcastAddr() {
       self.routeLock.Lock()
       defer self.routeLock.Unlock()
       self.ring.Add(otherPred)
@@ -316,7 +321,7 @@ func (self *Node) Join(addr string) (err error) {
 
 // RemoveNode will remove the provided remote from our routing ring.
 func (self *Node) RemoveNode(remote common.Remote) {
-  if remote.Addr == self.GetAddr() {
+  if remote.Addr == self.GetBroadcastAddr() {
     panic(fmt.Errorf("%v is trying to remove itself from the routing!", self))
   }
   self.routeLock.Lock()
@@ -367,7 +372,7 @@ func (self *Node) GetSuccessorFor(key []byte) common.Remote {
     predecessor = match
   }
   // If we consider ourselves successors, just return us
-  if successor.Addr != self.GetAddr() {
+  if successor.Addr != self.GetBroadcastAddr() {
     // Double check by asking the successor we found what predecessor it has
     if err := successor.Call("Discord.GetPredecessor", 0, predecessor); err != nil {
       self.RemoveNode(*successor)

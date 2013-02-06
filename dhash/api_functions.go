@@ -13,7 +13,7 @@ import (
 // Description will return a current description of the node.
 func (self *Node) Description() common.DHashDescription {
   return common.DHashDescription{
-    Addr:         self.GetAddr(),
+    Addr:         self.GetBroadcastAddr(),
     Pos:          self.node.GetPosition(),
     LastReroute:  time.Unix(0, atomic.LoadInt64(&self.lastReroute)),
     LastSync:     time.Unix(0, atomic.LoadInt64(&self.lastSync)),
@@ -425,7 +425,7 @@ func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpRe
       return
     }
     successor := self.node.GetSuccessorFor(expr.Dest)
-    if successor.Addr != self.node.GetAddr() {
+    if successor.Addr != self.node.GetBroadcastAddr() {
       return successor.Call("DHash.SetExpression", expr, items)
     }
   }
@@ -438,7 +438,7 @@ func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpRe
       remote: succ,
       key:    b,
     }
-    if succ.Addr == self.node.GetAddr() {
+    if succ.Addr == self.node.GetBroadcastAddr() {
       result.tree = self.tree
     }
     return result
