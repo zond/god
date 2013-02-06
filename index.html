@@ -763,7 +763,7 @@ func (self user) recommended() recommendation {
       var count int
       // fetch the intersection of the flavours we and the other taster has tried, subtracting the ratings from each other, and for each match
       for _, f := range conn.SetExpression(setop.SetExpression{
-        Code: fmt.Sprintf("(I:IntegerSub %v %v)", self, string(u.Key)),
+        Code: fmt.Sprintf("(I:IntegerSum %v %v*-1)", self, string(u.Key)),
       }) {
         // sum the similarity between our ratings
         sum += (10 - abs(common.MustDecodeInt64(f.Values[0])))
