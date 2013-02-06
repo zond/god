@@ -38,7 +38,7 @@ func testStartup(t *testing.T, n, port int) (dhashes []*Node) {
   }
   dhashes = make([]*Node, n)
   for i := 0; i < n; i++ {
-    dhashes[i] = NewNode(fmt.Sprintf("127.0.0.1:%v", port+i*2))
+    dhashes[i] = NewNode(fmt.Sprintf("127.0.0.1:%v", port+i*2), fmt.Sprintf("127.0.0.1:%v", port+i*2))
     dhashes[i].MustStart()
   }
   for i := 1; i < n; i++ {

@@ -76,14 +76,14 @@ type Node struct {
   tree             *radix.Tree
 }
 
-func NewNode(addr string) *Node {
-  return NewNodeDir(addr, addr)
+func NewNode(listenAddr, broadcastAddr string) *Node {
+  return NewNodeDir(listenAddr, broadcastAddr, broadcastAddr)
 }
 
 // NewNode will return a dhash.Node publishing itself on the given address.
-func NewNodeDir(addr, dir string) (result *Node) {
+func NewNodeDir(listenAddr, broadcastAddr, dir string) (result *Node) {
   result = &Node{
-    node:          discord.NewNode(addr),
+    node:          discord.NewNode(listenAddr, broadcastAddr),
     lock:          new(sync.RWMutex),
     commListeners: make(map[*commListenerContainer]bool),
     state:         created,

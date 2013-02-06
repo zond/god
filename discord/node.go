@@ -34,7 +34,8 @@ const (
 type Node struct {
   ring          *common.Ring
   position      []byte
-  addr          string
+  listenAddr    string
+  broadcastAddr string
   listener      *net.TCPListener
   metaLock      *sync.RWMutex
   routeLock     *sync.Mutex
@@ -43,15 +44,16 @@ type Node struct {
   commListeners []CommListener
 }
 
-func NewNode(addr string) (result *Node) {
+func NewNode(listenAddr, broadcastAddr string) (result *Node) {
   return &Node{
-    ring:      common.NewRing(),
-    position:  make([]byte, murmur.Size),
-    addr:      addr,
-    exports:   make(map[string]interface{}),
-    metaLock:  new(sync.RWMutex),
-    routeLock: new(sync.Mutex),
-    state:     created,
+    ring:          common.NewRing(),
+    position:      make([]byte, murmur.Size),
+    listenAddr:    listenAddr,
+    broadcastAddr: broadcastAddr,
+    exports:       make(map[string]interface{}),
+    metaLock:      new(sync.RWMutex),
+    routeLock:     new(sync.Mutex),
+    state:         created,
   }
 }
 
@@ -123,16 +125,16 @@ func (self *Node) GetPosition() (result []byte) {
 func (self *Node) GetAddr() string {
   self.metaLock.RLock()
   defer self.metaLock.RUnlock()
-  return self.addr
+  return self.broadcastAddr
 }
 func (self *Node) String() string {
   return fmt.Sprintf("<%v@%v>", common.HexEncode(self.GetPosition()), self.GetAddr())
 }
 
-// Describe returns a humanly readable string describing the address, position and ring of this Node.
+// Describe returns a humanly readable string describing the broadcast address, position and ring of this Node.
 func (self *Node) Describe() string {
   self.metaLock.RLock()
-  buffer := bytes.NewBufferString(fmt.Sprintf("%v@%v\n", common.HexEncode(self.position), self.addr))
+  buffer := bytes.NewBufferString(fmt.Sprintf("%v@%v\n", common.HexEncode(self.position), self.broadcastAddr))
   self.metaLock.RUnlock()
   fmt.Fprint(buffer, self.ring.Describe())
   return string(buffer.Bytes())
@@ -153,11 +155,6 @@ func (self *Node) setListener(l *net.TCPListener) {
   self.metaLock.Lock()
   defer self.metaLock.Unlock()
   self.listener = l
-}
-func (self *Node) setAddr(addr string) {
-  self.metaLock.Lock()
-  defer self.metaLock.Unlock()
-  self.addr = addr
 }
 
 // Remote returns a remote to this Node.
@@ -182,15 +179,11 @@ func (self *Node) Start() (err error) {
   if !self.changeState(created, started) {
     return fmt.Errorf("%v can only be started when in state 'created'", self)
   }
-  if self.GetAddr() == "" {
-    var foundAddr string
-    if foundAddr, err = findAddress(); err != nil {
-      return
-    }
-    self.setAddr(foundAddr)
+  if self.listenAddr == "" {
+    return fmt.Errorf("%v needs to have an address to listen at", self)
   }
   var addr *net.TCPAddr
-  if addr, err = net.ResolveTCPAddr("tcp", self.GetAddr()); err != nil {
+  if addr, err = net.ResolveTCPAddr("tcp", self.listenAddr); err != nil {
     return
   }
   var listener *net.TCPListener

@@ -12,7 +12,8 @@ const (
   address = "address"
 )
 
-var ip = flag.String("ip", "127.0.0.1", "IP address to listen to.")
+var listenIp = flag.String("listenIp", "127.0.0.1", "IP address to listen at.")
+var broadcastIp = flag.String("broadcastIp", "127.0.0.1", "IP address to broadcast to the cluster.")
 var port = flag.Int("port", 9191, "Port to listen to for net/rpc connections. The next port will be used for the HTTP service.")
 var joinIp = flag.String("joinIp", "", "IP address to join.")
 var joinPort = flag.Int("joinPort", 9191, "Port to join.")
@@ -23,9 +24,9 @@ func main() {
   runtime.GOMAXPROCS(runtime.NumCPU())
   flag.Parse()
   if *dir == address {
-    *dir = fmt.Sprintf("%v:%v", *ip, *port)
+    *dir = fmt.Sprintf("%v:%v", *broadcastIp, *port)
   }
-  s := dhash.NewNodeDir(fmt.Sprintf("%v:%v", *ip, *port), *dir)
+  s := dhash.NewNodeDir(fmt.Sprintf("%v:%v", *listenIp, *port), fmt.Sprintf("%v:%v", *broadcastIp, *port), *dir)
   if *verbose {
     s.AddChangeListener(func(ring *common.Ring) bool {
       fmt.Println(s.Describe())

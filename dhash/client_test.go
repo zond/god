@@ -72,7 +72,7 @@ func BenchmarkServer(b *testing.B) {
   defer runtime.GOMAXPROCS(oldprocs)
   b.StopTimer()
   if benchNode == nil {
-    benchNode = NewNode("127.0.0.1:1231")
+    benchNode = NewNode("127.0.0.1:1231", "127.0.0.1:1231")
     benchNode.MustStart()
   }
   benchNode.Clear()
@@ -94,7 +94,7 @@ func BenchmarkClientAndServer(b *testing.B) {
   defer runtime.GOMAXPROCS(oldprocs)
   b.StopTimer()
   if benchNode == nil {
-    benchNode = NewNode("127.0.0.1:1231")
+    benchNode = NewNode("127.0.0.1:1231", "127.0.0.1:1231")
     benchNode.MustStart()
   }
   c := client.MustConn("127.0.0.1:1231")
