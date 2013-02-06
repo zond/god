@@ -106,6 +106,10 @@ func (self *JSONApi) Clear(x Nothing, y *Nothing) (err error) {
   (*Node)(self).Clear()
   return nil
 }
+func (self *JSONApi) Nodes(x Nothing, result *common.Remotes) (err error) {
+  *result = (*Node)(self).node.GetNodes()
+  return nil
+}
 func (self *JSONApi) SubDel(d SubKeyOp, n *Nothing) (err error) {
   data := common.Item{
     Key:    d.Key,
