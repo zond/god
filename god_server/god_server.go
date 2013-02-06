@@ -50,7 +50,5 @@ func main() {
     s.MustJoin(fmt.Sprintf("%v:%v", *joinIp, *joinPort))
   }
 
-  for {
-    time.Sleep(time.Second * 10)
-  }
+  select {}
 }
