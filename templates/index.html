@@ -93,7 +93,7 @@
 				To make it easy to use, <i>god</i> always exports its interface on both Go <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON. The HTTP/JSON interface is always exported on the next port after the main one where the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> interface is exported. By default this is port 9192. If you started your server by running <code>god_server -verbose=true</code> as suggested above, you will find a small administrative/monitoring tool at <a href="http://localhost:9192">http://localhost:9192</a>.
 				</p>
 				<p>
-				The server only listens to the default network interface for <code>localhost</code> by default. To make it listen to another network interface, use the switch <code>-listenIp HOST/IP</code> and to make it broadcast another address to its peers use <code>-broadcastIp</code>.
+				The server only listens to the default network interface for <code>localhost</code> by default. To make it listen to another network interface, use the switch <code>-listenIp HOST/IP</code> and to make it broadcast another address to its peers use <code>-broadcastIp HOST/IP</code>.
 				</p>
 				<h2 id="clients">Clients</h2>
 				<p>
