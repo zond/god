@@ -6,7 +6,6 @@ import (
   "github.com/zond/god/common"
   "github.com/zond/god/dhash"
   "runtime"
-  "time"
 )
 
 const (
