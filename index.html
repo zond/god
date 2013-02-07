@@ -1,126 +1,126 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
-		<link href="css/shCore.css" rel="stylesheet" media="screen">
-		<link href="css/shThemeDefault.css" rel="stylesheet" media="screen">
-		<script src="js/jquery-latest.js"></script>
-		<script src="js/bootstrap.min.js"></script>
-		<script src="js/shCore.js"></script>
-		<script type="text/javascript" src="js/shBrushJScript.js"></script>
-		<script type="text/javascript" src="js/shBrushGo.js"></script>
-		<style type="text/css">
-		  body {
-		    background-color: #faf5f5;
-		  }
-		  img.illustration {
-		    width: 50%;
-		  }
-		  .illustration {
-		    float: right;
-		  }
-		</style>
-		<script>
-		$(document).ready(function() {
-		  SyntaxHighlighter.all();
-		});
-		</script>
-		<title>Go Database! Docs</title>
-	</head>
-	<body data-spy="scroll" data-target="#sidebar">
-		<div class="row">
-			<div class="span12">
-			<ul class="nav nav-tabs">
-					<li class="active"><a href="index.html">Usage</a></li>
-					<li><a href="architecture.html">Architecture</a></li>
-				</ul>
-			</div>
-		</div>
-		<div class="row">
-			<div id="sidebar" class="span3">
-				<ul class="nav nav-list affix">
-					<li><a href="#overview">Overview</a></li>
-					<li><a href="#operations">Operations</a></li>
-					<li><a href="#clients">Clients</a></li>
-					<li><a href="#bytestorage">Storing bytes</a></li>
-					<li><a href="#users">Users</a></li>
-					<li><a href="#structstorage">Storing structures</a></li>
-					<li><a href="#followers">Followers</a></li>
-					<li><a href="#friends">Friends</a></li>
-					<li><a href="#toplists">Top lists</a></li>
-					<li><a href="#similarity">Similarity</a></li>
-					<li><a href="#relevance">Relevance</a></li>
-				</ul>
-			</div>
-			<div class="span9">
-				<h1>Usage</h1>
-				<h2 id="overview">Overview</h2>
-				<p>
-				<i>god</i> is a scalable, performant, persistent in memory data structure server. It allows massively distributed applications to update and fetch common data in a structured and sorted format.
-				</p>
-				<p>
-				Its main inspirations are <a href="http://redis.io/">Redis</a> and <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a>.
-				Like <a href="http://redis.io/">Redis</a> it focuses on performance, ease of use and a small, simple yet powerful feature set, 
-				while from the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a> projects it inherits scalability, redundancy and transparent failover behaviour.
-				</p>
-				<p>
-				This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore. The example code snippets below are tested against somewhat current versions of Go and node, and should run as is if you provide them their dependencies and run a local <i>god</i> server.
-				</p>
-				<p>
-                                To try it out right now, install <a href="http://golang.org/doc/install">Go</a>, <a href="http://git-scm.com/downloads">git</a>, <a href="http://mercurial.selenic.com/wiki/Download">Mercurial</a> and <a href="http://gcc.gnu.org/install/">gcc</a>, <code>go get github.com/zond/god/god_server</code>, run <code>god_server</code>, browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
-				</p>
-				<p>
-				For API documentation, go to <a href="http://go.pkgdoc.org/github.com/zond/god">http://go.pkgdoc.org/github.com/zond/god</a>.
-				</p>
-				<p>
-				For the source, go to <a href="https://github.com/zond/god">https://github.com/zond/god</a>.
-				</p>
-				<h2 id="operations">Operations</h2>
-				<p>
-				<i>god</i> is built to be simple to use, and as such has few dependencies for building apart from the Go standard library. For running, all you need is one statically linked binary.
-				</p>
-				<p>
-				If you have a working <a href="http://golang.org/doc/install">Go</a> environment installed (specifically a writable <code>$GOPATH</code>), you just run <code>go get github.com/zond/god/god_server</code>. This will download, compile and install <i>god</i> and all its dependencies. After this you will find <code>god_server</code> in <code>$GOPATH/bin</code>. To start a server, just run <code>god_server -verbose=true</code>. Other option can be listed if you run <code>god_server -help</code>.
-				</p>
-				<p>
-				Since there are a plethora of ways to daemonize such a program, and since Go doesn't currently contain its own way of doing it, daemonizing this binary is left to creative ops people out there.
-				</p>
-				<p>
-				To make your server join an existing cluster/server, just run <code>god_server -joinIp HOST/IP</code>. It will default to using port 9191, but using the switch <code>-port</code> can force it to try another port.
-				</p>
-				<img class="illustration" src="web-gui.png"></object>
-				<p>
-				To make it easy to use, <i>god</i> always exports its interface on both Go <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON. The HTTP/JSON interface is always exported on the next port after the main one where the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> interface is exported. By default this is port 9192. If you started your server by running <code>god_server -verbose=true</code> as suggested above, you will find a small administrative/monitoring tool at <a href="http://localhost:9192">http://localhost:9192</a>.
-				</p>
-				<p>
-				The server only listens to the default network interface for <code>localhost</code> by default. To make it listen to another network interface, use the switch <code>-listenIp HOST/IP</code> and to make it broadcast another address to its peers use <code>-broadcastIp HOST/IP</code>.
-				</p>
-				<h2 id="clients">Clients</h2>
-				<p>
-				As mentioned there are two APIs for <i>god</i>, <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON.
-				</p>
-				<p>
-				Using the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> API is as simple as <code>go get github.com/zond/god/client</code>, and then <code>import "github.com/zond/god/client"</code>. See <a href="http://godoc.org/github.com/zond/god/client">http://godoc.org/github.com/zond/god/client</a> for godoc generated documentation.
-				</p>
-				<p>
-				To simplify trying it out from the command line, there is also a command line interface available. To install it, run <code>go get github.com/zond/god/god_cli</code>, and then run <code>god_cli</code>. Documentation for the command format for this tool can be found at <a href="https://github.com/zond/god/tree/master/god_cli">https://github.com/zond/god/tree/master/god_cli</a>.
-				</p>
-				<p>
-				Since the HTTP/JSON API is designed to be as simple as possible to interact with from any type of client system, there isn't really much to say about how to use it. Examples for the different commands found in the web monitor at <a href="http://localhost:9192">http://localhost:9192</a> (if the server is started via <code>god_server</code> with default options) along with the generated documentation at <a href="http://godoc.org/github.com/zond/god/client">http://godoc.org/github.com/zond/god/client</a> are likely the best way to learn and explore.
-				</p>
-				<p>
-				The HTTP/JSON API is slightly less efficient than the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> API, mainly due to the receiving node having to figure out who is responsible for the operation in the request, something that the native Go client does on its own.
-				</p>
-				<h2 id="bytestorage">Storing bytes</h2>
-				<p>
-				The simplest and most obvious way to use <i>god</i> is to store bytes in it. Like all content in <i>god</i> nodes, the bytes you put in the system will be stored in RAM in one or more (if you have a cluster, which is really recommended) servers. To store byte arrays in the database, use the <b>put</b> command, either via <code>client.Conn#Put</code> or <code>POST /rpc/DHash.Put</code>.
-				</p>
-				<h2 id="users">Users</h2>
-				<p>
-				A trivial example would be to store application users in <i>god</i>. Here is a bit of example Go code that would store and fetch a user object:
-				</p>
-				<pre class="brush: go">
-package main
+  <head>
+    <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="css/shCore.css" rel="stylesheet" media="screen">
+    <link href="css/shThemeDefault.css" rel="stylesheet" media="screen">
+    <script src="js/jquery-latest.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/shCore.js"></script>
+    <script type="text/javascript" src="js/shBrushJScript.js"></script>
+    <script type="text/javascript" src="js/shBrushGo.js"></script>
+    <style type="text/css">
+      body {
+      background-color: #faf5f5;
+      }
+      img.illustration {
+      width: 50%;
+      }
+      .illustration {
+      float: right;
+      }
+    </style>
+    <script>
+      $(document).ready(function() {
+      SyntaxHighlighter.all();
+      });
+    </script>
+    <title>Go Database! Docs</title>
+  </head>
+  <body data-spy="scroll" data-target="#sidebar">
+    <div class="row">
+      <div class="span12">
+	<ul class="nav nav-tabs">
+	  <li class="active"><a href="index.html">Usage</a></li>
+	  <li><a href="architecture.html">Architecture</a></li>
+	</ul>
+      </div>
+    </div>
+    <div class="row">
+      <div id="sidebar" class="span3">
+	<ul class="nav nav-list affix">
+	  <li><a href="#overview">Overview</a></li>
+	  <li><a href="#operations">Operations</a></li>
+	  <li><a href="#clients">Clients</a></li>
+	  <li><a href="#bytestorage">Storing bytes</a></li>
+	  <li><a href="#users">Users</a></li>
+	  <li><a href="#structstorage">Storing structures</a></li>
+	  <li><a href="#followers">Followers</a></li>
+	  <li><a href="#friends">Friends</a></li>
+	  <li><a href="#toplists">Top lists</a></li>
+	  <li><a href="#similarity">Similarity</a></li>
+	  <li><a href="#relevance">Relevance</a></li>
+	</ul>
+      </div>
+      <div class="span9">
+	<h1>Usage</h1>
+	<h2 id="overview">Overview</h2>
+	<p>
+	  <i>god</i> is a scalable, performant, persistent, in-memory data structure server. It allows massively distributed applications to update and fetch common data in a structured and sorted format.
+	</p>
+	<p>
+	  Its main inspirations are <a href="http://redis.io/">Redis</a> and <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a>.
+	  Like <a href="http://redis.io/">Redis</a> it focuses on performance, ease of use and a small, simple yet powerful feature set, 
+	  while from the <a href="http://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a>/<a href="http://pdos.csail.mit.edu/papers/dhash:nsdi/paper.pdf">DHash</a> projects it inherits scalability, redundancy, and transparent failover behaviour.
+	</p>
+	<p>
+	  This is a usage instruction aiming to be somewhere between example collection and tutorial, targeting developers interested in trying out <i>god</i> as datastore. The example code snippets below are tested against somewhat current versions of Go and node, and should run as is if you provide them their dependencies and run a local <i>god</i> server.
+	</p>
+	<p>
+	  To try it out right now, install <a href="http://golang.org/doc/install">Go</a>, <a href="http://git-scm.com/downloads">git</a>, <a href="http://mercurial.selenic.com/wiki/Download">Mercurial</a> and <a href="http://gcc.gnu.org/install/">gcc</a>, <code>go get github.com/zond/god/god_server</code>, run <code>god_server</code>, browse to <a href="http://localhost:9192/">http://localhost:9192/</a>.
+	</p>
+	<p>
+	  For API documentation, go to <a href="http://go.pkgdoc.org/github.com/zond/god">http://go.pkgdoc.org/github.com/zond/god</a>.
+	</p>
+	<p>
+	  For the source, go to <a href="https://github.com/zond/god">https://github.com/zond/god</a>.
+	</p>
+	<h2 id="operations">Operations</h2>
+	<p>
+	  <i>god</i> is built to be simple to use, and as such has few dependencies for building apart from the Go standard library. For running, all you need is one statically linked binary.
+	</p>
+	<p>
+	  If you have a working <a href="http://golang.org/doc/install">Go</a> environment installed (specifically a writable <code>$GOPATH</code>), you just run <code>go get github.com/zond/god/god_server</code>. This will download, compile and install <i>god</i> and all its dependencies. After this you will find <code>god_server</code> in <code>$GOPATH/bin</code>. To start a server, just run <code>god_server -verbose=true</code>. Other option can be listed if you run <code>god_server -help</code>.
+	</p>
+	<p>
+	  Since there are a plethora of ways to daemonize such a program, and since Go doesn't currently contain its own way of doing it, daemonizing this binary is left to creative ops people out there.
+	</p>
+	<p>
+	  To make your server join an existing cluster/server, just run <code>god_server -joinIp HOST/IP</code>. It will default to using port 9191, but using the switch <code>-port</code> can force it to try another port.
+	</p>
+	<img class="illustration" src="web-gui.png"></object>
+<p>
+  To make it easy to use, <i>god</i> always exports its interface on both Go <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON. The HTTP/JSON interface is always exported on the next port after the main one where the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> interface is exported. By default this is port 9192. If you started your server by running <code>god_server -verbose=true</code> as suggested above, you will find a small administrative/monitoring tool at <a href="http://localhost:9192">http://localhost:9192</a>.
+</p>
+<p>
+  The server only listens to the default network interface for <code>localhost</code> by default. To make it listen to another network interface, use the switch <code>-listenIp HOST/IP</code> and to make it broadcast another address to its peers use <code>-broadcastIp HOST/IP</code>.
+</p>
+<h2 id="clients">Clients</h2>
+<p>
+  As mentioned there are two APIs for <i>god</i>, <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON.
+</p>
+<p>
+  Using the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> API is as simple as <code>go get github.com/zond/god/client</code>, and then <code>import "github.com/zond/god/client"</code>. See <a href="http://godoc.org/github.com/zond/god/client">http://godoc.org/github.com/zond/god/client</a> for godoc generated documentation.
+</p>
+<p>
+  To simplify trying it out from the command line, there is also a command line interface available. To install it, run <code>go get github.com/zond/god/god_cli</code>, and then run <code>god_cli</code>. Documentation for the command format for this tool can be found at <a href="https://github.com/zond/god/tree/master/god_cli">https://github.com/zond/god/tree/master/god_cli</a>.
+</p>
+<p>
+  Since the HTTP/JSON API is designed to be as simple as possible to interact with from any type of client system, there isn't really much to say about how to use it. Examples for the different commands found in the web monitor at <a href="http://localhost:9192">http://localhost:9192</a> (if the server is started via <code>god_server</code> with default options) along with the generated documentation at <a href="http://godoc.org/github.com/zond/god/client">http://godoc.org/github.com/zond/god/client</a> are likely the best way to learn and explore.
+</p>
+<p>
+  The HTTP/JSON API is slightly less efficient than the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> API, mainly due to the receiving node having to figure out who is responsible for the operation in the request, something that the native Go client does on its own.
+</p>
+<h2 id="bytestorage">Storing bytes</h2>
+<p>
+  The simplest and most obvious way to use <i>god</i> is to store bytes in it. Like all content in <i>god</i> nodes, the bytes you put in the system will be stored in RAM in one or more (if you have a cluster, which is really recommended) servers. To store byte arrays in the database, use the <b>put</b> command, either via <code>client.Conn#Put</code> or <code>POST /rpc/DHash.Put</code>.
+</p>
+<h2 id="users">Users</h2>
+<p>
+  A trivial example would be to store application users in <i>god</i>. Here is a bit of example Go code that would store and fetch a user object:
+</p>
+<pre class="brush: go">
+  package main
 
 import (
   "encoding/json"
@@ -164,12 +164,12 @@ func main() {
 
 // output: stored and found {Email:mail@domain.tld Password:so secret Name:john doe}
 
-				</pre>
-				<p>
-				And here is a bit of node compatible JavaScript doing the same thing against the HTTP/JSON API:
-				</p>
-				<pre class="brush: js">
-var http = require('http');
+</pre>
+<p>
+  And here is a bit of node compatible JavaScript doing the same thing against the HTTP/JSON API:
+</p>
+<pre class="brush: js">
+  var http = require('http');
 
 // call endpoint with params and run callback when finished
 function rpc(endpoint, params, callback) {
@@ -224,23 +224,23 @@ rpc('Put', {
 // output: password: 'so secret',
 // output: name: 'john doe' }
 
-				</pre>
-				<h2 id="structstorage">Storing structures</h2>
-				<p>
-				To experience the real power of <i>god</i>, one really has to use it to store data structures. The data structures in <i>god</i> are themselves key/value stores with unique keys and sorted on keys in byte order.
-				</p>
-				<p>
-				Since they are stored not as serialized values under their keys, but as individual tree structures they can be used to store large amounts of data in a structured fashion, by using the keys of byte values and structures (tree values) to relate them to each other.
-				</p>
-				<p>
-				To further make use of the efficient modification, sorting and lookup properties of these sub trees they can be both 'mirrored' to allow sorting on their values as well as keys and used in various set operations to analyze them in a more algorithmic fashion.
-	</p>
-				<h2 id="followers">Followers</h2>
-				<p>
-				The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the followers of a user:
-				</p>
-				<pre class="brush: go">
-package main
+</pre>
+<h2 id="structstorage">Storing structures</h2>
+<p>
+  To experience the real power of <i>god</i>, one really has to use it to store data structures. The data structures in <i>god</i> are themselves key/value stores with unique keys and sorted on keys in byte order.
+</p>
+<p>
+  Since they are stored not as serialized values under their keys, but as individual tree structures they can be used to store large amounts of data in a structured fashion, by using the keys of byte values and structures (tree values) to relate them to each other.
+</p>
+<p>
+  To further make use of the efficient modification, sorting and lookup properties of these sub trees they can be both 'mirrored' to allow sorting on their values as well as keys and used in various set operations to analyze them in a more algorithmic fashion.
+</p>
+<h2 id="followers">Followers</h2>
+<p>
+  The simplest way to store structured data in <i>god</i> is to just dump it into a sub tree as is. Here is a bit of example Go code that would modify and query the followers of a user:
+</p>
+<pre class="brush: go">
+  package main
 
 import (
   "fmt"
@@ -264,12 +264,12 @@ func main() {
 // output: my first follower is follower1@domain.tld
 // output: my last two followers are user2@domain.tld and user3@domain.tld
 
-				</pre>
-				<p>
-				And here is a bit of nody JavaScript doing the same thing against the HTTP/JSON API:
-				</p>
-				<pre class="brush: js">
-var http = require('http');
+</pre>
+<p>
+  And here is a bit of nody JavaScript doing the same thing against the HTTP/JSON API:
+</p>
+<pre class="brush: js">
+  var http = require('http');
 
 function rpc(endpoint, params, callback) {
   var data = '';
@@ -342,13 +342,13 @@ followers.map(function(follower) {
 // output: my first follower is follower1@domain.tld
 // output: my last two followers are user2@domain.tld and user3@domain.tld
 
-				</pre>
-				<h2 id="friends">Friends</h2>
-				<p>
-				One simple way to use the set operation support in god would be to intersect followers and followees to produce the users who are both. Below follows a bit of Go code that would produce these users, let us call them friends:
-				</p>
-				<pre class="brush: go">
-package main
+</pre>
+<h2 id="friends">Friends</h2>
+<p>
+  One simple way to use the set operation support in god would be to intersect followers and followees to produce the users who are both. Below follows a bit of Go code that would produce these users, let us call them friends:
+</p>
+<pre class="brush: go">
+  package main
 
 import (
   "fmt"
@@ -378,12 +378,12 @@ func main() {
 
 // output: user3@domain.tld
 
-				</pre>
-				<p>
-				To do the same thing using node, you can run:
-				</p>
-				<pre class="brush: js">
-var http = require("http");
+</pre>
+<p>
+  To do the same thing using node, you can run:
+</p>
+<pre class="brush: js">
+  var http = require("http");
 
 function rpc(endpoint, params, callback) {
   var data = "";
@@ -462,13 +462,13 @@ followees.map(function(followee) {
 });
 // output: user3@domain.tld
 
-				</pre>
-				<h2 id="toplists">Top lists</h2>
-				<p>
-				The tree mirroring capabilities of <i>god</i> lets you sort a mapping on both key and value, by keeping a <i>mirrored</i> version of the main tree, with key and value reversed. This is quite costly, as it has to update the mirrored tree for each update of the main tree, but it lets you do things like keeping a running top list of the highest scoring players of your fancy multi player game. Here is some Go code to do that:
-				</p>
-				<pre class="brush: go">
-package main
+</pre>
+<h2 id="toplists">Top lists</h2>
+<p>
+  The tree mirroring capabilities of <i>god</i> lets you sort a mapping on both key and value, by keeping a <i>mirrored</i> version of the main tree, with key and value reversed. This is quite costly, as it has to update the mirrored tree for each update of the main tree, but it lets you do things like keeping a running top list of the highest scoring players of your fancy multi player game. Here is some Go code to do that:
+</p>
+<pre class="brush: go">
+  package main
 
 import (
   "fmt"
@@ -501,12 +501,12 @@ func main() {
 // output: 1 mail6@domain.tld 4512
 // output: 2 mail7@domain.tld 1023
 
-				</pre>
-				<p>
-				And the corresponding node code:
-				</p>
-				<pre class="brush: js">
-var http = require('http');
+</pre>
+<p>
+  And the corresponding node code:
+</p>
+<pre class="brush: js">
+  var http = require('http');
 
 function rpc(endpoint, params, callback) {
   var data = '';
@@ -606,16 +606,16 @@ for (var email in scores) {
 // output: mail6@domain.tld 5123
 // output: mail1@domain.tld 1234
 
-				</pre>
-				<h2 id="similarity">Similarity</h2>
-				<p>
-				Now, over to something slightly more advanced. Say that we have a site where our users 'like' ice cream flavours.
-				</p>
-				<p>
-				If we just want to help our users find potential friends, we could collect all the users that have liked any flavour that we have liked, and sort them so that we find the one having liked the most flavours in common with us. Here is some Go code for that:
-				</p>
- <pre class="brush: go">
-package main
+</pre>
+<h2 id="similarity">Similarity</h2>
+<p>
+  Now, over to something slightly more advanced. Say that we have a site where our users 'like' ice cream flavours.
+</p>
+<p>
+  If we just want to help our users find potential friends, we could collect all the users that have liked any flavour that we have liked, and sort them so that we find the one having liked the most flavours in common with us. Here is some Go code for that:
+</p>
+<pre class="brush: go">
+  package main
 
 import (
   "fmt"
@@ -692,19 +692,19 @@ func main() {
 // output: denise has liked 3 flavours in common with adam
 // output: adam should get to know denise
 
-				</pre>
-				<h2 id="relevance">Relevance</h2>
-				<p>
-				For even more data mining juicyness: If we let our users rate the flavours from 0 to 10 we can do some more nifty relevance searches!
-				</p>
-				<p>
-				We can again find all users that have rated a flavour that we have rated, and for each user sum how similar to us they have rated.
-				</p>
-				<p>
-				Then we go through their ratings, for each found flavour summing it up with a weight score calculated by our similarity to the found user and dumping it in a mirrored set. Then we just fetch the top hit from the mirror tree of this set. Go code!
-				</p>
-				<pre class="brush: go">
-package main
+</pre>
+<h2 id="relevance">Relevance</h2>
+<p>
+  For even more data mining juicyness: If we let our users rate the flavours from 0 to 10 we can do some more nifty relevance searches!
+</p>
+<p>
+  We can again find all users that have rated a flavour that we have rated, and for each user sum how similar to us they have rated.
+</p>
+<p>
+  Then we go through their ratings, for each found flavour summing it up with a weight score calculated by our similarity to the found user and dumping it in a mirrored set. Then we just fetch the top hit from the mirror tree of this set. Go code!
+</p>
+<pre class="brush: go">
+  package main
 
 import (
   "fmt"
@@ -840,8 +840,9 @@ func main() {
 // output: this gives them an average similarity of 4, and a weight of 6.437751649736401
 // output: with the data we have, we recommend that adam tries chocolate
 
-				</pre>
-			      </div>
-			    </div>
-			  </body>
-			</html>
+</pre>
+</div>
+</div>
+</body>
+</html>
+
