@@ -94,6 +94,9 @@ func (self *Sync) Run() *Sync {
   }
   return self
 }
+
+// potentiallyWithinLimits will check if the given key can contain children between the from and to Nibbles
+// for this Sync when considering the namespace circular.
 func (self *Sync) potentiallyWithinLimits(key []Nibble) bool {
   if self.from == nil || self.to == nil {
     return true
@@ -110,20 +113,31 @@ func (self *Sync) potentiallyWithinLimits(key []Nibble) bool {
   }
   return common.BetweenII(cmpKey[:m], cmpFrom[:m], cmpTo[:m])
 }
+
+// withinLimits will check i the given key is actually between the from and to Nibbles for this Sync.
 func (self *Sync) withinLimits(key []Nibble) bool {
   if self.from == nil || self.to == nil {
     return true
   }
   return common.BetweenIE(toBytes(key), toBytes(self.from), toBytes(self.to))
 }
+
+// synchronize will recursively run the actual synchronization.
 func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
+  // If there is a source key
   if sourcePrint.Exists {
+    // If it represents a node containing synchronizable data, and it is within our limits
     if !sourcePrint.Empty && self.withinLimits(sourcePrint.Key) {
+      // If it contains a sub tree
       if sourcePrint.SubTree {
+        // If the sub tree in the destination is not equal to the sub tree in the source
         if bytes.Compare(sourcePrint.TreeHash, destinationPrint.TreeHash) != 0 {
+          // If the source is empty, but not the destination, and the source is newer than the destination
           if sourcePrint.TreeSize == 0 && destinationPrint.TreeSize > 0 && sourcePrint.TreeDataTimestamp > destinationPrint.TreeDataTimestamp {
+            // Clear the destination and count the number of removed keys.
             self.putCount += self.destination.SubClearTimestamp(sourcePrint.Key, destinationPrint.TreeDataTimestamp, sourcePrint.TreeDataTimestamp)
           }
+          // Synchronize the sub trees. If the destination is previously cleared, this will copy the configuration.
           subSync := NewSync(&subTreeWrapper{
             self.source,
             sourcePrint.Key,
@@ -138,27 +152,38 @@ func (self *Sync) synchronize(sourcePrint, destinationPrint *Print) {
           self.putCount += subSync.PutCount()
           self.delCount += subSync.DelCount()
         } else if self.destructive {
+          // If the trees are equal, but this Sync is destructive, just remove the source sub tree.
           self.delCount += self.source.SubKillTimestamp(sourcePrint.Key, sourcePrint.TreeDataTimestamp)
         }
       }
+      // If the source has a byte value.
       if sourcePrint.Timestamp > 0 {
+        // If the destination print is not covered by the source print (it is not equal and it is older)
         if !sourcePrint.coveredBy(destinationPrint) {
+          // If the source still contains the same timestamp
           if value, timestamp, present := self.source.GetTimestamp(sourcePrint.Key); timestamp == sourcePrint.timestamp() {
+            // Put the found data in the destination
             if self.destination.PutTimestamp(sourcePrint.Key, value, present, destinationPrint.timestamp(), sourcePrint.timestamp()) {
               self.putCount++
             }
           }
         }
+        // If we are destructive and contain something
         if self.destructive && !sourcePrint.Empty {
+          // Remove the byte value in the source.
           if self.source.DelTimestamp(sourcePrint.Key, sourcePrint.timestamp()) {
             self.delCount++
           }
         }
       }
     }
+    // For each child of the source print
     for index, subPrint := range sourcePrint.SubPrints {
+      // If there is a child node there, and it might contain matching keys
       if subPrint.Exists && self.potentiallyWithinLimits(subPrint.Key) {
+        // If we are destructive, or if the prints are dissimilar
         if self.destructive || (!destinationPrint.Exists || !subPrint.equals(destinationPrint.SubPrints[index])) {
+          // Synchronize the children
           self.synchronize(
             self.source.Finger(subPrint.Key),
             self.destination.Finger(subPrint.Key),
