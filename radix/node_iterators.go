@@ -1,5 +1,6 @@
 package radix
 
+// each will iterate over the tree in order
 func (self *node) each(prefix []Nibble, use int, f nodeIterator) (cont bool) {
   cont = true
   if self != nil {
@@ -18,6 +19,8 @@ func (self *node) each(prefix []Nibble, use int, f nodeIterator) (cont bool) {
   }
   return
 }
+
+// reverseEach will iterate over the tree in reverse order
 func (self *node) reverseEach(prefix []Nibble, use int, f nodeIterator) (cont bool) {
   cont = true
   if self != nil {
@@ -36,6 +39,8 @@ func (self *node) reverseEach(prefix []Nibble, use int, f nodeIterator) (cont bo
   }
   return
 }
+
+// eachBetween will iterate between min and max, including each depending on mincmp and maxcmp, in order
 func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int, f nodeIterator) (cont bool) {
   cont = true
   prefix = append(prefix, self.segment...)
@@ -67,6 +72,8 @@ func (self *node) eachBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int
   }
   return
 }
+
+// eachBetween will iterate between min and max, including each depending on mincmp and maxcmp, in reverse order
 func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int, f nodeIterator) (cont bool) {
   cont = true
   prefix = append(prefix, self.segment...)
@@ -101,6 +108,7 @@ func (self *node) reverseEachBetween(prefix, min, max []Nibble, mincmp, maxcmp, 
   return
 }
 
+// sizeBetween will count values between min and max, including each depending on mincmp and maxcmp, counting values of types included in use (byteValue and/or treeValue)
 func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int) (result int) {
   prefix = append(prefix, self.segment...)
   if !self.empty && (use == 0 || self.use&use != 0) && (min == nil || nComp(prefix, min) > mincmp) && (max == nil || nComp(prefix, max) < maxcmp) {
@@ -147,6 +155,8 @@ func (self *node) sizeBetween(prefix, min, max []Nibble, mincmp, maxcmp, use int
   return
 }
 
+// eachBetweenIndex will iterate over the tree between index min and max, inclusive.
+// Missing min or max will mean 'from the start' or 'to the end' respectively.
 func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, use int, f nodeIndexIterator) (cont bool) {
   cont = true
   prefix = append(prefix, self.segment...)
@@ -186,6 +196,8 @@ func (self *node) eachBetweenIndex(prefix []Nibble, count int, min, max *int, us
   }
   return
 }
+
+// reverseEachBetweenIndex is like eachBetweenIndex, but iterates in reverse.
 func (self *node) reverseEachBetweenIndex(prefix []Nibble, count int, min, max *int, use int, f nodeIndexIterator) (cont bool) {
   cont = true
   prefix = append(prefix, self.segment...)

@@ -105,6 +105,10 @@ func (self *node) rehash(key []Nibble, now int64) {
   }
   h.Extrude(&self.hash)
 }
+
+// gc will garbage collect old tombstones.
+// If this node is an old tombstone, a replacement child will be returned.
+// If this node contains a tree which is empty and too old, it will be removed.
 func (self *node) gc(prefix []Nibble, now int64) (result *node) {
   if self == nil {
     return self
@@ -139,6 +143,8 @@ func (self *node) describe(indent int, buffer *bytes.Buffer) {
     child.describe(indent+len(encodedSegment), buffer)
   }
 }
+
+// finger will return a finger print of this node to use when comparing trees in Sync.
 func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
   result = allocated
   if self == nil {
@@ -163,6 +169,9 @@ func (self *node) finger(allocated *Print, segment []Nibble) (result *Print) {
   }
   panic("Shouldn't happen")
 }
+
+// indexOf will return the index of the given segment, considering the data type defined by use (byteValue and/or treeValue).
+// It will count from the start if up, else from the end.
 func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index int, existed int) {
   beyond_self := false
   beyond_segment := false
@@ -243,6 +252,8 @@ func (self *node) indexOf(count int, segment []Nibble, use int, up bool) (index 
   }
   panic("Shouldn't happen")
 }
+
+// get will return values for the given key, if it exists
 func (self *node) get(segment []Nibble) (byteValue []byte, treeValue *Tree, timestamp int64, existed int) {
   if self == nil {
     return
@@ -266,6 +277,8 @@ func (self *node) get(segment []Nibble) (byteValue []byte, treeValue *Tree, time
   }
   panic("Shouldn't happen")
 }
+
+// del will return this node or a child replacement after removing the value type defined by use (byteValue and/or treeValue).
 func (self *node) del(prefix, segment []Nibble, use int, now int64) (result *node, oldBytes []byte, oldTree *Tree, timestamp int64, existed int) {
   if self == nil {
     return
@@ -341,12 +354,18 @@ func (self *node) del(prefix, segment []Nibble, use int, now int64) (result *nod
   }
   panic("Shouldn't happen")
 }
+
+// fakeDel will replace the given key with a tombstone
 func (self *node) fakeDel(prefix, segment []Nibble, use int, timestamp, now int64) (result *node, oldBytes []byte, oldTree *Tree, oldTimestamp int64, existed int) {
   return self.insertHelp(prefix, newNode(segment, nil, nil, timestamp, false, 0), use, now)
 }
+
+// insert will insert the given node.
 func (self *node) insert(prefix []Nibble, n *node, now int64) (result *node, oldBytes []byte, oldTree *Tree, timestamp int64, existed int) {
   return self.insertHelp(prefix, n, n.use, now)
 }
+
+// insertHelp will insert the given node, allowing the caller to define what values of any current node to replace by providing the use parameter.
 func (self *node) insertHelp(prefix []Nibble, n *node, use int, now int64) (result *node, oldBytes []byte, oldTree *Tree, timestamp int64, existed int) {
   if self == nil {
     n.rehash(append(prefix, n.segment...), now)
