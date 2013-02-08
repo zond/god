@@ -12,9 +12,24 @@ import (
 */
 import "C"
 
+func hash32(key unsafe.Pointer, length C.int, seed C.uint32_t, out unsafe.Pointer) {
+  C.MurmurHash3_x86_128(key, length, seed, out)
+}
+
+func hash64(key unsafe.Pointer, length C.int, seed C.uint32_t, out unsafe.Pointer) {
+  C.MurmurHash3_x64_128(key, length, seed, out)
+}
+
+var hashfunc func(key unsafe.Pointer, lenght C.int, seed C.uint32_t, out unsafe.Pointer)
+
 func init() {
-  if unsafe.Sizeof(new(C.uint64_t)) != 8 {
-    panic("C.word64 is not 8 bytes long!")
+  testtype := new(C.uint64_t)
+  if unsafe.Sizeof(testtype) == 8 {
+    hashfunc = hash64
+  } else if unsafe.Sizeof(testtype) == 4 {
+    hashfunc = hash32
+  } else {
+    panic("C.word64 is not 4 or 8 bytes long!")
   }
 }
 
@@ -80,7 +95,7 @@ func (self *Hash) Get() (result []byte) {
 // Extrude is slightly less allocating than Get, if that kind of thing is of interest.
 func (self *Hash) Extrude(result *[]byte) {
   buf := (*bytes.Buffer)(self).Bytes()
-  C.MurmurHash3_x64_128(
+  hashfunc(
     *(*unsafe.Pointer)(unsafe.Pointer(&buf)),
     C.int(len(buf)),
     C.uint32_t(seed),
