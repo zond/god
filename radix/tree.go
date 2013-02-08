@@ -827,7 +827,8 @@ func (self *Tree) ReverseIndex(n int) (key []byte, byteValue []byte, timestamp i
   return
 }
 
-// Clear will remove all content of this Tree (including tombstones and sub trees) and any mirror Tree and replace the all with one giant tombstone, and clear any persistence.Logger assigned to this Tree.
+// Clear will remove all content of this Tree (including tombstones and sub trees) and any mirror Tree, replace them all with one giant tombstone, 
+// and clear any persistence.Logger assigned to this Tree.
 func (self *Tree) Clear(timestamp int64) {
   self.lock.Lock()
   defer self.lock.Unlock()
@@ -1131,6 +1132,8 @@ func (self *Tree) SubFakeDel(key, subKey []byte, timestamp int64) (oldBytes []by
   }
   return
 }
+
+// SubClear does Clear on the sub tree.
 func (self *Tree) SubClear(key []byte, timestamp int64) (deleted int) {
   self.lock.Lock()
   defer self.lock.Unlock()
@@ -1149,6 +1152,8 @@ func (self *Tree) SubClear(key []byte, timestamp int64) (deleted int) {
   }
   return
 }
+
+// SubKill will completely remove the sub tree.
 func (self *Tree) SubKill(key []byte) (deleted int) {
   self.lock.Lock()
   defer self.lock.Unlock()
