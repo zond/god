@@ -88,7 +88,7 @@
 	<p>
 	  To make your server join an existing cluster/server, just run <code>god_server -joinIp HOST/IP</code>. It will default to using port 9191, but using the switch <code>-port</code> can force it to try another port.
 	</p>
-	<img class="illustration" src="web-gui.png"></object>
+	<img class="illustration" src="web-gui.gif"></object>
 <p>
   To make it easy to use, <i>god</i> always exports its interface on both Go <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> and HTTP/JSON. The HTTP/JSON interface is always exported on the next port after the main one where the <a href="http://golang.org/pkg/net/rpc/">net/rpc</a> interface is exported. By default this is port 9192. If you started your server by running <code>god_server -verbose=true</code> as suggested above, you will find a small administrative/monitoring tool at <a href="http://localhost:9192">http://localhost:9192</a>.
 </p>
