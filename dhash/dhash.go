@@ -171,6 +171,9 @@ func (self *Node) hasState(s int32) bool {
 func (self *Node) changeState(old, neu int32) bool {
   return atomic.CompareAndSwapInt32(&self.state, old, neu)
 }
+func (self *Node) GetListenAddr() string {
+  return self.node.GetListenAddr()
+}
 func (self *Node) GetBroadcastAddr() string {
   return self.node.GetBroadcastAddr()
 }
