@@ -1050,7 +1050,7 @@ func (self *Conn) AddConfiguration(key, value string) {
   }
 }
 
-// SubAddConfiguration will set a key and value to the configuratino of the sub tree defined by key.
+// SubAddConfiguration will set a key and value to the configuration of the sub tree defined by key.
 //
 // To mirror a sub tree, set mirrored=yes. To turn off mirroring of a sub tree, set mirrored!=yes.
 func (self *Conn) SubAddConfiguration(treeKey []byte, key, value string) {
