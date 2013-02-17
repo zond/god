@@ -599,6 +599,7 @@ func (self *Conn) PrevIndex(key []byte, index int) (foundKey, foundValue []byte,
 }
 
 // MirrorReverseSliceIndex will return the reverse slice between index min and max in the mirror tree of the sub tree defined by key.
+// A min of nil will return from the end. A max of nil will return to the start.
 func (self *Conn) MirrorReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
   var mi int
   var ma int
@@ -620,6 +621,7 @@ func (self *Conn) MirrorReverseSliceIndex(key []byte, min, max *int) (result []c
 }
 
 // MirrorSliceIndex will return the slice between index min and max in the mirror tree of the sub tree defined by key.
+// A min of nil will return from the start. A max of nil will return to the end.
 func (self *Conn) MirrorSliceIndex(key []byte, min, max *int) (result []common.Item) {
   var mi int
   var ma int
@@ -691,6 +693,7 @@ func (self *Conn) MirrorReverseSliceLen(key, max []byte, maxinc bool, maxRes int
 }
 
 // ReverseSliceIndex will the reverse slice between index min and max in the sub tree defined by key.
+// A min of nil will return from the end. A max of nil will return to the start.
 func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.Item) {
   var mi int
   var ma int
@@ -712,6 +715,7 @@ func (self *Conn) ReverseSliceIndex(key []byte, min, max *int) (result []common.
 }
 
 // SliceIndex will return the slice between index min and max in the sub tree defined by key.
+// A min of nil will return from the start. A max of nil will return to the end.
 func (self *Conn) SliceIndex(key []byte, min, max *int) (result []common.Item) {
   var mi int
   var ma int
