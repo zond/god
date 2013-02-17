@@ -4,6 +4,7 @@ import (
   "bytes"
   "encoding/binary"
   "encoding/hex"
+  "encoding/json"
   "fmt"
   "math/big"
   "runtime"
