@@ -643,6 +643,7 @@ func (self *Conn) MirrorSliceIndex(key []byte, min, max *int) (result []common.I
 }
 
 // MirrorReverseSlice will return the reverse slice between min and max in the mirror tree of the sub tree defined by key.
+// A min of nil will return from the end. A max of nil will return to the start.
 func (self *Conn) MirrorReverseSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
   r := common.Range{
     Key:    key,
@@ -656,6 +657,7 @@ func (self *Conn) MirrorReverseSlice(key, min, max []byte, mininc, maxinc bool) 
 }
 
 // MirrorSlice will return the slice between min and max in the mirror tree of the sub tree defined by key.
+// A min of nil will return from the start. A max of nil will return to the end.
 func (self *Conn) MirrorSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
   r := common.Range{
     Key:    key,
@@ -669,6 +671,7 @@ func (self *Conn) MirrorSlice(key, min, max []byte, mininc, maxinc bool) (result
 }
 
 // MirrorSliceLen will return at most maxRes elements after min in the mirror tree of the sub tree defined by key.
+// A min of nil will return from the start.
 func (self *Conn) MirrorSliceLen(key, min []byte, mininc bool, maxRes int) (result []common.Item) {
   r := common.Range{
     Key:    key,
@@ -681,6 +684,7 @@ func (self *Conn) MirrorSliceLen(key, min []byte, mininc bool, maxRes int) (resu
 }
 
 // MirrorReverseSliceLen will return at most maxRes elements before max in the mirror tree of the sub tree defined by key.
+// A min of nil will return from the end.
 func (self *Conn) MirrorReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (result []common.Item) {
   r := common.Range{
     Key:    key,
@@ -737,6 +741,7 @@ func (self *Conn) SliceIndex(key []byte, min, max *int) (result []common.Item) {
 }
 
 // ReverseSlice will return the reverse slice between min and max in the sub tree defined by key.
+// A min of nil will return from the end. A max of nil will return to the start.
 func (self *Conn) ReverseSlice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
   r := common.Range{
     Key:    key,
@@ -750,6 +755,7 @@ func (self *Conn) ReverseSlice(key, min, max []byte, mininc, maxinc bool) (resul
 }
 
 // ReverseSlice will return the slice between min and max in the sub tree defined by key.
+// A min of nil will return from the start. A max of nil will return to the end.
 func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
   r := common.Range{
     Key:    key,
@@ -763,6 +769,7 @@ func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []com
 }
 
 // SliceLen will return at most maxRes elements after min in the sub tree defined by key.
+// A min of nil will return from the start.
 func (self *Conn) SliceLen(key, min []byte, mininc bool, maxRes int) (result []common.Item) {
   r := common.Range{
     Key:    key,
@@ -775,6 +782,7 @@ func (self *Conn) SliceLen(key, min []byte, mininc bool, maxRes int) (result []c
 }
 
 // ReverseSliceLen will return at most maxRes elements before max in the sub tree defined by key.
+// A min of nil will return from the end. A max of nil will return to the start.
 func (self *Conn) ReverseSliceLen(key, max []byte, maxinc bool, maxRes int) (result []common.Item) {
   r := common.Range{
     Key:    key,
