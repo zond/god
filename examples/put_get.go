@@ -1,9 +1,9 @@
 package main
 
 import (
-  "encoding/json"
   "fmt"
   "github.com/zond/god/client"
+  "github.com/zond/god/common"
   "github.com/zond/god/murmur"
 )
 
@@ -24,19 +24,14 @@ func main() {
     Name:     "john doe",
   }
   // serialize the user
-  if bytes, err := json.Marshal(user); err != nil {
-    panic(err)
-  } else {
-    // and put it in the database
-    conn.Put(murmur.HashString(user.Email), bytes)
-  }
+  bytes := common.MustJSONEncode(user)
+  // and put it in the database
+  conn.Put(murmur.HashString(user.Email), bytes)
   // try to fetch the user again
   data, _ := conn.Get(murmur.HashString(user.Email))
   var found User
-  // try to unserialize it
-  if err := json.Unmarshal(data, &found); err != nil {
-    panic(err)
-  }
+  // to unserialize it
+  common.MustJSONDecode(data, &found)
   fmt.Printf("stored and found %+v\n", found)
 }
 
