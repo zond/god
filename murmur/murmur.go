@@ -84,6 +84,12 @@ func NewBytes(b []byte) *Hash {
   return (*Hash)(bytes.NewBuffer(b))
 }
 
+func (self *Hash) HashBytes(b []byte) []byte {
+  self.Reset()
+  self.Write(b)
+  return self.Get()
+}
+
 // Get will return the hash for all consumed data.
 func (self *Hash) Get() (result []byte) {
   result = make([]byte, Size)
@@ -103,10 +109,10 @@ func (self *Hash) Extrude(result *[]byte) {
   self.Reset()
 }
 
-// Sum will consume the given bytes and return the hash for all consumed data.
+// Sum appends the current hash to b and returns the resulting slice.
+// It does not change the underlying hash state.
 func (self *Hash) Sum(p []byte) []byte {
-  (*bytes.Buffer)(self).Write(p)
-  return self.Get()
+  return append(p, self.Get()...)
 }
 
 func (self *Hash) MustWriteInt64(i int64) {
@@ -117,25 +123,33 @@ func (self *Hash) MustWriteInt64(i int64) {
   self.MustWrite(b.Bytes())
 }
 
-// MustWrite will consume the provided bytes.
+// MustWrite adds more data to the running hash.
 func (self *Hash) MustWrite(p []byte) {
   if i, err := (*bytes.Buffer)(self).Write(p); i != len(p) || err != nil {
     panic(fmt.Errorf("When Writing %v to %v, got %v, %v", p, self, i, err))
   }
 }
 
-// Write will consume the provided bytes, or return an error.
+// Write adds more data to the running hash.
+// It never returns an error.
 func (self *Hash) Write(p []byte) (n int, err error) {
   return (*bytes.Buffer)(self).Write(p)
 }
 
-// Reset will forget all consumed data.
+// Reset resets the hash to one with zero bytes written.
 func (self *Hash) Reset() {
   (*bytes.Buffer)(self).Truncate(0)
 }
+
+// Size returns the number of bytes Sum will return.
 func (self *Hash) Size() int {
   return 3 * 8
 }
+
+// BlockSize returns the hash's underlying block size.
+// The Write method must be able to accept any amount
+// of data, but it may operate more efficiently if all writes
+// are a multiple of the block size.
 func (self *Hash) BlockSize() int {
   return 8
 }
