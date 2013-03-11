@@ -456,7 +456,8 @@ func (self *Tree) Hash() []byte {
   self.lock.RLock()
   defer self.lock.RUnlock()
   hash := murmur.NewString(fmt.Sprint(self.configuration))
-  return hash.Sum(self.root.hash)
+  hash.MustWrite(self.root.hash)
+  return hash.Get()
 }
 
 // ToMap will return a dubious map representation of this Tree, where each byte slice key is converted to a string.
