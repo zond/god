@@ -64,3 +64,7 @@ func (self Remote) Call(service string, args, reply interface{}) error {
 func (self Remote) Go(service string, args, reply interface{}) *rpc.Call {
   return Switch.Go(self.Addr, service, args, reply)
 }
+
+func (self Remote) Close() error {
+  return Switch.Close(self.Addr)
+}
