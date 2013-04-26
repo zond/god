@@ -15,9 +15,16 @@ import (
 )
 
 const (
-	Redundancy   = 3
 	PingInterval = time.Second
 )
+
+var (
+	Redundancy int = 3
+)
+
+func SetRedundancy(r int) {
+	Redundancy = r
+}
 
 func MustParseFloat64(s string) (result float64) {
 	var err error
