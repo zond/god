@@ -1,4 +1,5 @@
 package templates
+
 const (
-  Timestamp = 1360922314903943000
+	Timestamp = 1360922314903943000
 )
