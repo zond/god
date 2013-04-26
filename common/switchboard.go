@@ -61,3 +61,12 @@ func (self *Switchboard) Call(addr, service string, args, reply interface{}) (er
 	}
 	return
 }
+
+func (self *Switchboard) Close(addr string) error {
+  client, err := self.client(addr)
+  if err != nil {
+    return err
+  }
+  
+  return client.Close()
+}
