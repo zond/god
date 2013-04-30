@@ -103,7 +103,7 @@ func (self *node) rehash(key []Nibble, now int64) {
 			h.Write(child.hash)
 		}
 	}
-	h.Extrude(&self.hash)
+	h.Extrude(self.hash)
 }
 
 // gc will garbage collect old tombstones.

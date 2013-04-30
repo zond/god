@@ -1,4 +1,4 @@
 murmur
 ===
 
-A thin wrapper around the 128 bit x86 and x64 versions of http://code.google.com/p/smhasher/wiki/MurmurHash3, a fast, non cryptographically secure but well distributed hash function.
+A thin wrapper around https://github.com/spaolacci/murmur3, a Go native and very fast murmur3 implementation.
