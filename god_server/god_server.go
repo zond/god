@@ -24,7 +24,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
 	if *dir == address {
-		*dir = fmt.Sprintf("%v:%v", *broadcastIp, *port)
+		*dir = fmt.Sprintf("%v_%v", *broadcastIp, *port)
 	}
 	s := dhash.NewNodeDir(fmt.Sprintf("%v:%v", *listenIp, *port), fmt.Sprintf("%v:%v", *broadcastIp, *port), *dir)
 	if *verbose {
