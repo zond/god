@@ -34,5 +34,6 @@ radix/profile/profile
 god_cli/god_cli
 persistence/test*
 radix/benchmarklogs
+127.0.0.1_*
 127.0.0.1:*
 

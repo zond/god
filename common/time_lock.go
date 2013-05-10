@@ -11,9 +11,9 @@ const (
 )
 
 type TimeLock struct {
-	lock          *sync.RWMutex
 	lockdurations [logsize]int64
 	locktimes     [logsize]int64
+	lock          *sync.RWMutex
 	index         int
 }
 

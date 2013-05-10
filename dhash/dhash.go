@@ -61,10 +61,10 @@ const (
 // Node is a node in the database. It contains a discord.Node containing routing and rpc functionality, 
 // a timenet.Timer containing time synchronization functionality and a radix.Tree containing the actual data.
 type Node struct {
-	state            int32
 	lastSync         int64
 	lastMigrate      int64
 	lastReroute      int64
+	state            int32
 	lock             *sync.RWMutex
 	syncListeners    []SyncListener
 	cleanListeners   []CleanListener
