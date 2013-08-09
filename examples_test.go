@@ -76,7 +76,7 @@ func TestExamples(t *testing.T) {
 				fmt.Fprintln(cleanout, strings.TrimSpace(line))
 			}
 			if string(cleanout.Bytes()) != expected {
-				t.Errorf("%v: Expected %#v but got %#v", file, expected, string(cleanout.Bytes()))
+				t.Errorf("%v: Expected \n%v\n but got \n%v\n", file, expected, string(cleanout.Bytes()))
 			}
 		}
 	}

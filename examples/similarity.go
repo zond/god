@@ -48,6 +48,7 @@ func (self user) similar() user {
 }
 
 func main() {
+	conn.Clear()
 	adam := user("adam")
 	beatrice := user("beatrice")
 	charlie := user("charlie")
@@ -71,6 +72,5 @@ func main() {
 
 // output: adam has liked 4 flavours in common with adam
 // output: beatrice has liked 1 flavours in common with adam
-// output: charlie has liked 1 flavours in common with adam
-// output: denise has liked 3 flavours in common with adam
+// output: denise has liked 2 flavours in common with adam
 // output: adam should get to know denise

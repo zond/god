@@ -103,6 +103,7 @@ func (self user) recommended() recommendation {
 }
 
 func main() {
+	conn.Clear()
 	adam := user("adam")
 	beatrice := user("beatrice")
 	charlie := user("charlie")
@@ -130,6 +131,6 @@ func main() {
 // output: this gives them an average similarity of 7.5, and a weight of 8.239592165010821
 // output: charlie has 1 ratings in common with adam, and they are 5 similar
 // output: this gives them an average similarity of 5, and a weight of 3.4657359027997265
-// output: denise has 4 ratings in common with adam, and they are 16 similar
-// output: this gives them an average similarity of 4, and a weight of 6.437751649736401
+// output: denise has 3 ratings in common with adam, and they are 6 similar
+// output: this gives them an average similarity of 2, and a weight of 2.772588722239781
 // output: with the data we have, we recommend that adam tries chocolate
