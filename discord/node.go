@@ -3,13 +3,15 @@ package discord
 import (
 	"bytes"
 	"fmt"
-	"github.com/zond/god/common"
-	"github.com/zond/god/murmur"
 	"net"
 	"net/rpc"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/zond/god/common"
+	"github.com/zond/god/murmur"
 )
 
 // CommListener is a function listening for generic communication between two Nodes.
@@ -206,11 +208,20 @@ func (self *Node) Start() (err error) {
 		}
 	}
 	self.ring.Add(self.Remote())
-	go server.Accept(self.getListener())
+	go func() {
+		var conn net.Conn
+		for conn, err = self.getListener().Accept(); err == nil; conn, err = self.getListener().Accept() {
+			go server.ServeConn(conn)
+		}
+		if !strings.Contains(err.Error(), "use of closed network connection") {
+			panic(err)
+		}
+	}()
 	go self.notifyPeriodically()
 	go self.pingPeriodically()
 	return
 }
+
 func (self *Node) notifyPeriodically() {
 	for self.hasState(started) {
 		self.notifySuccessor()

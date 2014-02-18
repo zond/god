@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os/exec"
+
 	"github.com/zond/god/common"
 	"github.com/zond/setop"
-	"net/http"
 )
 
 // JSONClient is used in the tests to ensure that the JSON API provides roughly the same functionality as the gob API.
@@ -14,8 +17,11 @@ import (
 // It is NOT meant to be used as a real client, since if you are using Go anyway the client.Conn type is much more efficient.
 type JSONClient string
 
+var jsonClient = &http.Client{}
+
+var lastOpen int32 = 0
+
 func (self JSONClient) call(action string, params, result interface{}) {
-	client := new(http.Client)
 	buf := new(bytes.Buffer)
 	if params != nil {
 		err := json.NewEncoder(buf).Encode(params)
@@ -28,14 +34,20 @@ func (self JSONClient) call(action string, params, result interface{}) {
 		panic(err)
 	}
 	req.Header.Set("Accept", "application/json")
-	resp, err := client.Do(req)
+	resp, err := jsonClient.Do(req)
 	if err != nil {
+		outp, e := exec.Command("sysctl", "kern.num_files").Output()
+		if e != nil {
+			panic(e)
+		}
+		fmt.Println(string(outp))
 		panic(err)
 	}
 	err = json.NewDecoder(resp.Body).Decode(result)
 	if err != nil {
 		panic(err)
 	}
+	ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 }
 func (self JSONClient) SSubPut(key, subKey, value []byte) {

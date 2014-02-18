@@ -3,15 +3,16 @@ package dhash
 import (
 	"bytes"
 	"fmt"
-	"github.com/zond/god/client"
-	"github.com/zond/god/common"
-	"github.com/zond/god/murmur"
-	"github.com/zond/setop"
 	"math/big"
 	"net"
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/zond/god/client"
+	"github.com/zond/god/common"
+	"github.com/zond/god/murmur"
+	"github.com/zond/setop"
 )
 
 type testClient interface {
@@ -113,6 +114,7 @@ func TestClient(t *testing.T) {
 	dhashes := testStartup(t, common.Redundancy*2, 11191)
 	testGOBClient(t, dhashes)
 	testJSONClient(t, dhashes)
+	stopServers(dhashes)
 }
 
 func clearAll(dhashes []*Node) {
@@ -122,6 +124,7 @@ func clearAll(dhashes []*Node) {
 }
 
 func testGOBClient(t *testing.T, dhashes []*Node) {
+	fmt.Println(" === Run testGOBClient")
 	clearAll(dhashes)
 	c := client.MustConn(dhashes[0].GetBroadcastAddr())
 	c.Start()
@@ -129,6 +132,7 @@ func testGOBClient(t *testing.T, dhashes []*Node) {
 }
 
 func testJSONClient(t *testing.T, dhashes []*Node) {
+	fmt.Println(" === Run testJSONClient")
 	for _, dhash := range dhashes {
 		clearAll(dhashes)
 		addr, err := net.ResolveTCPAddr("tcp", dhash.node.GetBroadcastAddr())
@@ -141,20 +145,33 @@ func testJSONClient(t *testing.T, dhashes []*Node) {
 }
 
 func testClientInterface(t *testing.T, dhashes []*Node, c testClient) {
+	fmt.Println("  === Run testGetPutDel")
 	testGetPutDel(t, c)
+	fmt.Println("  === Run testSubGetPutDel")
 	testSubGetPutDel(t, c)
+	fmt.Println("  === Run testSubClear")
 	testSubClear(t, c)
+	fmt.Println("  === Run testIndices")
 	testIndices(t, dhashes, c)
 	if rc, ok := c.(*client.Conn); ok {
+		fmt.Println("  === Run testDump")
 		testDump(t, rc)
+		fmt.Println("  === Run testSubDump")
 		testSubDump(t, rc)
 	}
+	fmt.Println("  === Run testNextPrev")
 	testNextPrev(t, c)
+	fmt.Println("  === Run testCounts")
 	testCounts(t, dhashes, c)
+	fmt.Println("  === Run testNextPrevIndices")
 	testNextPrevIndices(t, dhashes, c)
+	fmt.Println("  === Run testSlices")
 	testSlices(t, dhashes, c)
+	fmt.Println("  === Run testSliceIndices")
 	testSliceIndices(t, dhashes, c)
+	fmt.Println("  === Run testSliceLen")
 	testSliceLen(t, dhashes, c)
+	fmt.Println("  === Run testSetExpression")
 	testSetExpression(t, c)
 }
 

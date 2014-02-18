@@ -2,11 +2,12 @@ package timenet
 
 import (
 	"fmt"
-	"github.com/zond/god/common"
 	"math"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/zond/god/common"
 )
 
 func init() {
@@ -78,5 +79,5 @@ func TestSample(t *testing.T) {
 	common.AssertWithin(t, func() (string, bool) {
 		d := producer.deviance()
 		return fmt.Sprint(d), d > 0 && d < 1000000
-	}, time.Second*10)
+	}, time.Second*20)
 }
