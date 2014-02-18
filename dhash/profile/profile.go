@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime/pprof"
+
 	"github.com/zond/god/common"
 	. "github.com/zond/god/dhash"
 	"github.com/zond/god/murmur"
-	"os"
-	"runtime/pprof"
 )
 
 func main() {
@@ -23,9 +24,8 @@ func main() {
 	defer pprof.StopCPUProfile()
 	defer pprof.WriteHeapProfile(f2)
 
-	benchNode := NewNode("127.0.0.1:1231")
+	benchNode := NewNodeDir("127.0.0.1:1231", "127.0.0.1:1231", "")
 	benchNode.MustStart()
-	benchNode.Kill()
 	var k []byte
 	for i := 0; i < 100000; i++ {
 		k = murmur.HashString(fmt.Sprint(i))
