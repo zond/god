@@ -13,7 +13,7 @@ import (
 // RingChangeListener is a function listening to changes in a Ring (ie changes in Node composition or position).
 type RingChangeListener func(ring *Ring) (keep bool)
 
-// Ring contains an ordered set of routes to discord.Nodes. 
+// Ring contains an ordered set of routes to discord.Nodes.
 // It can fetch predecessor, match and successor for any key or remote (remotes are ordeded first on position, then on address, so that we have
 // a defined orded even between nodes with the same position).
 type Ring struct {
@@ -140,6 +140,12 @@ func (self *Ring) predecessorIndex(r Remote) int {
 func (self *Ring) Predecessor(r Remote) Remote {
 	self.lock.RLock()
 	defer self.lock.RUnlock()
+	if len(self.nodes) == 0 {
+		return r
+	}
+	if len(self.nodes) == 1 {
+		return self.nodes[0]
+	}
 	return self.nodes[self.predecessorIndex(r)]
 }
 func (self *Ring) successorIndex(r Remote) int {
@@ -220,7 +226,7 @@ func (self *Ring) byteIndices(pos []byte) (before, at, after int) {
 	if len(self.nodes) == 0 {
 		return -1, -1, -1
 	}
-	// Find the first position in self.nodes where the position 
+	// Find the first position in self.nodes where the position
 	// is greather than or equal to the searched for position.
 	i := sort.Search(len(self.nodes), func(i int) bool {
 		return bytes.Compare(pos, self.nodes[i].Pos) < 1
@@ -232,15 +238,15 @@ func (self *Ring) byteIndices(pos []byte) (before, at, after int) {
 		at = -1
 		return
 	}
-	// If we did, then we know that the position before (or the last position) 
+	// If we did, then we know that the position before (or the last position)
 	// is the one that is before the searched for position.
 	if i == 0 {
 		before = len(self.nodes) - 1
 	} else {
 		before = i - 1
 	}
-	// If we found a position that is equal to the searched for position 
-	// just keep searching for a position that is guaranteed to be greater 
+	// If we found a position that is equal to the searched for position
+	// just keep searching for a position that is guaranteed to be greater
 	// than the searched for position.
 	// If we did not find a position that is equal, then we know that the found
 	// position is greater than.
@@ -270,7 +276,7 @@ func (self *Ring) indices(pos Remote) (before, at, after int) {
 	if len(self.nodes) == 0 {
 		return -1, -1, -1
 	}
-	// Find the first position in self.nodes where the position 
+	// Find the first position in self.nodes where the position
 	// is greather than or equal to the searched for position.
 	i := sort.Search(len(self.nodes), func(i int) bool {
 		return !self.nodes[i].Less(pos)
@@ -282,15 +288,15 @@ func (self *Ring) indices(pos Remote) (before, at, after int) {
 		at = -1
 		return
 	}
-	// If we did, then we know that the position before (or the last position) 
+	// If we did, then we know that the position before (or the last position)
 	// is the one that is before the searched for position.
 	if i == 0 {
 		before = len(self.nodes) - 1
 	} else {
 		before = i - 1
 	}
-	// If we found a position that is equal to the searched for position 
-	// just keep searching for a position that is guaranteed to be greater 
+	// If we found a position that is equal to the searched for position
+	// just keep searching for a position that is guaranteed to be greater
 	// than the searched for position.
 	// If we did not find a position that is equal, then we know that the found
 	// position is greater than.
