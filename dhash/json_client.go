@@ -48,7 +48,6 @@ func (self JSONClient) call(action string, params, result interface{}) {
 		panic(err)
 	}
 	ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
 }
 func (self JSONClient) SSubPut(key, subKey, value []byte) {
 	var x Nothing
