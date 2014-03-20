@@ -225,10 +225,10 @@ func testSetExpression(t *testing.T, c testClient) {
 	t1 := []byte("sete1")
 	t2 := []byte("sete2")
 	for i := byte(0); i < 10; i++ {
-		c.SubPut(t1, []byte{i}, common.EncodeBigInt(big.NewInt(1)))
+		c.SubPut(t1, []byte{i}, setop.EncodeBigInt(big.NewInt(1)))
 	}
 	for i := byte(5); i < 15; i++ {
-		c.SubPut(t2, []byte{i}, common.EncodeBigInt(big.NewInt(1)))
+		c.SubPut(t2, []byte{i}, setop.EncodeBigInt(big.NewInt(1)))
 	}
 	assertSetOps(t, c.SetExpression(setop.SetExpression{
 		Op: setop.MustParse("(U:BigIntAnd sete1 sete2)"),

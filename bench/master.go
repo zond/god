@@ -13,7 +13,7 @@ func RunMaster() {
 	ip := flag.String("ip", "127.0.0.1", "IP address to find a node at")
 	slaves := flag.String("slaves", "", "Comma separated list of slave host:ip pairs")
 	port := flag.Int("port", 9191, "Port to find a node at")
-	maxKey := flag.Int64("maxKey", 10000, "Biggest key as int64 converted to []byte using common.EncodeInt64")
+	maxKey := flag.Int64("maxKey", 10000, "Biggest key as int64 converted to []byte using setop.EncodeInt64")
 	prepare := flag.String("prepare", "0-0", "The key range (as int64's) to make sure exists before starging")
 	keyRangePattern := regexp.MustCompile("^(\\d+)-(\\d+)$")
 	flag.Parse()

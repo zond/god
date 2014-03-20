@@ -5,9 +5,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/zond/god/client"
-	"github.com/zond/god/common"
-	"github.com/zond/setop"
 	"io"
 	"math/big"
 	"os"
@@ -15,6 +12,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/zond/god/client"
+	"github.com/zond/setop"
 )
 
 const (
@@ -41,19 +41,19 @@ func encode(s string) []byte {
 		if err != nil {
 			panic(err)
 		}
-		return common.EncodeFloat64(result)
+		return setop.EncodeFloat64(result)
 	case intFormat:
 		result, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
 			panic(err)
 		}
-		return common.EncodeInt64(result)
+		return setop.EncodeInt64(result)
 	case bigFormat:
 		result, ok := new(big.Int).SetString(s, 10)
 		if !ok {
 			panic(fmt.Errorf("Bad BigInt format: %v", s))
 		}
-		return common.EncodeBigInt(result)
+		return setop.EncodeBigInt(result)
 	}
 	panic(fmt.Errorf("Unknown encoding: %v", *enc))
 }
@@ -62,19 +62,19 @@ func decode(b []byte) string {
 	case stringFormat:
 		return string(b)
 	case floatFormat:
-		res, err := common.DecodeFloat64(b)
+		res, err := setop.DecodeFloat64(b)
 		if err != nil {
 			return fmt.Sprint(b)
 		}
 		return fmt.Sprint(res)
 	case intFormat:
-		res, err := common.DecodeInt64(b)
+		res, err := setop.DecodeInt64(b)
 		if err != nil {
 			return fmt.Sprint(b)
 		}
 		return fmt.Sprint(res)
 	case bigFormat:
-		return fmt.Sprint(common.DecodeBigInt(b))
+		return fmt.Sprint(setop.DecodeBigInt(b))
 	}
 	panic(fmt.Errorf("Unknown encoding: %v", *enc))
 }

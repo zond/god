@@ -2,11 +2,9 @@ package common
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"runtime"
 	"sort"
 	"strconv"
@@ -46,49 +44,6 @@ func MustJSONDecode(b []byte, i interface{}) {
 	if err != nil {
 		panic(err)
 	}
-}
-func EncodeBigInt(i *big.Int) []byte {
-	return i.Bytes()
-}
-func DecodeBigInt(b []byte) (result *big.Int) {
-	result = new(big.Int).SetBytes(b)
-	return
-}
-func EncodeInt64(i int64) []byte {
-	result := new(bytes.Buffer)
-	if err := binary.Write(result, binary.BigEndian, i); err != nil {
-		panic(err)
-	}
-	return result.Bytes()
-}
-func MustDecodeInt64(b []byte) (result int64) {
-	result, err := DecodeInt64(b)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-func DecodeInt64(b []byte) (result int64, err error) {
-	err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &result)
-	return
-}
-func EncodeFloat64(f float64) []byte {
-	result := new(bytes.Buffer)
-	if err := binary.Write(result, binary.BigEndian, f); err != nil {
-		panic(err)
-	}
-	return result.Bytes()
-}
-func MustDecodeFloat64(b []byte) (result float64) {
-	result, err := DecodeFloat64(b)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-func DecodeFloat64(b []byte) (result float64, err error) {
-	err = binary.Read(bytes.NewBuffer(b), binary.BigEndian, &result)
-	return
 }
 
 func Max64(i ...int64) (result int64) {
