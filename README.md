@@ -1,8 +1,6 @@
 god
 ===
 
-[![Build Status](https://drone.io/github.com/zond/god/status.png)](https://drone.io/github.com/zond/god/latest)
-
 god is a scalable, performant, persistent, in-memory data structure server. It allows massively distributed applications to update and fetch common data in a structured and sorted format.
 
 Its main inspirations are Redis and Chord/DHash. Like Redis it focuses on performance, ease of use, and a small, simple yet powerful feature set, while from the Chord/DHash projects it inherits scalability, redundancy, and transparent failover behaviour.
@@ -15,7 +13,7 @@ Install <a href="http://golang.org/doc/install">Go</a>, <a href="http://git-scm.
 
 HTML documentation: http://zond.github.com/god/
 
-godoc documentation: http://go.pkgdoc.org/github.com/zond/god
+godoc documentation: http://godoc.org/github.com/zond/god
 
 # TODO
 

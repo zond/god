@@ -3,14 +3,15 @@ package dhash
 import (
 	"bytes"
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/zond/god/common"
 	"github.com/zond/god/discord"
 	"github.com/zond/god/murmur"
 	"github.com/zond/god/radix"
 	"github.com/zond/god/timenet"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // SyncListener is a function listening for sync events where one dhash.Node has pushed items to, and pulled items from, another dhash.Node.
@@ -58,7 +59,7 @@ const (
 	stopped
 )
 
-// Node is a node in the database. It contains a discord.Node containing routing and rpc functionality, 
+// Node is a node in the database. It contains a discord.Node containing routing and rpc functionality,
 // a timenet.Timer containing time synchronization functionality and a radix.Tree containing the actual data.
 type Node struct {
 	lastSync         int64
