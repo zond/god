@@ -3,11 +3,12 @@ package dhash
 import (
 	"bytes"
 	"fmt"
+	"sync/atomic"
+	"time"
+
 	"github.com/zond/god/client"
 	"github.com/zond/god/common"
 	"github.com/zond/setop"
-	"sync/atomic"
-	"time"
 )
 
 // Description will return a current description of the node.
@@ -432,16 +433,17 @@ func (self *Node) SetExpression(expr setop.SetExpression, items *[]setop.SetOpRe
 	data := common.Item{
 		Key: expr.Dest,
 	}
-	err = expr.Each(func(b []byte) setop.Skipper {
+	err = expr.Each(func(b []byte) (result setop.Skipper, err error) {
 		succ := self.node.GetSuccessorFor(b)
-		result := &treeSkipper{
+		res := &treeSkipper{
 			remote: succ,
 			key:    b,
 		}
 		if succ.Addr == self.node.GetBroadcastAddr() {
-			result.tree = self.tree
+			res.tree = self.tree
 		}
-		return result
+		result = res
+		return
 	}, func(res *setop.SetOpResult) {
 		if expr.Dest == nil {
 			*items = append(*items, *res)
