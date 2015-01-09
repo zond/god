@@ -26,9 +26,9 @@ func ExampleSetExpression() {
 	}
 	// Output:
 	// name score
-	// alice 10
-	// bob 11
-	// charlie 4
+	// alice 10 <nil>
+	// bob 11 <nil>
+	// charlie 4 <nil>
 }
 
 func ExampleTreeMirror() {
@@ -46,8 +46,8 @@ func ExampleTreeMirror() {
 	}
 	// Output:
 	// name score
-	// 10 alice
-	// 6 charlie
-	// 5 bob
-	// 4 denise
+	// 10 <nil> alice
+	// 6 <nil> charlie
+	// 5 <nil> bob
+	// 4 <nil> denise
 }
