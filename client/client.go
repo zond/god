@@ -361,7 +361,7 @@ func (self *Conn) SubClear(key []byte) {
 	self.subClear(key, false)
 }
 
-// SubClear will remove all byte values from the sub tree defined by key. It will retain delete markers for all deleted values.
+// SSubClear will remove all byte values from the sub tree defined by key. It will retain delete markers for all deleted values.
 func (self *Conn) SSubClear(key []byte) {
 	self.subClear(key, true)
 }
@@ -754,7 +754,7 @@ func (self *Conn) ReverseSlice(key, min, max []byte, mininc, maxinc bool) (resul
 	return
 }
 
-// ReverseSlice will return the slice between min and max in the sub tree defined by key.
+// Slice will return the slice between min and max in the sub tree defined by key.
 // A min of nil will return from the start. A max of nil will return to the end.
 func (self *Conn) Slice(key, min, max []byte, mininc, maxinc bool) (result []common.Item) {
 	r := common.Range{
@@ -805,7 +805,7 @@ func (self *Conn) SubMirrorPrev(key, subKey []byte) (prevKey, prevValue []byte, 
 	return
 }
 
-// SubMirrorPrev will return the next key and value after subKey in the sub tree defined by key.
+// SubMirrorNext will return the next key and value after subKey in the sub tree defined by key.
 func (self *Conn) SubMirrorNext(key, subKey []byte) (nextKey, nextValue []byte, existed bool) {
 	data := common.Item{
 		Key:    key,
@@ -919,7 +919,7 @@ func (self *Conn) DescribeTree(pos []byte) (result string, err error) {
 	return
 }
 
-// DescribeTree will return a string representation of the complete trees of all known nodes.
+// DescribeAllTrees will return a string representation of the complete trees of all known nodes.
 // Used for debug purposes, don't do it on big databases!
 func (self *Conn) DescribeAllTrees() string {
 	buf := new(bytes.Buffer)
@@ -1030,7 +1030,7 @@ func (self *Conn) Configuration() (conf map[string]string) {
 	return result.Data
 }
 
-// SubConfiguratino will return the configuration for the sub tree defined by key.
+// SubConfiguration will return the configuration for the sub tree defined by key.
 //
 // mirrored=yes means that the sub tree is currently mirrored.
 func (self *Conn) SubConfiguration(key []byte) (conf map[string]string) {

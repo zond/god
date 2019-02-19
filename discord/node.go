@@ -369,7 +369,7 @@ func (self *Node) GetSuccessor() common.Remote {
 	return self.GetSuccessorForRemote(self.Remote())
 }
 
-// GetSuccessorFor will return the successor for the provided remote.
+// GetSuccessorForRemote will return the successor for the provided remote.
 func (self *Node) GetSuccessorForRemote(r common.Remote) common.Remote {
 	return self.ring.Successor(r)
 }

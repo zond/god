@@ -81,7 +81,7 @@ func NewNode(listenAddr, broadcastAddr string) *Node {
 	return NewNodeDir(listenAddr, broadcastAddr, broadcastAddr)
 }
 
-// NewNode will return a dhash.Node publishing itself on the given address.
+// NewNodeDir will return a dhash.Node publishing itself on the given address.
 func NewNodeDir(listenAddr, broadcastAddr, dir string) (result *Node) {
 	result = &Node{
 		node:          discord.NewNode(listenAddr, broadcastAddr),
