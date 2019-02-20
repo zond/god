@@ -391,7 +391,7 @@ func (self *Tree) MirrorReverseIndexOf(key []byte) (index int, existed bool) {
 	return
 }
 
-// MirrorReverseIndexOf will return the index from the end (or the index it would have if it existed) key.
+// ReverseIndexOf will return the index from the end (or the index it would have if it existed) key.
 func (self *Tree) ReverseIndexOf(key []byte) (index int, existed bool) {
 	if self == nil {
 		return
